@@ -10,10 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
     
     <!-- Supabase Client -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* Name Selection Modal Styles */
+        /* NEW: Name Selection Modal Styles */
         #name-selection-modal {
             position: fixed;
             top: 0;
@@ -1174,19 +1174,6 @@
             opacity: 0.9;
         }
 
-        /* Connection Status */
-        .connection-status {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-
-        .status-connected { background: #4caf50; }
-        .status-disconnected { background: #f44336; }
-        .status-connecting { background: #ff9800; }
-
         @media (max-width: 1024px) {
             #main-content {
                 grid-template-columns: 1fr;
@@ -1350,7 +1337,7 @@
 </head>
 <body>
 
-<!-- Name Selection Modal -->
+<!-- NEW: Name Selection Modal -->
 <div id="name-selection-modal">
     <div class="name-modal-content">
         <div class="name-modal-title">The News Bruh</div>
@@ -1363,7 +1350,7 @@
                 <ul>
                     <li>Maximum 20 characters</li>
                     <li>Almost any character allowed (letters, numbers, spaces, symbols)</li>
-                    <li>Your name will appear on the live leaderboard</li>
+                    <li>Your name will appear on the leaderboard</li>
                     <li>Other players can tag you in chat using @name</li>
                     <li>Note: @ symbol is reserved for tagging system</li>
                 </ul>
@@ -1389,10 +1376,6 @@
         <div class="player-counts">
             <span>Players Online: <span id="online-count">0</span></span>
             <span>Total Players: <span id="total-count">0</span></span>
-            <span id="connection-status" style="font-size: 0.7rem;">
-                <span class="connection-status status-connecting"></span>
-                Connecting...
-            </span>
         </div>
 
         <div class="meta-line">
@@ -1439,7 +1422,7 @@
         <div class="column" id="col-center">
             <h2>Front Page</h2>
             
-            <!-- ENHANCED: Breaking News Banner -->
+            <!-- ENHANCED: Breaking News Banner (now without timer) -->
             <div id="breaking-news-container">
                 <div id="breaking-news-banner">
                     <div class="breaking-news-text">
@@ -1491,10 +1474,10 @@
 
     </div>
 
-    <!-- Leaderboard Section -->
+    <!-- NEW: Leaderboard Section -->
     <div id="leaderboard-section">
         <div class="leaderboard-header">
-            <h2 style="border-bottom: none; margin: 0;">🏆 Live Leaderboard 🏆</h2>
+            <h2 style="border-bottom: none; margin: 0;">🏆 Leaderboard 🏆</h2>
             <div id="leaderboard-update-time" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-light);">
                 Updated: Just now
             </div>
@@ -1514,21 +1497,18 @@
         </table>
     </div>
 
-    <!-- Chat Section -->
+    <!-- NEW: Chat Section -->
     <div id="chat-section">
         <div class="chat-container">
             <div class="chat-header">
                 <span>📰 PRESS ROOM CHAT</span>
-                <span id="chat-status">
-                    <span class="connection-status status-connecting"></span>
-                    Connecting...
-                </span>
+                <span id="chat-status">Connecting...</span>
             </div>
             <div id="chat-messages">
                 <!-- Chat messages will be inserted here -->
                 <div class="chat-message other">
                     <div class="message-sender">System <span class="message-timestamp">Just now</span></div>
-                    <div class="message-content">Welcome to The News Bruh Press Room! Chat with other players here.</div>
+                    <div class="message-content">Connecting to live chat...</div>
                 </div>
             </div>
             <div id="chat-input-container">
@@ -1555,16 +1535,526 @@
 </div>
 
 <script>
-    // Supabase Configuration
+    // ===============================
+    // SUPABASE CONFIGURATION
+    // ===============================
     const SUPABASE_URL = 'https://qlwtovkrmfoqfgrtynrv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsd3RvdmtybWZvcWZncnR5bnJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzE4NTksImV4cCI6MjA4Mzg0Nzg1OX0.XMPhSftpLtTeM3gTS0Acf6DrFuI_H0U-iAfxAas9n8Y';
     
-    // Initialize Supabase client
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Initialize Supabase
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
-    // Game State with Supabase ID
+    // Player session ID
+    let playerSessionId = localStorage.getItem('newsBruhSessionId');
+    if (!playerSessionId) {
+        playerSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('newsBruhSessionId', playerSessionId);
+    }
+    
+    let currentPlayerId = null;
+    let isSupabaseConnected = false;
+    let lastPlayerUpdate = 0;
+    let playerUpdateInterval = null;
+
+    // ===============================
+    // SUPABASE FUNCTIONS
+    // ===============================
+    
+    async function checkSupabaseConnection() {
+        try {
+            const { data, error } = await supabase
+                .from('players')
+                .select('count')
+                .limit(1);
+            
+            if (error) throw error;
+            return true;
+        } catch (error) {
+            console.error('Supabase connection error:', error);
+            return false;
+        }
+    }
+    
+    async function createOrUpdatePlayer(name, initialData = {}) {
+        try {
+            // Check if player already exists
+            const { data: existingPlayer, error: fetchError } = await supabase
+                .from('players')
+                .select('*')
+                .eq('name', name)
+                .maybeSingle();
+            
+            if (fetchError) throw fetchError;
+            
+            if (existingPlayer) {
+                // Update existing player
+                const { data: updatedPlayer, error: updateError } = await supabase
+                    .from('players')
+                    .update({
+                        session_id: playerSessionId,
+                        last_active: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', existingPlayer.id)
+                    .select()
+                    .single();
+                
+                if (updateError) throw updateError;
+                
+                currentPlayerId = updatedPlayer.id;
+                return updatedPlayer;
+            } else {
+                // Create new player
+                const { data: newPlayer, error: insertError } = await supabase
+                    .from('players')
+                    .insert([{
+                        name: name,
+                        session_id: playerSessionId,
+                        total_news: initialData.news || 0,
+                        bruh_count: initialData.bruh || 0,
+                        level: initialData.level || 1,
+                        last_active: new Date().toISOString(),
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+                
+                if (insertError) throw insertError;
+                
+                currentPlayerId = newPlayer.id;
+                return newPlayer;
+            }
+        } catch (error) {
+            console.error('Error creating/updating player:', error);
+            return null;
+        }
+    }
+    
+    async function updatePlayerStats() {
+        if (!currentPlayerId || !isSupabaseConnected) return;
+        
+        // Calculate level
+        const level = calculateLevel(gameState.bruh, gameState.news);
+        
+        try {
+            const { error } = await supabase
+                .from('players')
+                .update({
+                    total_news: gameState.news,
+                    bruh_count: gameState.bruh,
+                    level: level,
+                    last_active: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', currentPlayerId);
+            
+            if (error) throw error;
+            lastPlayerUpdate = Date.now();
+        } catch (error) {
+            console.error('Error updating player stats:', error);
+        }
+    }
+    
+    async function getOnlinePlayersCount() {
+        try {
+            // Get players active in last 5 minutes
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+            
+            const { count, error } = await supabase
+                .from('players')
+                .select('*', { count: 'exact', head: true })
+                .gte('last_active', fiveMinutesAgo);
+            
+            if (error) throw error;
+            return count || 0;
+        } catch (error) {
+            console.error('Error getting online players count:', error);
+            return 0;
+        }
+    }
+    
+    async function getTotalPlayersCount() {
+        try {
+            const { count, error } = await supabase
+                .from('players')
+                .select('*', { count: 'exact', head: true });
+            
+            if (error) throw error;
+            return count || 0;
+        } catch (error) {
+            console.error('Error getting total players count:', error);
+            return 0;
+        }
+    }
+    
+    async function updatePlayerCounts() {
+        try {
+            const onlineCount = await getOnlinePlayersCount();
+            const totalCount = await getTotalPlayersCount();
+            
+            document.getElementById('online-count').textContent = formatNumber(onlineCount);
+            document.getElementById('total-count').textContent = formatNumber(totalCount);
+        } catch (error) {
+            console.error('Error updating player counts:', error);
+        }
+    }
+    
+    async function getLeaderboardData() {
+        try {
+            const { data, error } = await supabase
+                .from('players')
+                .select('id, name, bruh_count, total_news, level, last_active')
+                .order('bruh_count', { ascending: false })
+                .order('total_news', { ascending: false })
+                .limit(20);
+            
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error getting leaderboard data:', error);
+            return [];
+        }
+    }
+    
+    async function updateLeaderboard() {
+        try {
+            const leaderboardData = await getLeaderboardData();
+            const tbody = document.getElementById('leaderboard-body');
+            
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            // Update timestamp
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const updateTimeElement = document.getElementById('leaderboard-update-time');
+            if (updateTimeElement) {
+                updateTimeElement.textContent = `Updated: ${timeStr}`;
+            }
+            
+            // Display players
+            leaderboardData.forEach((player, index) => {
+                const row = document.createElement('tr');
+                const rank = index + 1;
+                
+                // Highlight current player
+                if (player.id === currentPlayerId) {
+                    row.style.backgroundColor = '#e8f5e8';
+                    row.style.fontWeight = 'bold';
+                }
+                
+                // Add rank class for top 3
+                let rankClass = '';
+                if (rank === 1) rankClass = 'rank-1';
+                else if (rank === 2) rankClass = 'rank-2';
+                else if (rank === 3) rankClass = 'rank-3';
+                
+                row.innerHTML = `
+                    <td class="player-rank ${rankClass}">${rank}</td>
+                    <td class="player-name">${escapeHtml(player.name)} ${player.id === currentPlayerId ? ' (You)' : ''}</td>
+                    <td class="player-bruh">${formatNumber(player.bruh_count)}</td>
+                    <td class="player-level">${formatNumber(player.level)}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            // If current player is not in top 20, find and add them
+            if (currentPlayerId) {
+                const currentPlayerIndex = leaderboardData.findIndex(p => p.id === currentPlayerId);
+                if (currentPlayerIndex === -1 || currentPlayerIndex >= 20) {
+                    try {
+                        const { data: currentPlayer, error } = await supabase
+                            .from('players')
+                            .select('id, name, bruh_count, total_news, level')
+                            .eq('id', currentPlayerId)
+                            .single();
+                        
+                        if (!error && currentPlayer) {
+                            // Find rank by getting count of players with higher bruh_count
+                            const { count: higherRankCount, error: rankError } = await supabase
+                                .from('players')
+                                .select('*', { count: 'exact', head: true })
+                                .gt('bruh_count', currentPlayer.bruh_count);
+                            
+                            if (!rankError) {
+                                const rank = (higherRankCount || 0) + 1;
+                                const row = document.createElement('tr');
+                                row.style.backgroundColor = '#e8f5e8';
+                                row.style.fontWeight = 'bold';
+                                
+                                let rankClass = '';
+                                if (rank === 1) rankClass = 'rank-1';
+                                else if (rank === 2) rankClass = 'rank-2';
+                                else if (rank === 3) rankClass = 'rank-3';
+                                
+                                row.innerHTML = `
+                                    <td class="player-rank ${rankClass}">${rank}</td>
+                                    <td class="player-name">${escapeHtml(currentPlayer.name)} (You)</td>
+                                    <td class="player-bruh">${formatNumber(currentPlayer.bruh_count)}</td>
+                                    <td class="player-level">${formatNumber(currentPlayer.level)}</td>
+                                `;
+                                
+                                tbody.appendChild(row);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error adding current player to leaderboard:', error);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error updating leaderboard:', error);
+        }
+    }
+    
+    async function getOnlinePlayers() {
+        try {
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+            
+            const { data, error } = await supabase
+                .from('players')
+                .select('id, name, bruh_count, last_active')
+                .gte('last_active', fiveMinutesAgo)
+                .order('bruh_count', { ascending: false })
+                .limit(50);
+            
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error getting online players:', error);
+            return [];
+        }
+    }
+    
+    async function updateOnlinePlayers() {
+        try {
+            const onlinePlayers = await getOnlinePlayers();
+            const container = document.getElementById('online-users');
+            const countElement = document.getElementById('online-users-count');
+            
+            if (!container || !countElement) return;
+            
+            // Update count
+            countElement.textContent = onlinePlayers.length;
+            
+            // Update list
+            container.innerHTML = '';
+            
+            onlinePlayers.forEach(player => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                
+                userDiv.innerHTML = `
+                    <div>
+                        <span class="user-online"></span>
+                        <span class="user-name">${escapeHtml(player.name)}</span>
+                    </div>
+                    <div class="user-bruh">${formatNumber(player.bruh_count)} Bruh</div>
+                `;
+                
+                container.appendChild(userDiv);
+            });
+        } catch (error) {
+            console.error('Error updating online players:', error);
+        }
+    }
+    
+    async function sendChatMessageToSupabase(message, sender) {
+        try {
+            const { error } = await supabase
+                .from('chat_messages')
+                .insert([{
+                    sender: sender,
+                    content: message,
+                    session_id: playerSessionId,
+                    created_at: new Date().toISOString()
+                }]);
+            
+            if (error) throw error;
+            return true;
+        } catch (error) {
+            console.error('Error sending chat message:', error);
+            return false;
+        }
+    }
+    
+    async function getChatMessages() {
+        try {
+            const { data, error } = await supabase
+                .from('chat_messages')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(50);
+            
+            if (error) throw error;
+            return (data || []).reverse(); // Reverse to show oldest first at top
+        } catch (error) {
+            console.error('Error getting chat messages:', error);
+            return [];
+        }
+    }
+    
+    async function updateChatDisplay() {
+        try {
+            const chatMessages = await getChatMessages();
+            const chatContainer = document.getElementById('chat-messages');
+            
+            if (!chatContainer) return;
+            
+            chatContainer.innerHTML = '';
+            
+            chatMessages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `chat-message ${msg.sender === gameState.playerName ? 'self' : 'other'}`;
+                
+                // Check if this message tags the current player
+                if (msg.content.includes(`@${gameState.playerName}`) && msg.sender !== gameState.playerName) {
+                    messageDiv.classList.add('tagged');
+                }
+                
+                // Format timestamp
+                const timestamp = new Date(msg.created_at);
+                const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // Format message content with highlighted tags
+                let content = escapeHtml(msg.content);
+                // Allow special characters in tagged names
+                content = content.replace(/@([^\s@]+)/g, '<span class="tagged-player">@$1</span>');
+                
+                messageDiv.innerHTML = `
+                    <div class="message-sender">${escapeHtml(msg.sender)} <span class="message-timestamp">${timeStr}</span></div>
+                    <div class="message-content">${content}</div>
+                `;
+                
+                chatContainer.appendChild(messageDiv);
+            });
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        } catch (error) {
+            console.error('Error updating chat display:', error);
+        }
+    }
+    
+    function setupRealtimeSubscriptions() {
+        if (!isSupabaseConnected) return;
+        
+        // Subscribe to chat messages
+        const chatSubscription = supabase
+            .channel('chat-channel')
+            .on('postgres_changes', 
+                { event: 'INSERT', schema: 'public', table: 'chat_messages' }, 
+                (payload) => {
+                    // Update chat display when new message arrives
+                    updateChatDisplay();
+                    
+                    // Show notification if tagged
+                    const newMessage = payload.new;
+                    if (newMessage.content.includes(`@${gameState.playerName}`) && 
+                        newMessage.sender !== gameState.playerName &&
+                        gameState.chatNotifications) {
+                        showChatNotification(newMessage.sender, newMessage.content);
+                    }
+                }
+            )
+            .subscribe();
+        
+        // Subscribe to leaderboard updates
+        const leaderboardSubscription = supabase
+            .channel('leaderboard-channel')
+            .on('postgres_changes', 
+                { event: '*', schema: 'public', table: 'players' }, 
+                (payload) => {
+                    // Update leaderboard when player data changes
+                    updateLeaderboard();
+                    updateOnlinePlayers();
+                    updatePlayerCounts();
+                }
+            )
+            .subscribe();
+        
+        return { chatSubscription, leaderboardSubscription };
+    }
+    
+    // ===============================
+    // HELPER FUNCTIONS
+    // ===============================
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function validatePlayerName(name) {
+        if (!name || name.trim() === '') {
+            alert('Please enter a name!');
+            return false;
+        }
+        
+        if (name.length > 20) {
+            alert('Name must be 20 characters or less!');
+            return false;
+        }
+        
+        // Allow most characters, but prevent potential security issues
+        if (name.includes('@') && name.indexOf('@') === 0) {
+            alert('Name cannot start with @ (reserved for tagging system)');
+            return false;
+        }
+        
+        // Check for excessive special characters that might cause issues
+        const excessiveSpecialChars = /[<>{}[\]\\]/;
+        if (excessiveSpecialChars.test(name)) {
+            alert('Name contains invalid characters: < > { } [ ] \\ are not allowed');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // NEW: Live Date & Time Display
+    function updateDateTime() {
+        const now = new Date();
+        
+        // Format day with leading zero
+        const day = String(now.getDate()).padStart(2, '0');
+        
+        // Format month with leading zero (months are 0-indexed in JavaScript)
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        
+        // Get full year
+        const year = now.getFullYear();
+        
+        // Format time with leading zeros
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        
+        // Create the formatted string: dd/mm/yyyy HH:MM:SS
+        const dateTimeString = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+        
+        // Update the element
+        const dateTimeElement = document.getElementById('currentDateTime');
+        if (dateTimeElement) {
+            dateTimeElement.textContent = dateTimeString;
+        }
+    }
+    
+    // Start updating the date/time every second
+    function startDateTimeUpdate() {
+        // Update immediately
+        updateDateTime();
+        
+        // Then update every second
+        setInterval(updateDateTime, 1000);
+    }
+    
+    // Fixed Game State Management
     const defaultGameState = {
-        id: null,
         news: 0,
         bruh: 0,
         buildings: [
@@ -1576,10 +2066,10 @@
             { id: 5, name: "Media Empire", baseCost: 1400000, baseCPS: 850, count: 0 }
         ],
         lastUpdate: Date.now(),
-        version: "1.0.7",
+        version: "2.0.0",
         playerName: "",
         chatNotifications: true,
-        // Boost System State
+        // ENHANCED: Boost System State
         boostProgress: 0,
         isBoostActive: false,
         boostTimeLeft: 0,
@@ -1587,26 +2077,20 @@
         boostMultiplier: 1,
         lastDepletionTime: Date.now()
     };
-
+    
     let gameState = JSON.parse(JSON.stringify(defaultGameState));
     let isInitialized = false;
     
-    // Boost system variables
+    // ENHANCED: Boost system variables
     let breakingNewsEmojis = [];
     let boostEmojiInterval = null;
     let boostTimerInterval = null;
     
-    // Real-time subscriptions
-    let leaderboardSubscription = null;
-    let chatSubscription = null;
-    let onlinePlayersSubscription = null;
+    // NEW: Chat System Variables
+    let lastLeaderboardUpdate = 0;
     
-    // Connection status
-    let isConnected = false;
-    let connectionRetries = 0;
-    const MAX_RETRIES = 5;
-
     // INFINITE ALPHABETICAL NUMBER SYSTEM
+    // ===================================
     function formatNumber(num) {
         if (typeof num !== 'number' || !isFinite(num)) return '0';
         if (num < 0) return '-' + formatNumber(-num);
@@ -1615,18 +2099,25 @@
         // Convert to infinite alphabetical system
         return toAlphabetical(num);
     }
-
+    
+    // New: Infinite alphabetical number system
     function toAlphabetical(num) {
+        // Handle scientific notation for very large numbers
         if (num >= 1e6) {
+            // Use log10 to determine the magnitude
             const log = Math.log10(num);
-            const magnitude = Math.floor(log / 3);
+            const magnitude = Math.floor(log / 3); // Every 3 orders of magnitude = new letter group
             
             if (magnitude < 1) return Math.floor(num).toLocaleString();
             
+            // Calculate the base value (1e3, 1e6, 1e9, etc.)
             const baseValue = Math.pow(1000, magnitude);
             const scaled = num / baseValue;
+            
+            // Get the letter suffix for this magnitude
             const suffix = getAlphabeticalSuffix(magnitude - 1);
             
+            // Format with 2 decimal places for readability
             if (scaled >= 100) {
                 return Math.floor(scaled) + suffix;
             } else if (scaled >= 10) {
@@ -1636,6 +2127,7 @@
             }
         }
         
+        // Traditional formatting for smaller numbers
         if (num >= 1e15) return (num / 1e15).toFixed(2) + "Qa";
         if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
         if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
@@ -1644,439 +2136,411 @@
         
         return Math.floor(num).toLocaleString();
     }
-
+    
+    // New: Generate alphabetical suffixes infinitely
     function getAlphabeticalSuffix(index) {
         if (index < 0) return "";
-        if (index < 26) return String.fromCharCode(97 + index);
         
+        // First 26: a-z (for magnitudes 0-25)
+        if (index < 26) {
+            return String.fromCharCode(97 + index); // 97 = 'a'
+        }
+        
+        // For indices >= 26, we need to build a multi-letter suffix
         let result = "";
         let remaining = index;
         
         while (remaining >= 0) {
+            // Get the current character (0-25 = a-z)
             const charIndex = remaining % 26;
             result = String.fromCharCode(97 + charIndex) + result;
+            
+            // Move to next "digit" (like base-26 counting)
             remaining = Math.floor(remaining / 26) - 1;
+            
             if (remaining < 0) break;
         }
         
         return result;
     }
-
-    // Update connection status display
-    function updateConnectionStatus(status) {
-        const statusElement = document.getElementById('connection-status');
-        const chatStatusElement = document.getElementById('chat-status');
+    
+    // NEW: Calculate player level based on bruh count and news
+    const calculateLevel = (bruh, news) => {
+        return Math.floor(Math.sqrt(bruh * 10 + news / 1000));
+    };
+    
+    // ENHANCED: Boost System Functions
+    function updateBoostProgress() {
+        const boostButton = document.getElementById('boost-button');
+        const progressBar = document.getElementById('boost-progress-bar');
+        const percentageElement = document.getElementById('boost-percentage');
+        const cooldownElement = document.getElementById('boost-cooldown');
+        const timerElement = document.getElementById('boost-timer');
         
-        isConnected = status === 'connected';
-        
-        if (status === 'connected') {
-            statusElement.innerHTML = '<span class="connection-status status-connected"></span> Connected';
-            chatStatusElement.innerHTML = '<span class="connection-status status-connected"></span> Connected';
-            connectionRetries = 0;
-        } else if (status === 'connecting') {
-            statusElement.innerHTML = '<span class="connection-status status-connecting"></span> Connecting...';
-            chatStatusElement.innerHTML = '<span class="connection-status status-connecting"></span> Connecting...';
+        if (gameState.boostCooldown > 0) {
+            // In cooldown
+            boostButton.disabled = true;
+            const minutes = Math.floor(gameState.boostCooldown / 60);
+            const seconds = Math.floor(gameState.boostCooldown % 60);
+            cooldownElement.textContent = `Cooldown: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            cooldownElement.style.display = 'block';
+            timerElement.style.display = 'none';
+            percentageElement.textContent = '0%';
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(90deg, #cccccc, #999999)';
+        } else if (gameState.isBoostActive) {
+            // Boost is active
+            boostButton.disabled = false;
+            percentageElement.textContent = 'ACTIVE!';
+            percentageElement.style.color = '#ff0000';
+            percentageElement.style.textShadow = '0 0 10px rgba(255, 0, 0, 0.8)';
+            progressBar.style.width = '100%';
+            progressBar.style.background = 'linear-gradient(90deg, #ff0000, #ff8800, #ff0000)';
+            progressBar.style.animation = 'progressShimmer 1s infinite linear';
+            cooldownElement.style.display = 'none';
+            timerElement.style.display = 'block';
+            timerElement.textContent = `${gameState.boostTimeLeft}s`;
         } else {
-            statusElement.innerHTML = '<span class="connection-status status-disconnected"></span> Disconnected';
-            chatStatusElement.innerHTML = '<span class="connection-status status-disconnected"></span> Disconnected';
-        }
-    }
-
-    // Initialize real-time subscriptions
-    async function initRealTimeSubscriptions() {
-        try {
-            // Subscribe to player count changes
-            const playerCountChannel = supabase.channel('player-count')
-                .on('postgres_changes', 
-                    { event: '*', schema: 'public', table: 'players' }, 
-                    async () => {
-                        await updatePlayerCounts();
-                    }
-                )
-                .subscribe();
-
-            // Subscribe to leaderboard updates
-            leaderboardSubscription = supabase.channel('leaderboard-updates')
-                .on('postgres_changes', 
-                    { event: '*', schema: 'public', table: 'players' }, 
-                    async () => {
-                        await updateLeaderboard();
-                    }
-                )
-                .subscribe();
-
-            // Subscribe to chat messages
-            chatSubscription = supabase.channel('chat-messages')
-                .on('postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'chat_messages' }, 
-                    (payload) => {
-                        handleNewChatMessage(payload.new);
-                    }
-                )
-                .subscribe();
-
-            // Subscribe to online players updates
-            onlinePlayersSubscription = supabase.channel('online-players')
-                .on('postgres_changes', 
-                    { event: '*', schema: 'public', table: 'players' }, 
-                    async () => {
-                        await updateOnlinePlayers();
-                    }
-                )
-                .subscribe();
-
-            updateConnectionStatus('connected');
-            console.log('Real-time subscriptions initialized');
+            // Normal charging state
+            boostButton.disabled = false;
+            percentageElement.style.color = '';
+            percentageElement.style.textShadow = '';
+            percentageElement.textContent = `${Math.floor(gameState.boostProgress)}%`;
+            progressBar.style.width = `${gameState.boostProgress}%`;
+            progressBar.style.background = 'linear-gradient(90deg, #ff4444, #ff0000, #ff4444)';
+            progressBar.style.animation = 'progressShimmer 2s infinite linear';
+            cooldownElement.style.display = 'none';
+            timerElement.style.display = 'none';
             
-        } catch (error) {
-            console.error('Error initializing real-time subscriptions:', error);
-            updateConnectionStatus('disconnected');
-            
-            // Retry connection
-            if (connectionRetries < MAX_RETRIES) {
-                connectionRetries++;
-                setTimeout(initRealTimeSubscriptions, 2000 * connectionRetries);
-            }
-        }
-    }
-
-    // Update player counts from Supabase
-    async function updatePlayerCounts() {
-        try {
-            // Get total players
-            const { count: totalCount, error: totalError } = await supabase
-                .from('players')
-                .select('*', { count: 'exact', head: true });
-            
-            if (!totalError) {
-                document.getElementById('total-count').textContent = totalCount.toLocaleString();
-            }
-            
-            // Get online players (last 5 minutes)
-            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-            
-            const { count: onlineCount, error: onlineError } = await supabase
-                .from('players')
-                .select('*', { count: 'exact', head: true })
-                .gte('last_active', fiveMinutesAgo);
-            
-            if (!onlineError) {
-                document.getElementById('online-count').textContent = onlineCount.toLocaleString();
-            }
-            
-        } catch (error) {
-            console.error('Error updating player counts:', error);
-        }
-    }
-
-    // Load or create player in Supabase
-    async function loadOrCreatePlayer() {
-        try {
-            const playerName = gameState.playerName;
-            
-            // Check if player exists
-            const { data: existingPlayer, error: fetchError } = await supabase
-                .from('players')
-                .select('*')
-                .eq('name', playerName)
-                .single();
-            
-            if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows returned
-                console.error('Error fetching player:', fetchError);
-                return false;
-            }
-            
-            if (existingPlayer) {
-                // Load existing player
-                gameState.id = existingPlayer.id;
-                gameState.news = existingPlayer.news || 0;
-                gameState.bruh = existingPlayer.bruh || 0;
-                gameState.buildings = existingPlayer.buildings || defaultGameState.buildings;
-                gameState.version = existingPlayer.version || defaultGameState.version;
-                gameState.lastUpdate = new Date(existingPlayer.updated_at).getTime();
-                
-                // Load boost state
-                gameState.boostProgress = existingPlayer.boost_progress || 0;
-                gameState.isBoostActive = existingPlayer.is_boost_active || false;
-                gameState.boostTimeLeft = existingPlayer.boost_time_left || 0;
-                gameState.boostCooldown = existingPlayer.boost_cooldown || 0;
-                gameState.boostMultiplier = existingPlayer.boost_multiplier || 1;
-                gameState.lastDepletionTime = existingPlayer.last_depletion_time || Date.now();
-                
-                console.log('Player loaded from Supabase:', playerName);
+            // Update cooldown display
+            if (gameState.boostProgress >= 100) {
+                cooldownElement.textContent = 'READY!';
+                cooldownElement.style.display = 'block';
+                cooldownElement.style.color = '#ff0000';
+                cooldownElement.style.background = 'rgba(255, 0, 0, 0.2)';
             } else {
-                // Create new player
-                const newPlayer = {
-                    name: playerName,
-                    news: gameState.news,
-                    bruh: gameState.bruh,
-                    buildings: gameState.buildings,
-                    version: gameState.version,
-                    level: calculateLevel(gameState.bruh, gameState.news),
-                    last_active: new Date().toISOString(),
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    boost_progress: gameState.boostProgress,
-                    is_boost_active: gameState.isBoostActive,
-                    boost_time_left: gameState.boostTimeLeft,
-                    boost_cooldown: gameState.boostCooldown,
-                    boost_multiplier: gameState.boostMultiplier,
-                    last_depletion_time: gameState.lastDepletionTime
-                };
-                
-                const { data, error } = await supabase
-                    .from('players')
-                    .insert([newPlayer])
-                    .select()
-                    .single();
-                
-                if (error) {
-                    console.error('Error creating player:', error);
-                    return false;
-                }
-                
-                gameState.id = data.id;
-                console.log('New player created in Supabase:', playerName);
+                cooldownElement.style.display = 'none';
             }
-            
-            // Update player's last active timestamp
-            await updatePlayerLastActive();
-            
-            return true;
-            
-        } catch (error) {
-            console.error('Error in loadOrCreatePlayer:', error);
-            return false;
         }
     }
-
-    // Save game state to Supabase
-    async function saveGameToSupabase() {
-        if (!gameState.id || !isConnected) return;
+    
+    // NEW: Deplete boost progress over time
+    function depleteBoostProgress() {
+        if (gameState.isBoostActive || gameState.boostCooldown > 0 || gameState.boostProgress <= 0) {
+            return;
+        }
         
-        try {
-            const updateData = {
-                news: gameState.news,
-                bruh: gameState.bruh,
-                buildings: gameState.buildings,
-                version: gameState.version,
-                level: calculateLevel(gameState.bruh, gameState.news),
-                updated_at: new Date().toISOString(),
-                boost_progress: gameState.boostProgress,
-                is_boost_active: gameState.isBoostActive,
-                boost_time_left: gameState.boostTimeLeft,
-                boost_cooldown: gameState.boostCooldown,
-                boost_multiplier: gameState.boostMultiplier,
-                last_depletion_time: gameState.lastDepletionTime
-            };
+        const now = Date.now();
+        const timeSinceLastDepletion = (now - gameState.lastDepletionTime) / 1000; // Convert to seconds
+        
+        // Deplete 2% per second
+        if (timeSinceLastDepletion >= 1) {
+            gameState.boostProgress = Math.max(0, gameState.boostProgress - 2);
+            gameState.lastDepletionTime = now;
             
-            const { error } = await supabase
-                .from('players')
-                .update(updateData)
-                .eq('id', gameState.id);
-            
-            if (error) {
-                console.error('Error saving game to Supabase:', error);
-            } else {
-                console.log('Game saved to Supabase');
+            // Update display if needed
+            if (gameState.boostProgress % 10 === 0 || gameState.boostProgress <= 1) {
+                updateBoostProgress();
             }
-            
-        } catch (error) {
-            console.error('Error in saveGameToSupabase:', error);
         }
     }
-
-    // Update player's last active timestamp
-    async function updatePlayerLastActive() {
-        if (!gameState.id || !isConnected) return;
-        
-        try {
-            await supabase
-                .from('players')
-                .update({ last_active: new Date().toISOString() })
-                .eq('id', gameState.id);
-        } catch (error) {
-            console.error('Error updating last active:', error);
+    
+    function incrementBoostProgress() {
+        if (gameState.isBoostActive || gameState.boostCooldown > 0) {
+            return;
         }
-    }
-
-    // Update leaderboard from Supabase
-    async function updateLeaderboard() {
-        try {
-            const { data: leaderboardData, error } = await supabase
-                .from('players')
-                .select('name, bruh, news, level, last_active')
-                .order('bruh', { ascending: false })
-                .order('news', { ascending: false })
-                .limit(100);
-            
-            if (error) {
-                console.error('Error fetching leaderboard:', error);
-                return;
-            }
-            
-            // Update leaderboard display
-            updateLeaderboardDisplay(leaderboardData);
-            
-            // Update timestamp
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const updateTimeElement = document.getElementById('leaderboard-update-time');
-            if (updateTimeElement) {
-                updateTimeElement.textContent = `Updated: ${timeStr}`;
-            }
-            
-        } catch (error) {
-            console.error('Error in updateLeaderboard:', error);
+        
+        // Each click adds 5% progress
+        gameState.boostProgress += 5;
+        
+        // Reset depletion timer
+        gameState.lastDepletionTime = Date.now();
+        
+        // AUTO-ACTIVATE when reaching 100%
+        if (gameState.boostProgress >= 100) {
+            gameState.boostProgress = 100;
+            activateBoost(); // Auto-activate immediately
         }
+        
+        updateBoostProgress();
+        saveGame();
     }
-
-    // Update leaderboard display
-    function updateLeaderboardDisplay(leaderboardData) {
-        const tbody = document.getElementById('leaderboard-body');
-        if (!tbody) return;
+    
+    function activateBoost() {
+        if (gameState.isBoostActive || gameState.boostProgress < 100) return;
         
-        tbody.innerHTML = '';
+        gameState.isBoostActive = true;
+        gameState.boostTimeLeft = 15; // 15 seconds
+        gameState.boostMultiplier = 5; // 5x multiplier
+        gameState.boostProgress = 0;
         
-        leaderboardData.forEach((player, index) => {
-            const row = document.createElement('tr');
-            
-            // Highlight current player
-            if (player.name === gameState.playerName) {
-                row.style.backgroundColor = '#e8f5e8';
-                row.style.fontWeight = 'bold';
-            }
-            
-            // Add rank class for top 3
-            let rankClass = '';
-            if (index === 0) rankClass = 'rank-1';
-            else if (index === 1) rankClass = 'rank-2';
-            else if (index === 2) rankClass = 'rank-3';
-            
-            row.innerHTML = `
-                <td class="player-rank ${rankClass}">${index + 1}</td>
-                <td class="player-name">${player.name} ${player.name === gameState.playerName ? ' (You)' : ''}</td>
-                <td class="player-bruh">${formatNumber(player.bruh)}</td>
-                <td class="player-level">${formatNumber(player.level)}</td>
-            `;
-            
-            tbody.appendChild(row);
+        // Show enhanced breaking news banner
+        const banner = document.getElementById('breaking-news-banner');
+        banner.style.display = 'block';
+        
+        // Start dropping emojis
+        startEmojiRain();
+        
+        // Update timer display
+        updateBoostTimer();
+        
+        // Start boost timer
+        if (boostTimerInterval) clearInterval(boostTimerInterval);
+        boostTimerInterval = setInterval(updateBoostTimer, 1000);
+        
+        // Add visual effect to stats
+        const statBlocks = document.querySelectorAll('.stat-block');
+        statBlocks.forEach(block => {
+            block.classList.add('active-boost');
         });
-    }
-
-    // Update online players list
-    async function updateOnlinePlayers() {
+        
+        // Update UI immediately
+        updateUI();
+        updateBoostProgress();
+        
+        // Play a sound effect if available (optional)
         try {
-            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
             
-            const { data: onlinePlayers, error } = await supabase
-                .from('players')
-                .select('name, bruh, last_active')
-                .gte('last_active', fiveMinutesAgo)
-                .order('bruh', { ascending: false });
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
             
-            if (error) {
-                console.error('Error fetching online players:', error);
-                return;
+            oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+            oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+            oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (e) {
+            // Audio not supported, continue silently
+        }
+    }
+    
+    function updateBoostTimer() {
+        if (!gameState.isBoostActive) return;
+        
+        gameState.boostTimeLeft--;
+        
+        // Update timer displays
+        const timerElement = document.getElementById('boost-timer');
+        
+        if (timerElement) {
+            timerElement.textContent = `${gameState.boostTimeLeft}s`;
+            
+            // Flash red when time is running low
+            if (gameState.boostTimeLeft <= 5) {
+                timerElement.style.animation = 'none';
+                setTimeout(() => {
+                    timerElement.style.animation = 'pulseTimer 0.5s infinite alternate';
+                }, 10);
+                timerElement.style.color = '#ff0000';
+                timerElement.style.borderColor = '#ff0000';
             }
+        }
+        
+        if (gameState.boostTimeLeft <= 0) {
+            endBoost();
+        }
+    }
+    
+    function resetBoostTimer() {
+        if (!gameState.isBoostActive) return;
+        
+        // Reset timer to 15 seconds when print edition is clicked
+        gameState.boostTimeLeft = 15;
+        
+        // Update timer displays
+        const timerElement = document.getElementById('boost-timer');
+        
+        if (timerElement) {
+            timerElement.textContent = `${gameState.boostTimeLeft}s`;
+            timerElement.style.color = '#ff0000';
+            timerElement.style.borderColor = '#ff0000';
+        }
+        
+        // Visual feedback on banner
+        const banner = document.getElementById('breaking-news-banner');
+        banner.style.transform = 'perspective(500px) rotateX(5deg) scale(1.05)';
+        banner.style.boxShadow = '0 6px 25px rgba(255, 0, 0, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.4)';
+        
+        setTimeout(() => {
+            banner.style.transform = 'perspective(500px) rotateX(5deg)';
+            banner.style.boxShadow = '0 4px 20px rgba(255, 0, 0, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.3)';
+        }, 300);
+    }
+    
+    function endBoost() {
+        gameState.isBoostActive = false;
+        gameState.boostMultiplier = 1;
+        gameState.boostCooldown = 600; // 10 minutes cooldown = 600 seconds
+        
+        // Hide breaking news banner
+        const banner = document.getElementById('breaking-news-banner');
+        banner.style.display = 'none';
+        
+        // Stop dropping emojis
+        stopEmojiRain();
+        
+        // Clear boost timer interval
+        if (boostTimerInterval) {
+            clearInterval(boostTimerInterval);
+            boostTimerInterval = null;
+        }
+        
+        // Remove visual effect from stats
+        const statBlocks = document.querySelectorAll('.stat-block');
+        statBlocks.forEach(block => {
+            block.classList.remove('active-boost');
+        });
+        
+        // Start cooldown timer
+        const cooldownInterval = setInterval(() => {
+            gameState.boostCooldown--;
+            updateBoostProgress();
             
-            // Update online count
-            document.getElementById('online-users-count').textContent = onlinePlayers.length;
-            
-            // Update online users list
-            const onlineUsersContainer = document.getElementById('online-users');
-            if (onlineUsersContainer) {
-                onlineUsersContainer.innerHTML = '';
-                
-                onlinePlayers.forEach(player => {
-                    const userDiv = document.createElement('div');
-                    userDiv.className = 'user-item';
-                    
-                    userDiv.innerHTML = `
-                        <div>
-                            <span class="user-online"></span>
-                            <span class="user-name">${player.name}</span>
-                        </div>
-                        <div class="user-bruh">${formatNumber(player.bruh)} Bruh</div>
-                    `;
-                    
-                    onlineUsersContainer.appendChild(userDiv);
-                });
+            if (gameState.boostCooldown <= 0) {
+                clearInterval(cooldownInterval);
+                gameState.boostCooldown = 0;
+                updateBoostProgress();
             }
-            
-        } catch (error) {
-            console.error('Error in updateOnlinePlayers:', error);
-        }
+        }, 1000);
+        
+        // Update UI
+        updateUI();
+        updateBoostProgress();
     }
-
-    // Load chat messages from Supabase
-    async function loadChatMessages() {
-        try {
-            const { data: messages, error } = await supabase
-                .from('chat_messages')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(50);
-            
-            if (error) {
-                console.error('Error loading chat messages:', error);
-                return;
+    
+    function startEmojiRain() {
+        // Clear any existing interval
+        if (boostEmojiInterval) clearInterval(boostEmojiInterval);
+        
+        // Create falling emojis every 300ms for more intense effect
+        boostEmojiInterval = setInterval(() => {
+            createFallingEmoji();
+            // Sometimes create two at once
+            if (Math.random() > 0.5) {
+                setTimeout(createFallingEmoji, 150);
             }
-            
-            // Reverse to show oldest first
-            messages.reverse().forEach(handleNewChatMessage);
-            
-        } catch (error) {
-            console.error('Error in loadChatMessages:', error);
-        }
+        }, 300);
     }
-
-    // Handle new chat message from subscription
-    function handleNewChatMessage(message) {
-        // Add message to chat display
-        addChatMessageToDisplay(message);
-        
-        // Show notification if player is tagged
-        if (message.message && message.message.includes(`@${gameState.playerName}`) && 
-            message.sender !== gameState.playerName && gameState.chatNotifications) {
-            showChatNotification(message.sender, message.message);
-        }
-    }
-
-    // Add chat message to display
-    function addChatMessageToDisplay(message) {
-        const chatContainer = document.getElementById('chat-messages');
-        if (!chatContainer) return;
-        
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `chat-message ${message.sender === gameState.playerName ? 'self' : 'other'}`;
-        
-        // Check if this message tags the current player
-        if (message.message && message.message.includes(`@${gameState.playerName}`) && 
-            message.sender !== gameState.playerName) {
-            messageDiv.classList.add('tagged');
+    
+    function stopEmojiRain() {
+        if (boostEmojiInterval) {
+            clearInterval(boostEmojiInterval);
+            boostEmojiInterval = null;
         }
         
-        // Format timestamp
-        const timestamp = new Date(message.created_at);
-        const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        // Format message content with highlighted tags
-        let content = message.message || '';
-        content = content.replace(/@([^\s@]+)/g, '<span class="tagged-player">@$1</span>');
-        
-        messageDiv.innerHTML = `
-            <div class="message-sender">${message.sender} <span class="message-timestamp">${timeStr}</span></div>
-            <div class="message-content">${content}</div>
-        `;
-        
-        chatContainer.appendChild(messageDiv);
-        
-        // Scroll to bottom
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        // Remove all emojis
+        breakingNewsEmojis.forEach(emoji => {
+            if (emoji.parentNode) {
+                emoji.parentNode.removeChild(emoji);
+            }
+        });
+        breakingNewsEmojis = [];
     }
-
-    // Send chat message to Supabase
+    
+    function createFallingEmoji() {
+        const banner = document.getElementById('breaking-news-container');
+        if (!banner) return;
+        
+        const emoji = document.createElement('div');
+        emoji.className = 'breaking-news-flash';
+        emoji.textContent = '📰';
+        
+        // Random position across the entire newspaper width
+        const newspaper = document.getElementById('newspaper');
+        const newspaperRect = newspaper.getBoundingClientRect();
+        const bannerRect = banner.getBoundingClientRect();
+        
+        // Start position relative to newspaper
+        const startX = Math.random() * newspaperRect.width;
+        const startY = bannerRect.top - newspaperRect.top;
+        
+        emoji.style.left = `${startX}px`;
+        emoji.style.top = `${startY}px`;
+        emoji.style.fontSize = `${Math.random() * 20 + 20}px`;
+        emoji.style.animationDuration = `${Math.random() * 1 + 1.5}s`;
+        
+        // Random rotation direction
+        emoji.style.transform = `rotate(${Math.random() > 0.5 ? '' : '-'}${Math.random() * 30}deg)`;
+        
+        newspaper.appendChild(emoji);
+        breakingNewsEmojis.push(emoji);
+        
+        // Remove emoji after animation
+        setTimeout(() => {
+            if (emoji.parentNode) {
+                emoji.parentNode.removeChild(emoji);
+                const index = breakingNewsEmojis.indexOf(emoji);
+                if (index > -1) {
+                    breakingNewsEmojis.splice(index, 1);
+                }
+            }
+        }, 2000);
+    }
+    
+    // Fixed Helper Functions
+    const getPrestigeCost = (bruhCount) => {
+        return Math.floor(1000 * Math.pow(2.5, bruhCount));
+    };
+    
+    const getMultiplier = () => {
+        const bruh = gameState.bruh || 0;
+        // Handle very large numbers safely
+        if (bruh > 1e12) {
+            // Use logarithmic scaling for extreme values
+            return (1 + Math.pow(Math.log10(bruh + 1), 2)) * gameState.boostMultiplier;
+        }
+        return (1 + bruh) * gameState.boostMultiplier;
+    };
+    
+    const getCost = (building) => {
+        const count = building.count || 0;
+        const baseCost = building.baseCost || 15;
+        
+        // Handle very large counts safely
+        if (count > 1000) {
+            // Use exponential scaling but cap the growth rate
+            const exponent = Math.min(count, 10000) * 0.15;
+            return Math.floor(baseCost * Math.pow(1.15, Math.min(exponent, 100)));
+        }
+        
+        return Math.floor(baseCost * Math.pow(1.15, count));
+    };
+    
+    const getCPS = () => {
+        let base = gameState.buildings.reduce((acc, b) => acc + (b.count * b.baseCPS), 0);
+        return base * getMultiplier();
+    };
+    
+    const getMaxBuy = (building) => {
+        let canBuy = 0;
+        let tempNews = gameState.news;
+        let tempCount = building.count;
+        
+        // Safety limit
+        const maxIterations = 1000;
+        
+        for (let i = 0; i < maxIterations; i++) {
+            let nextCost = getCost({...building, count: tempCount});
+            if (tempNews >= nextCost) {
+                canBuy++;
+                tempNews -= nextCost;
+                tempCount++;
+            } else {
+                break;
+            }
+        }
+        
+        return canBuy;
+    };
+    
+    // NEW: Chat System Functions
     async function sendChatMessage() {
         const input = document.getElementById('chat-input');
         const message = input.value.trim();
@@ -2088,36 +2552,25 @@
             return;
         }
         
-        if (!isConnected) {
-            alert('Cannot send message while disconnected');
+        if (!gameState.playerName) {
+            alert('Please enter your name first!');
             return;
         }
         
-        try {
-            const { error } = await supabase
-                .from('chat_messages')
-                .insert([{
-                    sender: gameState.playerName,
-                    message: message,
-                    created_at: new Date().toISOString()
-                }]);
-            
-            if (error) {
-                console.error('Error sending chat message:', error);
-                alert('Failed to send message');
-                return;
-            }
-            
+        // Send message to Supabase
+        const success = await sendChatMessageToSupabase(message, gameState.playerName);
+        
+        if (success) {
             // Clear input
             input.value = '';
             
-        } catch (error) {
-            console.error('Error in sendChatMessage:', error);
-            alert('Failed to send message');
+            // Update chat display
+            updateChatDisplay();
+        } else {
+            alert('Failed to send message. Please try again.');
         }
     }
-
-    // Show chat notification
+    
     function showChatNotification(sender, message) {
         const notification = document.getElementById('chat-notification');
         const notificationSender = document.getElementById('notification-sender');
@@ -2141,39 +2594,7 @@
             notification.style.display = 'none';
         };
     }
-
-    // Calculate player level
-    function calculateLevel(bruh, news) {
-        return Math.floor(Math.sqrt(bruh * 10 + news / 1000));
-    }
-
-    // Name validation
-    function validatePlayerName(name) {
-        if (!name || name.trim() === '') {
-            alert('Please enter a name!');
-            return false;
-        }
-        
-        if (name.length > 20) {
-            alert('Name must be 20 characters or less!');
-            return false;
-        }
-        
-        if (name.includes('@') && name.indexOf('@') === 0) {
-            alert('Name cannot start with @ (reserved for tagging system)');
-            return false;
-        }
-        
-        const excessiveSpecialChars = /[<>{}[\]\\]/;
-        if (excessiveSpecialChars.test(name)) {
-            alert('Name contains invalid characters: < > { } [ ] \\ are not allowed');
-            return false;
-        }
-        
-        return true;
-    }
-
-    // Start game with name
+    
     async function startGameWithName() {
         const nameInput = document.getElementById('player-name-input');
         const playerName = nameInput.value.trim();
@@ -2182,374 +2603,95 @@
             return;
         }
         
-        // Save player name locally
-        localStorage.setItem('newsBruhPlayerName', playerName);
-        gameState.playerName = playerName;
-        
         // Show loading state
-        document.getElementById('name-selection-modal').classList.add('hidden');
-        updateConnectionStatus('connecting');
+        const startBtn = document.querySelector('.start-game-btn');
+        startBtn.textContent = 'CONNECTING...';
+        startBtn.disabled = true;
         
-        // Try to load/create player in Supabase
-        const success = await loadOrCreatePlayer();
-        
-        if (!success) {
-            alert('Failed to connect to game server. Please try again.');
-            document.getElementById('name-selection-modal').classList.remove('hidden');
-            return;
-        }
-        
-        // Show the game
-        document.getElementById('newspaper').style.display = 'flex';
-        
-        // Initialize the game
-        init();
-    }
-
-    // Live Date & Time Display
-    function updateDateTime() {
-        const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const year = now.getFullYear();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        
-        const dateTimeString = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-        const dateTimeElement = document.getElementById('currentDateTime');
-        if (dateTimeElement) {
-            dateTimeElement.textContent = dateTimeString;
-        }
-    }
-
-    // Start updating date/time
-    function startDateTimeUpdate() {
-        updateDateTime();
-        setInterval(updateDateTime, 1000);
-    }
-
-    // BOOST SYSTEM FUNCTIONS
-    function updateBoostProgress() {
-        const boostButton = document.getElementById('boost-button');
-        const progressBar = document.getElementById('boost-progress-bar');
-        const percentageElement = document.getElementById('boost-percentage');
-        const cooldownElement = document.getElementById('boost-cooldown');
-        const timerElement = document.getElementById('boost-timer');
-        
-        if (gameState.boostCooldown > 0) {
-            boostButton.disabled = true;
-            const minutes = Math.floor(gameState.boostCooldown / 60);
-            const seconds = Math.floor(gameState.boostCooldown % 60);
-            cooldownElement.textContent = `Cooldown: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            cooldownElement.style.display = 'block';
-            timerElement.style.display = 'none';
-            percentageElement.textContent = '0%';
-            progressBar.style.width = '0%';
-        } else if (gameState.isBoostActive) {
-            boostButton.disabled = false;
-            percentageElement.textContent = 'ACTIVE!';
-            percentageElement.style.color = '#ff0000';
-            progressBar.style.width = '100%';
-            progressBar.style.background = 'linear-gradient(90deg, #ff0000, #ff8800, #ff0000)';
-            cooldownElement.style.display = 'none';
-            timerElement.style.display = 'block';
-            timerElement.textContent = `${gameState.boostTimeLeft}s`;
-        } else {
-            boostButton.disabled = false;
-            percentageElement.style.color = '';
-            percentageElement.textContent = `${Math.floor(gameState.boostProgress)}%`;
-            progressBar.style.width = `${gameState.boostProgress}%`;
-            progressBar.style.background = 'linear-gradient(90deg, #ff4444, #ff0000, #ff4444)';
-            cooldownElement.style.display = 'none';
-            timerElement.style.display = 'none';
+        try {
+            // Test Supabase connection
+            isSupabaseConnected = await checkSupabaseConnection();
             
-            if (gameState.boostProgress >= 100) {
-                cooldownElement.textContent = 'READY!';
-                cooldownElement.style.display = 'block';
-                cooldownElement.style.color = '#ff0000';
+            if (!isSupabaseConnected) {
+                alert('Cannot connect to server. Playing in offline mode.');
+            }
+            
+            // Create or update player in Supabase
+            const playerData = await createOrUpdatePlayer(playerName, {
+                news: gameState.news,
+                bruh: gameState.bruh,
+                level: calculateLevel(gameState.bruh, gameState.news)
+            });
+            
+            if (playerData) {
+                currentPlayerId = playerData.id;
+                
+                // Save the player name locally
+                localStorage.setItem('newsBruhPlayerName', playerName);
+                gameState.playerName = playerName;
+                
+                // Hide name selection modal
+                document.getElementById('name-selection-modal').classList.add('hidden');
+                
+                // Show the game
+                document.getElementById('newspaper').style.display = 'flex';
+                
+                // Update chat status
+                document.getElementById('chat-status').textContent = isSupabaseConnected ? 'Connected' : 'Offline';
+                
+                // Initialize the game
+                init();
             } else {
-                cooldownElement.style.display = 'none';
+                alert('Failed to create player. Please try again.');
+                startBtn.textContent = 'START PRINTING';
+                startBtn.disabled = false;
             }
-        }
-    }
-
-    function depleteBoostProgress() {
-        if (gameState.isBoostActive || gameState.boostCooldown > 0 || gameState.boostProgress <= 0) {
-            return;
-        }
-        
-        const now = Date.now();
-        const timeSinceLastDepletion = (now - gameState.lastDepletionTime) / 1000;
-        
-        if (timeSinceLastDepletion >= 1) {
-            gameState.boostProgress = Math.max(0, gameState.boostProgress - 2);
-            gameState.lastDepletionTime = now;
+        } catch (error) {
+            console.error('Error starting game:', error);
+            alert('Error connecting to server. Starting in offline mode.');
             
-            if (gameState.boostProgress % 10 === 0 || gameState.boostProgress <= 1) {
-                updateBoostProgress();
-            }
-        }
-    }
-
-    function incrementBoostProgress() {
-        if (gameState.isBoostActive || gameState.boostCooldown > 0) {
-            return;
-        }
-        
-        gameState.boostProgress += 5;
-        gameState.lastDepletionTime = Date.now();
-        
-        if (gameState.boostProgress >= 100) {
-            gameState.boostProgress = 100;
-            activateBoost();
-        }
-        
-        updateBoostProgress();
-        saveGame();
-    }
-
-    function activateBoost() {
-        if (gameState.isBoostActive || gameState.boostProgress < 100) return;
-        
-        gameState.isBoostActive = true;
-        gameState.boostTimeLeft = 15;
-        gameState.boostMultiplier = 5;
-        gameState.boostProgress = 0;
-        
-        const banner = document.getElementById('breaking-news-banner');
-        banner.style.display = 'block';
-        
-        startEmojiRain();
-        updateBoostTimer();
-        
-        if (boostTimerInterval) clearInterval(boostTimerInterval);
-        boostTimerInterval = setInterval(updateBoostTimer, 1000);
-        
-        const statBlocks = document.querySelectorAll('.stat-block');
-        statBlocks.forEach(block => {
-            block.classList.add('active-boost');
-        });
-        
-        updateUI();
-        updateBoostProgress();
-        saveGame();
-    }
-
-    function updateBoostTimer() {
-        if (!gameState.isBoostActive) return;
-        
-        gameState.boostTimeLeft--;
-        
-        const timerElement = document.getElementById('boost-timer');
-        if (timerElement) {
-            timerElement.textContent = `${gameState.boostTimeLeft}s`;
+            // Save the player name locally
+            localStorage.setItem('newsBruhPlayerName', playerName);
+            gameState.playerName = playerName;
             
-            if (gameState.boostTimeLeft <= 5) {
-                timerElement.style.animation = 'none';
-                setTimeout(() => {
-                    timerElement.style.animation = 'pulseTimer 0.5s infinite alternate';
-                }, 10);
-                timerElement.style.color = '#ff0000';
-                timerElement.style.borderColor = '#ff0000';
-            }
-        }
-        
-        if (gameState.boostTimeLeft <= 0) {
-            endBoost();
-        }
-    }
-
-    function resetBoostTimer() {
-        if (!gameState.isBoostActive) return;
-        
-        gameState.boostTimeLeft = 15;
-        
-        const timerElement = document.getElementById('boost-timer');
-        if (timerElement) {
-            timerElement.textContent = `${gameState.boostTimeLeft}s`;
-            timerElement.style.color = '#ff0000';
-            timerElement.style.borderColor = '#ff0000';
-        }
-        
-        const banner = document.getElementById('breaking-news-banner');
-        banner.style.transform = 'perspective(500px) rotateX(5deg) scale(1.05)';
-        
-        setTimeout(() => {
-            banner.style.transform = 'perspective(500px) rotateX(5deg)';
-        }, 300);
-    }
-
-    function endBoost() {
-        gameState.isBoostActive = false;
-        gameState.boostMultiplier = 1;
-        gameState.boostCooldown = 600;
-        
-        const banner = document.getElementById('breaking-news-banner');
-        banner.style.display = 'none';
-        
-        stopEmojiRain();
-        
-        if (boostTimerInterval) {
-            clearInterval(boostTimerInterval);
-            boostTimerInterval = null;
-        }
-        
-        const statBlocks = document.querySelectorAll('.stat-block');
-        statBlocks.forEach(block => {
-            block.classList.remove('active-boost');
-        });
-        
-        const cooldownInterval = setInterval(() => {
-            gameState.boostCooldown--;
-            updateBoostProgress();
+            // Hide name selection modal
+            document.getElementById('name-selection-modal').classList.add('hidden');
             
-            if (gameState.boostCooldown <= 0) {
-                clearInterval(cooldownInterval);
-                gameState.boostCooldown = 0;
-                updateBoostProgress();
-            }
-        }, 1000);
-        
-        updateUI();
-        updateBoostProgress();
-        saveGame();
-    }
-
-    function startEmojiRain() {
-        if (boostEmojiInterval) clearInterval(boostEmojiInterval);
-        
-        boostEmojiInterval = setInterval(() => {
-            createFallingEmoji();
-            if (Math.random() > 0.5) {
-                setTimeout(createFallingEmoji, 150);
-            }
-        }, 300);
-    }
-
-    function stopEmojiRain() {
-        if (boostEmojiInterval) {
-            clearInterval(boostEmojiInterval);
-            boostEmojiInterval = null;
+            // Show the game
+            document.getElementById('newspaper').style.display = 'flex';
+            
+            // Update chat status
+            document.getElementById('chat-status').textContent = 'Offline';
+            
+            // Initialize the game
+            init();
         }
-        
-        breakingNewsEmojis.forEach(emoji => {
-            if (emoji.parentNode) {
-                emoji.parentNode.removeChild(emoji);
-            }
-        });
-        breakingNewsEmojis = [];
     }
-
-    function createFallingEmoji() {
-        const banner = document.getElementById('breaking-news-container');
-        if (!banner) return;
-        
-        const emoji = document.createElement('div');
-        emoji.className = 'breaking-news-flash';
-        emoji.textContent = '📰';
-        
-        const newspaper = document.getElementById('newspaper');
-        const newspaperRect = newspaper.getBoundingClientRect();
-        const bannerRect = banner.getBoundingClientRect();
-        
-        const startX = Math.random() * newspaperRect.width;
-        const startY = bannerRect.top - newspaperRect.top;
-        
-        emoji.style.left = `${startX}px`;
-        emoji.style.top = `${startY}px`;
-        emoji.style.fontSize = `${Math.random() * 20 + 20}px`;
-        emoji.style.animationDuration = `${Math.random() * 1 + 1.5}s`;
-        
-        newspaper.appendChild(emoji);
-        breakingNewsEmojis.push(emoji);
-        
-        setTimeout(() => {
-            if (emoji.parentNode) {
-                emoji.parentNode.removeChild(emoji);
-                const index = breakingNewsEmojis.indexOf(emoji);
-                if (index > -1) {
-                    breakingNewsEmojis.splice(index, 1);
-                }
-            }
-        }, 2000);
-    }
-
-    // GAME FUNCTIONS
-    const getPrestigeCost = (bruhCount) => {
-        return Math.floor(1000 * Math.pow(2.5, bruhCount));
-    };
-
-    const getMultiplier = () => {
-        const bruh = gameState.bruh || 0;
-        if (bruh > 1e12) {
-            return (1 + Math.pow(Math.log10(bruh + 1), 2)) * gameState.boostMultiplier;
-        }
-        return (1 + bruh) * gameState.boostMultiplier;
-    };
-
-    const getCost = (building) => {
-        const count = building.count || 0;
-        const baseCost = building.baseCost || 15;
-        
-        if (count > 1000) {
-            const exponent = Math.min(count, 10000) * 0.15;
-            return Math.floor(baseCost * Math.pow(1.15, Math.min(exponent, 100)));
-        }
-        
-        return Math.floor(baseCost * Math.pow(1.15, count));
-    };
-
-    const getCPS = () => {
-        let base = gameState.buildings.reduce((acc, b) => acc + (b.count * b.baseCPS), 0);
-        return base * getMultiplier();
-    };
-
-    const getMaxBuy = (building) => {
-        let canBuy = 0;
-        let tempNews = gameState.news;
-        let tempCount = building.count;
-        
-        const maxIterations = 1000;
-        
-        for (let i = 0; i < maxIterations; i++) {
-            let nextCost = getCost({...building, count: tempCount});
-            if (tempNews >= nextCost) {
-                canBuy++;
-                tempNews -= nextCost;
-                tempCount++;
-            } else {
-                break;
-            }
-        }
-        
-        return canBuy;
-    };
-
-    // Save game (combine local and Supabase)
+    
     function saveGame() {
         try {
             gameState.lastUpdate = Date.now();
             localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
             
-            // Also save to Supabase if connected
-            if (isConnected && gameState.id) {
-                saveGameToSupabase();
+            // Update player stats in Supabase if connected
+            if (isSupabaseConnected && currentPlayerId && Date.now() - lastPlayerUpdate > 30000) {
+                updatePlayerStats();
             }
         } catch (e) {
             console.warn('Could not save game state:', e);
         }
     }
-
-    // Load game from local storage
+    
     function loadGame() {
         try {
             const saved = localStorage.getItem('newsBruhGameState');
             if (saved) {
                 const parsed = JSON.parse(saved);
                 
-                // Migrate old saves
+                // Migrate old saves if needed
                 if (!parsed.version || parsed.version !== defaultGameState.version) {
+                    console.log('Migrating save data...');
+                    // Keep building counts if they exist
                     if (parsed.buildings && Array.isArray(parsed.buildings)) {
                         parsed.buildings.forEach((savedBuilding, index) => {
                             if (gameState.buildings[index]) {
@@ -2561,6 +2703,7 @@
                     gameState.bruh = parsed.bruh || 0;
                     gameState.version = defaultGameState.version;
                     
+                    // Initialize boost system for migrated saves
                     gameState.boostProgress = parsed.boostProgress || 0;
                     gameState.isBoostActive = parsed.isBoostActive || false;
                     gameState.boostTimeLeft = parsed.boostTimeLeft || 0;
@@ -2571,7 +2714,7 @@
                     gameState = parsed;
                 }
                 
-                // Ensure valid numbers
+                // Ensure we have valid numbers
                 gameState.news = Math.max(0, Number(gameState.news) || 0);
                 gameState.bruh = Math.max(0, Number(gameState.bruh) || 0);
                 gameState.boostProgress = Math.max(0, Number(gameState.boostProgress) || 0);
@@ -2579,12 +2722,17 @@
                 gameState.boostCooldown = Math.max(0, Number(gameState.boostCooldown) || 0);
                 gameState.boostMultiplier = Math.max(1, Number(gameState.boostMultiplier) || 1);
                 gameState.lastDepletionTime = gameState.lastDepletionTime || Date.now();
+                
+                console.log('Game loaded successfully');
             }
         } catch (e) {
             console.warn('Could not load saved game:', e);
+            // Reset to default if corrupted
+            gameState = JSON.parse(JSON.stringify(defaultGameState));
         }
     }
-
+    
+    // Fixed Game Functions
     function manualClick(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -2592,8 +2740,10 @@
         const amount = 1 * getMultiplier();
         gameState.news += amount;
         
+        // Increment boost progress
         incrementBoostProgress();
         
+        // If boost is active, reset the timer
         if (gameState.isBoostActive) {
             resetBoostTimer();
         }
@@ -2602,10 +2752,12 @@
         btn.classList.add('pulse');
         setTimeout(() => btn.classList.remove('pulse'), 300);
         
+        // Create floating text
         const floater = document.createElement('div');
         floater.className = 'floater';
         floater.innerText = `📰 +${formatNumber(amount)}`;
         
+        // Get position
         let x, y;
         if (e.type === 'touchstart' || e.type === 'touchmove') {
             const touch = e.touches[0] || e.changedTouches[0];
@@ -2624,7 +2776,7 @@
         updateUI();
         saveGame();
     }
-
+    
     function buyMax(id) {
         const building = gameState.buildings[id];
         let bought = 0;
@@ -2642,7 +2794,10 @@
         }
         
         if (bought > 0) {
+            // Visual feedback
             const card = document.getElementById(`card-${id}`);
+            const btn = document.getElementById(`btn-${id}`);
+            
             card.style.transform = 'scale(1.02)';
             card.style.backgroundColor = '#e8f5e8';
             card.classList.add('purchased');
@@ -2656,13 +2811,15 @@
             saveGame();
         }
     }
-
-    async function prestige() {
+    
+    function prestige() {
+        // Calculate how many Bruhs can be bought
         let bruhsToBuy = 0;
         let tempNews = gameState.news;
         let tempBruh = gameState.bruh;
         let totalCost = 0;
         
+        // Calculate max affordable Bruhs
         while (true) {
             const nextCost = getPrestigeCost(tempBruh);
             if (tempNews >= nextCost) {
@@ -2673,20 +2830,25 @@
             } else {
                 break;
             }
-            if (bruhsToBuy >= 100) break;
+            if (bruhsToBuy >= 100) break; // Safety limit
         }
         
-        if (bruhsToBuy === 0) return;
+        if (bruhsToBuy === 0) {
+            return;
+        }
         
         if (!confirm(`Are you sure? You will lose all News and Assets, but gain ${bruhsToBuy} Bruh${bruhsToBuy > 1 ? 's' : ''} (permanent +${bruhsToBuy * 100}% multiplier).\n\nCurrent Bruh: ${gameState.bruh}\nNew Bruh: ${gameState.bruh + bruhsToBuy}\nTotal Multiplier: x${1 + (gameState.bruh + bruhsToBuy)}`)) {
             return;
         }
         
+        // Deduct the total cost and add the Bruhs
         gameState.news -= totalCost;
         gameState.bruh += bruhsToBuy;
         
+        // Reset all buildings
         gameState.buildings.forEach(b => b.count = 0);
         
+        // Reset boost progress and cooldown (since it's a fresh start)
         gameState.boostProgress = 0;
         gameState.isBoostActive = false;
         gameState.boostTimeLeft = 0;
@@ -2694,16 +2856,20 @@
         gameState.boostMultiplier = 1;
         gameState.lastDepletionTime = Date.now();
         
+        // Hide breaking news banner
         const banner = document.getElementById('breaking-news-banner');
         banner.style.display = 'none';
         
+        // Stop emoji rain
         stopEmojiRain();
         
+        // Clear boost timer interval
         if (boostTimerInterval) {
             clearInterval(boostTimerInterval);
             boostTimerInterval = null;
         }
         
+        // Visual feedback
         const prestigeBox = document.querySelector('.prestige-box');
         prestigeBox.style.backgroundColor = '#ffe6e6';
         prestigeBox.style.transform = 'scale(1.05)';
@@ -2717,22 +2883,28 @@
         updateBoostProgress();
         saveGame();
     }
-
+    
+    // Fixed UI Update
     function updateUI() {
+        // Update stats
         document.getElementById('currency').textContent = formatNumber(gameState.news);
         document.getElementById('cps').textContent = formatNumber(getCPS());
         
+        // Show boost multiplier in multiplier display
         if (gameState.isBoostActive) {
             document.getElementById('multiplier').textContent = formatNumber(getMultiplier()) + ' (5x BOOST!)';
             document.getElementById('multiplier').style.color = '#ff0000';
+            document.getElementById('multiplier').style.textShadow = '0 0 10px rgba(255, 0, 0, 0.5)';
         } else {
             document.getElementById('multiplier').textContent = formatNumber(getMultiplier());
             document.getElementById('multiplier').style.color = 'var(--red-accent)';
+            document.getElementById('multiplier').style.textShadow = 'none';
         }
         
         document.getElementById('bruh-owned').textContent = formatNumber(gameState.bruh);
         document.getElementById('tap-value-display').textContent = `📰 +${formatNumber(1 * getMultiplier())} New per Tap`;
 
+        // Update prestige button
         const pBtn = document.getElementById('prestige-btn');
         const prestigeCost = getPrestigeCost(gameState.bruh);
         const prestigeCostElement = document.getElementById('prestige-cost');
@@ -2740,6 +2912,7 @@
         
         prestigeCostElement.textContent = `Costs: ${formatNumber(prestigeCost)} New`;
         
+        // Calculate max Bruhs that can be bought
         let maxBuy = 0;
         let tempNews = gameState.news;
         let tempBruh = gameState.bruh;
@@ -2753,7 +2926,7 @@
             } else {
                 break;
             }
-            if (maxBuy >= 100) break;
+            if (maxBuy >= 100) break; // Safety limit
         }
         
         prestigeMaxElement.textContent = `Max: ${maxBuy}`;
@@ -2766,6 +2939,7 @@
             pBtn.innerHTML = `Need ${formatNumber(prestigeCost)} New <div id="prestige-cost" class="prestige-cost">Costs: ${formatNumber(prestigeCost)} New</div> <div id="prestige-max" class="prestige-max">Max: 0</div>`;
         }
 
+        // Update building cards
         gameState.buildings.forEach(building => {
             const currentCost = getCost(building);
             const maxBuy = getMaxBuy(building);
@@ -2776,6 +2950,7 @@
                 document.getElementById(`count-${building.id}`).textContent = formatNumber(building.count);
                 document.getElementById(`cost-text-${building.id}`).textContent = `Cost: ${formatNumber(currentCost)}`;
                 
+                // Update card classes
                 if (building.count > 0) {
                     card.classList.add('purchased');
                 } else {
@@ -2800,12 +2975,15 @@
             }
         });
     }
-
-    // Initialize the game
+    
+    // Fixed Initialization
     async function init() {
         if (isInitialized) return;
         
         loadGame();
+        
+        // NEW: Start updating the date/time display
+        startDateTimeUpdate();
         
         const container = document.getElementById('upgrades-list');
         container.innerHTML = '';
@@ -2832,20 +3010,29 @@
             container.appendChild(div);
         });
         
+        // Add event listeners
         const printBtn = document.getElementById('print-btn');
+        
+        // Mouse events
         printBtn.addEventListener('mousedown', manualClick);
+        
+        // Touch events with proper handling
         printBtn.addEventListener('touchstart', function(e) {
             manualClick(e);
         }, { passive: false });
+        
         printBtn.addEventListener('touchend', function(e) {
             e.preventDefault();
         }, { passive: false });
         
+        // ENHANCED: Boost button is now display-only since it auto-activates
         const boostButton = document.getElementById('boost-button');
         boostButton.addEventListener('click', function() {
-            // Auto-activates at 100%
+            // Do nothing - boost auto-activates at 100%
+            // Button is just for display
         });
         
+        // NEW: Chat input enter key support
         const chatInput = document.getElementById('chat-input');
         chatInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -2853,6 +3040,7 @@
             }
         });
         
+        // NEW: Name input enter key support
         const nameInput = document.getElementById('player-name-input');
         nameInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -2860,36 +3048,49 @@
             }
         });
         
+        // Prevent context menu on button
         printBtn.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             return false;
         });
         
-        // Initialize real-time features
-        await initRealTimeSubscriptions();
-        await updatePlayerCounts();
-        await updateLeaderboard();
-        await updateOnlinePlayers();
-        await loadChatMessages();
+        // Initialize offline progress
+        const now = Date.now();
+        const lastUpdate = gameState.lastUpdate || now;
+        const timeDiff = (now - lastUpdate) / 1000; // Convert to seconds
         
-        startDateTimeUpdate();
+        if (timeDiff > 1 && timeDiff < 86400) { // Between 1 second and 24 hours
+            const offlineEarnings = getCPS() * timeDiff;
+            if (offlineEarnings > 0) {
+                gameState.news += offlineEarnings;
+                console.log(`Offline earnings: ${formatNumber(offlineEarnings)} New (${Math.floor(timeDiff)} seconds)`);
+            }
+        }
+        
         updateUI();
         updateBoostProgress();
         
+        // ENHANCED: If boost was active when saved, reactivate it
         if (gameState.isBoostActive) {
+            // Restart the boost timer
             if (boostTimerInterval) clearInterval(boostTimerInterval);
             boostTimerInterval = setInterval(updateBoostTimer, 1000);
             
+            // Show enhanced breaking news banner
             const banner = document.getElementById('breaking-news-banner');
             banner.style.display = 'block';
+            
+            // Start dropping emojis
             startEmojiRain();
             
+            // Add visual effect to stats
             const statBlocks = document.querySelectorAll('.stat-block');
             statBlocks.forEach(block => {
                 block.classList.add('active-boost');
             });
         }
         
+        // ENHANCED: If in cooldown, start cooldown timer
         if (gameState.boostCooldown > 0) {
             const cooldownInterval = setInterval(() => {
                 gameState.boostCooldown--;
@@ -2903,30 +3104,63 @@
             }, 1000);
         }
         
+        // NEW: Initialize multiplayer features if connected
+        if (isSupabaseConnected) {
+            // Update player counts
+            updatePlayerCounts();
+            
+            // Update leaderboard
+            updateLeaderboard();
+            
+            // Update online players
+            updateOnlinePlayers();
+            
+            // Update chat
+            updateChatDisplay();
+            
+            // Set up real-time subscriptions
+            setupRealtimeSubscriptions();
+            
+            // Update player stats immediately
+            updatePlayerStats();
+        } else {
+            // Show offline mode
+            document.getElementById('chat-status').textContent = 'Offline';
+            document.getElementById('online-count').textContent = '1';
+            document.getElementById('total-count').textContent = '1';
+            document.getElementById('online-users-count').textContent = '1';
+        }
+        
         isInitialized = true;
+        
+        // Start game loops
         startGameLoops();
     }
-
-    // Game loops
+    
+    // Fixed Game Loops
     function startGameLoops() {
+        // Update news based on CPS
         function updateNews() {
             const cps = getCPS();
             if (cps > 0) {
-                gameState.news += cps * 0.1;
+                gameState.news += cps * 0.1; // Update 10 times per second
                 if (gameState.news < 0) gameState.news = 0;
                 if (gameState.news > Number.MAX_SAFE_INTEGER) {
+                    // Handle extremely large numbers
                     gameState.news = Number.MAX_SAFE_INTEGER;
                 }
             }
         }
 
+        // Main game loop
         function gameLoop() {
             updateNews();
-            depleteBoostProgress();
+            depleteBoostProgress(); // NEW: Deplete boost over time
             updateUI();
             requestAnimationFrame(gameLoop);
         }
 
+        // Rotate headlines
         function rotateHeadlines() {
             const headlines = [
                 "Local cat appointed Editor-in-Chief.",
@@ -2961,56 +3195,72 @@
             }, 500);
         }
 
+        // Auto-save every 30 seconds
         function autoSave() {
             saveGame();
-            if (isConnected && gameState.id) {
-                updatePlayerLastActive();
-            }
         }
 
-        function updateLeaderboardPeriodically() {
-            if (isConnected) {
-                updateLeaderboard();
+        // NEW: Update multiplayer data periodically
+        function updateMultiplayerData() {
+            if (!isSupabaseConnected) return;
+            
+            const now = Date.now();
+            if (now - lastPlayerUpdate > 30000) { // Every 30 seconds
+                updatePlayerStats();
             }
-        }
-
-        function updateOnlinePlayersPeriodically() {
-            if (isConnected) {
-                updateOnlinePlayers();
-            }
-        }
-
-        function updatePlayerCountsPeriodically() {
-            if (isConnected) {
+            
+            // Update player counts every 10 seconds
+            if (now % 10000 < 100) {
                 updatePlayerCounts();
             }
+            
+            // Update leaderboard every 15 seconds
+            if (now - lastLeaderboardUpdate > 15000) {
+                updateLeaderboard();
+                updateOnlinePlayers();
+                lastLeaderboardUpdate = now;
+            }
         }
 
+        // Start loops
         gameLoop();
         setInterval(rotateHeadlines, 10000);
         setInterval(autoSave, 30000);
-        setInterval(updateLeaderboardPeriodically, 15000);
-        setInterval(updateOnlinePlayersPeriodically, 30000);
-        setInterval(updatePlayerCountsPeriodically, 60000);
+        setInterval(updateMultiplayerData, 1000);
     }
 
     // Initialize on load
     window.addEventListener('DOMContentLoaded', function() {
+        // Check if player already has a name
         const savedName = localStorage.getItem('newsBruhPlayerName');
         if (savedName && savedName.trim() !== '') {
+            // Player has a name, hide modal and initialize game
+            document.getElementById('name-selection-modal').style.display = 'none';
+            document.getElementById('newspaper').style.display = 'flex';
             gameState.playerName = savedName;
-            init();
+            
+            // Test Supabase connection
+            checkSupabaseConnection().then(connected => {
+                isSupabaseConnected = connected;
+                init();
+            });
+        } else {
+            // Show name selection modal
+            document.getElementById('name-selection-modal').style.display = 'flex';
+            document.getElementById('player-name-input').focus();
         }
     });
     
     window.addEventListener('beforeunload', saveGame);
     
-    // Export functions to global scope
+    // Export functions to global scope for onclick handlers
     window.manualClick = manualClick;
     window.buyMax = buyMax;
     window.prestige = prestige;
     window.sendChatMessage = sendChatMessage;
     window.startGameWithName = startGameWithName;
+    
+    // Export the formatting function for debugging
     window.formatNumber = formatNumber;
 </script>
 </body>
