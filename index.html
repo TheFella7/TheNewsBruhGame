@@ -3,17 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The News Bruh | Tycoon - Online Edition</title>
+    <title>The News Bruh | Tycoon</title>
     
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+    
+    <!-- Supabase Client -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <style>
+        /* Name Selection Modal Styles */
+        #name-selection-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+
+        #name-selection-modal.hidden {
+            display: none;
+        }
+
+        .name-modal-content {
+            background: var(--bg-paper);
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            border: 6px solid var(--ink);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            position: relative;
+            text-align: center;
+        }
+
+        .name-modal-content::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 2px solid var(--red-accent);
+            pointer-events: none;
+        }
+
+        .name-modal-title {
+            font-family: var(--font-old-english);
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            color: var(--ink);
+        }
+
+        .name-modal-subtitle {
+            font-family: var(--font-head);
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            color: var(--ink-light);
+            font-style: italic;
+        }
+
+        .name-input-container {
+            margin: 30px 0;
+        }
+
+        #player-name-input {
+            width: 100%;
+            padding: 20px;
+            font-family: var(--font-mono);
+            font-size: 1.2rem;
+            border: 3px solid var(--ink);
+            background: white;
+            text-align: center;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        #player-name-input:focus {
+            border-color: var(--red-accent);
+            box-shadow: 0 0 20px rgba(204, 0, 0, 0.3);
+        }
+
+        .name-rules {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--ink-light);
+            margin-top: 10px;
+            text-align: left;
+            padding: 15px;
+            background: var(--bg-paper-dark);
+            border: 1px solid var(--ink);
+        }
+
+        .name-rules ul {
+            list-style: none;
+            padding-left: 10px;
+        }
+
+        .name-rules li {
+            margin-bottom: 5px;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .name-rules li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--red-accent);
+        }
+
+        .start-game-btn {
+            background: var(--red-accent);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-family: var(--font-head);
+            font-size: 1.3rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 20px;
+            width: 100%;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .start-game-btn:hover {
+            background: #b30000;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .start-game-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        .start-game-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 30%,
+                rgba(255,255,255,0.1) 50%,
+                transparent 70%
+            );
+            transform: rotate(45deg);
+            animation: shine 3s infinite linear;
+        }
+
+        @keyframes shine {
+            0% { transform: rotate(45deg) translateX(-100%); }
+            100% { transform: rotate(45deg) translateX(100%); }
+        }
+
+        @media (max-width: 768px) {
+            .name-modal-content {
+                padding: 20px;
+            }
+            
+            .name-modal-title {
+                font-size: 2.5rem;
+            }
+            
+            #player-name-input {
+                padding: 15px;
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .name-modal-title {
+                font-size: 2rem;
+            }
+            
+            .name-modal-subtitle {
+                font-size: 1rem;
+            }
+            
+            .start-game-btn {
+                padding: 15px;
+                font-size: 1.1rem;
+            }
+        }
+
         :root {
             --bg-paper: #f9f7f1; 
             --bg-paper-dark: #e6e4dc;
@@ -27,179 +214,6 @@
             --font-old-english: 'UnifrakturMaguntia', cursive; 
         }
 
-        /* Authentication Modal Styles */
-        #auth-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 100000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: var(--font-mono);
-        }
-
-        .auth-container {
-            background: var(--bg-paper);
-            border: 4px solid var(--ink);
-            padding: 40px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
-        }
-
-        .auth-tabs {
-            display: flex;
-            margin-bottom: 30px;
-            border-bottom: 2px solid var(--ink);
-        }
-
-        .auth-tab {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            background: none;
-            border: none;
-            font-family: var(--font-mono);
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .auth-tab.active {
-            background: var(--ink);
-            color: white;
-        }
-
-        .auth-form {
-            display: none;
-        }
-
-        .auth-form.active {
-            display: block;
-        }
-
-        .auth-title {
-            font-family: var(--font-head);
-            font-size: 2rem;
-            margin-bottom: 20px;
-            text-align: center;
-            border-bottom: 2px solid var(--ink);
-            padding-bottom: 10px;
-        }
-
-        .auth-input-group {
-            margin-bottom: 20px;
-        }
-
-        .auth-input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: var(--ink);
-        }
-
-        .auth-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid var(--ink);
-            background: white;
-            font-family: var(--font-mono);
-            font-size: 1rem;
-        }
-
-        .auth-button {
-            width: 100%;
-            padding: 15px;
-            background: var(--ink);
-            color: white;
-            border: none;
-            font-family: var(--font-mono);
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin-top: 10px;
-        }
-
-        .auth-button:hover {
-            background: #333;
-        }
-
-        .auth-button:disabled {
-            background: #666;
-            cursor: not-allowed;
-        }
-
-        .auth-error {
-            background: #ffcccc;
-            color: #cc0000;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 2px solid #cc0000;
-            display: none;
-        }
-
-        .auth-success {
-            background: #ccffcc;
-            color: #006400;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 2px solid #006400;
-            display: none;
-        }
-
-        .auth-footer {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 0.9rem;
-            color: var(--ink-light);
-        }
-
-        .auth-footer a {
-            color: var(--red-accent);
-            text-decoration: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .auth-footer a:hover {
-            text-decoration: underline;
-        }
-
-        .user-info {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: var(--bg-paper);
-            border: 2px solid var(--ink);
-            padding: 10px 15px;
-            z-index: 1000;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            box-shadow: 3px 3px 0 rgba(0,0,0,0.2);
-        }
-
-        .user-info span {
-            font-weight: bold;
-            color: var(--red-accent);
-        }
-
-        .logout-btn {
-            background: var(--red-accent);
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            margin-left: 10px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        /* Rest of the original CSS styles remain exactly the same */
         * { 
             box-sizing: border-box; 
             -webkit-tap-highlight-color: transparent; 
@@ -367,7 +381,7 @@
             color: var(--ink);
         }
 
-        /* Enhanced: Breaking News Banner */
+        /* ENHANCED: Breaking News Banner */
         #breaking-news-container {
             position: relative;
             margin-bottom: 20px;
@@ -512,7 +526,7 @@
             font-weight: bold;
         }
 
-        /* Enhanced: Boost System Styles - RED THEME */
+        /* ENHANCED: Boost System Styles - RED THEME */
         #boost-container {
             margin: 20px 0;
             text-align: center;
@@ -856,7 +870,7 @@
             transition: opacity 0.5s ease;
         }
 
-        /* Leaderboard Styles */
+        /* NEW: Leaderboard Styles */
         #leaderboard-section {
             border-top: 5px double var(--ink);
             padding: 20px;
@@ -926,7 +940,7 @@
             font-weight: bold;
         }
 
-        /* Chat Styles */
+        /* NEW: Chat Styles */
         #chat-section {
             border-top: 5px double var(--ink);
             padding: 20px;
@@ -1160,168 +1174,18 @@
             opacity: 0.9;
         }
 
-        /* Hard Reset Button Styles */
-        .hard-reset-container {
-            text-align: center;
-            padding: 20px;
-            border-top: 5px double var(--ink);
-            background: var(--bg-paper-dark);
+        /* Connection Status */
+        .connection-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
         }
 
-        #hard-reset-btn {
-            background: linear-gradient(to bottom, #8B0000, #660000);
-            color: #ffffff;
-            border: 3px solid var(--ink);
-            padding: 12px 24px;
-            font-family: var(--font-mono);
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 0 #330000;
-            margin-top: 10px;
-        }
-
-        #hard-reset-btn:hover {
-            background: linear-gradient(to bottom, #a00000, #770000);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 0 #330000;
-        }
-
-        #hard-reset-btn:active {
-            transform: translateY(1px);
-            box-shadow: 0 2px 0 #330000;
-        }
-
-        .reset-warning {
-            font-size: 0.9rem;
-            color: var(--red-accent);
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-
-        .reset-confirmation-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 100000;
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .reset-confirmation-box {
-            background: var(--bg-paper);
-            border: 4px solid var(--red-accent);
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
-            text-align: center;
-            position: relative;
-        }
-
-        .reset-confirmation-box h3 {
-            font-family: var(--font-head);
-            font-size: 1.8rem;
-            color: var(--red-accent);
-            margin-bottom: 15px;
-            border-bottom: 2px solid var(--red-accent);
-            padding-bottom: 10px;
-        }
-
-        .reset-confirmation-box p {
-            font-family: var(--font-mono);
-            font-size: 1rem;
-            line-height: 1.5;
-            margin-bottom: 25px;
-            color: var(--ink);
-        }
-
-        .reset-confirmation-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .reset-confirm-btn {
-            background: linear-gradient(to bottom, #cc0000, #990000);
-            color: white;
-            border: 2px solid var(--ink);
-            padding: 12px 30px;
-            font-family: var(--font-mono);
-            font-weight: bold;
-            cursor: pointer;
-            flex: 1;
-            transition: all 0.2s;
-        }
-
-        .reset-confirm-btn:hover {
-            background: linear-gradient(to bottom, #ff0000, #bb0000);
-            transform: translateY(-2px);
-        }
-
-        .reset-cancel-btn {
-            background: linear-gradient(to bottom, #666666, #444444);
-            color: white;
-            border: 2px solid var(--ink);
-            padding: 12px 30px;
-            font-family: var(--font-mono);
-            font-weight: bold;
-            cursor: pointer;
-            flex: 1;
-            transition: all 0.2s;
-        }
-
-        .reset-cancel-btn:hover {
-            background: linear-gradient(to bottom, #888888, #666666);
-            transform: translateY(-2px);
-        }
-
-        .reset-warning-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            display: block;
-            animation: pulseWarning 1.5s infinite;
-        }
-
-        @keyframes pulseWarning {
-            0%, 100% { transform: scale(1); color: #ff0000; }
-            50% { transform: scale(1.1); color: #ff8800; }
-        }
-
-        .reset-stats {
-            background: rgba(255, 0, 0, 0.1);
-            padding: 15px;
-            margin: 15px 0;
-            border: 1px solid var(--red-accent);
-            text-align: left;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-        }
-
-        .reset-stat-item {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-        }
-
-        .reset-stat-label {
-            color: var(--ink-light);
-        }
-
-        .reset-stat-value {
-            color: var(--red-accent);
-            font-weight: bold;
-        }
+        .status-connected { background: #4caf50; }
+        .status-disconnected { background: #f44336; }
+        .status-connecting { background: #ff9800; }
 
         @media (max-width: 1024px) {
             #main-content {
@@ -1431,12 +1295,6 @@
             .boost-label {
                 font-size: 0.9rem;
             }
-
-            .user-info {
-                position: static;
-                margin: 10px auto;
-                width: 90%;
-            }
         }
 
         @media (max-width: 480px) {
@@ -1487,101 +1345,41 @@
             .boost-label {
                 font-size: 0.8rem;
             }
-
-            .auth-container {
-                padding: 20px;
-            }
-            
-            .auth-tab {
-                padding: 10px;
-                font-size: 0.9rem;
-            }
         }
     </style>
 </head>
 <body>
 
-<!-- User Info Display -->
-<div id="user-info" class="user-info" style="display: none;">
-    Logged in as: <span id="display-username">Loading...</span>
-    <button class="logout-btn" onclick="logout()">Logout</button>
-</div>
-
-<!-- Authentication Modal -->
-<div id="auth-modal">
-    <div class="auth-container">
-        <div class="auth-tabs">
-            <button class="auth-tab active" onclick="switchAuthTab('register')">Register</button>
-            <button class="auth-tab" onclick="switchAuthTab('login')">Login</button>
-            <button class="auth-tab" onclick="switchAuthTab('reset')">Reset Password</button>
-        </div>
-
-        <!-- Error/Success Messages -->
-        <div id="auth-error" class="auth-error"></div>
-        <div id="auth-success" class="auth-success"></div>
-
-        <!-- Registration Form -->
-        <div id="register-form" class="auth-form active">
-            <div class="auth-title">Create Account</div>
-            <div class="auth-input-group">
-                <label for="register-email">Email Address</label>
-                <input type="email" id="register-email" class="auth-input" placeholder="your.email@example.com">
-            </div>
-            <div class="auth-input-group">
-                <label for="register-username">Username</label>
-                <input type="text" id="register-username" class="auth-input" placeholder="Choose a username">
-            </div>
-            <div class="auth-input-group">
-                <label for="register-password">Password</label>
-                <input type="password" id="register-password" class="auth-input" placeholder="Minimum 6 characters">
-            </div>
-            <div class="auth-input-group">
-                <label for="register-confirm-password">Confirm Password</label>
-                <input type="password" id="register-confirm-password" class="auth-input" placeholder="Repeat your password">
-            </div>
-            <button class="auth-button" onclick="register()">Create Account & Start Playing</button>
-            <div class="auth-footer">
-                Already have an account? <a onclick="switchAuthTab('login')">Login here</a>
+<!-- Name Selection Modal -->
+<div id="name-selection-modal">
+    <div class="name-modal-content">
+        <div class="name-modal-title">The News Bruh</div>
+        <div class="name-modal-subtitle">Enter the Press Room</div>
+        
+        <div class="name-input-container">
+            <input type="text" id="player-name-input" placeholder="Type your newsroom name..." maxlength="20" autofocus>
+            <div class="name-rules">
+                <strong>Name Rules:</strong>
+                <ul>
+                    <li>Maximum 20 characters</li>
+                    <li>Almost any character allowed (letters, numbers, spaces, symbols)</li>
+                    <li>Your name will appear on the live leaderboard</li>
+                    <li>Other players can tag you in chat using @name</li>
+                    <li>Note: @ symbol is reserved for tagging system</li>
+                </ul>
             </div>
         </div>
-
-        <!-- Login Form -->
-        <div id="login-form" class="auth-form">
-            <div class="auth-title">Welcome Back</div>
-            <div class="auth-input-group">
-                <label for="login-email">Email Address</label>
-                <input type="email" id="login-email" class="auth-input" placeholder="your.email@example.com">
-            </div>
-            <div class="auth-input-group">
-                <label for="login-password">Password</label>
-                <input type="password" id="login-password" class="auth-input" placeholder="Your password">
-            </div>
-            <button class="auth-button" onclick="login()">Login to Your Account</button>
-            <div class="auth-footer">
-                New player? <a onclick="switchAuthTab('register')">Register here</a> • 
-                <a onclick="switchAuthTab('reset')">Forgot password?</a>
-            </div>
-        </div>
-
-        <!-- Password Reset Form -->
-        <div id="reset-form" class="auth-form">
-            <div class="auth-title">Reset Password</div>
-            <div class="auth-input-group">
-                <label for="reset-email">Email Address</label>
-                <input type="email" id="reset-email" class="auth-input" placeholder="your.email@example.com">
-            </div>
-            <button class="auth-button" onclick="resetPassword()">Send Reset Link</button>
-            <div class="auth-footer">
-                Remember your password? <a onclick="switchAuthTab('login')">Login here</a>
-            </div>
-        </div>
+        
+        <button class="start-game-btn" onclick="startGameWithName()">
+            START PRINTING
+        </button>
     </div>
 </div>
 
-<div id="newspaper">
+<div id="newspaper" style="display: none;">
     <div id="ticker-tape">
         <div class="ticker-content" id="ticker-text">
-            Join <a href="https://www.reddit.com/r/thenewsbruh/s/HPIdtW6H3X" target="_blank">r/TheNewsBruh</a> on Reddit & Reach The Top 3 on The Leaderboard to Earn Real New Token &nbsp;&bull;&nbsp; EXTRA! EXTRA! &nbsp;&bull;&nbsp; NEW: Online Multiplayer Edition!
+            Join <a href="https://www.reddit.com/r/thenewsbruh/s/HPIdtW6H3X" target="_blank">r/TheNewsBruh</a> on Reddit & Reach The Top 3 on The Leaderboard to Earn Real New Token &nbsp;&bull;&nbsp; EXTRA! EXTRA!
         </div>
     </div>
 
@@ -1589,14 +1387,17 @@
         <h1>The News Bruh</h1>
         
         <div class="player-counts">
-            <span>Players Online: <span id="online-count">12,403</span></span>
-            <span>Total Players: <span id="total-count">842,019</span></span>
-            <span>Your Rank: <span id="player-rank">#--</span></span>
+            <span>Players Online: <span id="online-count">0</span></span>
+            <span>Total Players: <span id="total-count">0</span></span>
+            <span id="connection-status" style="font-size: 0.7rem;">
+                <span class="connection-status status-connecting"></span>
+                Connecting...
+            </span>
         </div>
 
         <div class="meta-line">
-            <span>Vol. 2</span>
-            <span>Online Edition</span>
+            <span>Vol. 1</span>
+            <span>Est. 2026</span>
             <span id="currentDateTime">Loading...</span>
         </div>
     </header>
@@ -1638,7 +1439,7 @@
         <div class="column" id="col-center">
             <h2>Front Page</h2>
             
-            <!-- Enhanced: Breaking News Banner -->
+            <!-- ENHANCED: Breaking News Banner -->
             <div id="breaking-news-container">
                 <div id="breaking-news-banner">
                     <div class="breaking-news-text">
@@ -1653,7 +1454,7 @@
                 <span class="print-sub" id="tap-value-display">📰 +1 New per Tap</span>
             </button>
 
-            <!-- Enhanced: Boost Button -->
+            <!-- ENHANCED: Boost Button -->
             <div id="boost-container">
                 <button id="boost-button">
                     <div id="boost-progress-bar"></div>
@@ -1693,7 +1494,7 @@
     <!-- Leaderboard Section -->
     <div id="leaderboard-section">
         <div class="leaderboard-header">
-            <h2 style="border-bottom: none; margin: 0;">🏆 Global Leaderboard 🏆</h2>
+            <h2 style="border-bottom: none; margin: 0;">🏆 Live Leaderboard 🏆</h2>
             <div id="leaderboard-update-time" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-light);">
                 Updated: Just now
             </div>
@@ -1718,13 +1519,16 @@
         <div class="chat-container">
             <div class="chat-header">
                 <span>📰 PRESS ROOM CHAT</span>
-                <span id="chat-status">Connected</span>
+                <span id="chat-status">
+                    <span class="connection-status status-connecting"></span>
+                    Connecting...
+                </span>
             </div>
             <div id="chat-messages">
                 <!-- Chat messages will be inserted here -->
                 <div class="chat-message other">
                     <div class="message-sender">System <span class="message-timestamp">Just now</span></div>
-                    <div class="message-content">Welcome to The News Bruh Online Edition! Chat with players worldwide.</div>
+                    <div class="message-content">Welcome to The News Bruh Press Room! Chat with other players here.</div>
                 </div>
             </div>
             <div id="chat-input-container">
@@ -1735,62 +1539,14 @@
         
         <div class="chat-users">
             <div class="users-header">
-                <span>🟢 ONLINE PLAYERS (<span id="online-users-count">1</span>)</span>
+                <span>🟢 ONLINE PLAYERS (<span id="online-users-count">0</span>)</span>
             </div>
             <div id="online-users">
                 <!-- Online users will be inserted here -->
             </div>
         </div>
     </div>
-
-    <!-- Hard Reset Button Section -->
-    <div class="hard-reset-container">
-        <div class="reset-warning">⚠️ CAUTION: IRREVERSIBLE ACTION</div>
-        <button id="hard-reset-btn" onclick="showResetConfirmation()">
-            🗑️ HARD RESET GAME
-        </button>
-        <div style="font-size: 0.8rem; color: var(--ink-light); margin-top: 8px;">
-            This will delete ALL progress, chat, and leaderboard data
-        </div>
-    </div>
-
-    <!-- Reset Confirmation Modal -->
-    <div id="reset-confirmation-modal" class="reset-confirmation-modal">
-        <div class="reset-confirmation-box">
-            <span class="reset-warning-icon">⚠️</span>
-            <h3>CONFIRM HARD RESET</h3>
-            <p>Are you absolutely sure you want to reset EVERYTHING? This action cannot be undone!</p>
-            
-            <div class="reset-stats">
-                <div class="reset-stat-item">
-                    <span class="reset-stat-label">Current Bruh:</span>
-                    <span class="reset-stat-value" id="reset-current-bruh">0</span>
-                </div>
-                <div class="reset-stat-item">
-                    <span class="reset-stat-label">Current News:</span>
-                    <span class="reset-stat-value" id="reset-current-news">0</span>
-                </div>
-                <div class="reset-stat-item">
-                    <span class="reset-stat-label">Buildings Owned:</span>
-                    <span class="reset-stat-value" id="reset-buildings-count">0</span>
-                </div>
-                <div class="reset-stat-item">
-                    <span class="reset-stat-label">Chat Messages:</span>
-                    <span class="reset-stat-value" id="reset-chat-count">0</span>
-                </div>
-            </div>
-            
-            <div class="reset-confirmation-buttons">
-                <button class="reset-cancel-btn" onclick="hideResetConfirmation()">
-                    CANCEL - KEEP MY PROGRESS
-                </button>
-                <button class="reset-confirm-btn" onclick="performHardReset()">
-                    YES, DELETE EVERYTHING
-                </button>
-            </div>
-        </div>
-    </div>
-</div> <!-- Closing div for #newspaper -->
+</div>
 
 <!-- Chat Notification -->
 <div id="chat-notification" class="chat-notification" style="display: none;">
@@ -1799,20 +1555,16 @@
 </div>
 
 <script>
-    // Supabase Configuration (using your provided credentials)
+    // Supabase Configuration
     const SUPABASE_URL = 'https://qlwtovkrmfoqfgrtynrv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsd3RvdmtybWZvcWZncnR5bnJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzE4NTksImV4cCI6MjA4Mzg0Nzg1OX0.XMPhSftpLtTeM3gTS0Acf6DrFuI_H0U-iAfxAas9n8Y';
-
+    
     // Initialize Supabase client
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // Authentication State
-    let currentUser = null;
-    let isAuthenticated = false;
-    let authCheckComplete = false;
-
-    // Game State Management
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Game State with Supabase ID
     const defaultGameState = {
+        id: null,
         news: 0,
         bruh: 0,
         buildings: [
@@ -1824,10 +1576,10 @@
             { id: 5, name: "Media Empire", baseCost: 1400000, baseCPS: 850, count: 0 }
         ],
         lastUpdate: Date.now(),
-        version: "2.0.0", // Updated version for online edition
+        version: "1.0.7",
         playerName: "",
         chatNotifications: true,
-        // Enhanced: Boost System State
+        // Boost System State
         boostProgress: 0,
         isBoostActive: false,
         boostTimeLeft: 0,
@@ -1839,642 +1591,28 @@
     let gameState = JSON.parse(JSON.stringify(defaultGameState));
     let isInitialized = false;
     
-    // Enhanced: Boost system variables
+    // Boost system variables
     let breakingNewsEmojis = [];
     let boostEmojiInterval = null;
     let boostTimerInterval = null;
+    
+    // Real-time subscriptions
+    let leaderboardSubscription = null;
+    let chatSubscription = null;
+    let onlinePlayersSubscription = null;
+    
+    // Connection status
+    let isConnected = false;
+    let connectionRetries = 0;
+    const MAX_RETRIES = 5;
 
-    // Chat System Variables
-    let chatMessages = [];
-    let onlinePlayers = [];
-    let leaderboardData = [];
-    let lastChatUpdate = 0;
-    let lastLeaderboardUpdate = 0;
-
-    // Live Date & Time Display
-    function updateDateTime() {
-        const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const year = now.getFullYear();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        
-        const dateTimeString = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-        
-        const dateTimeElement = document.getElementById('currentDateTime');
-        if (dateTimeElement) {
-            dateTimeElement.textContent = dateTimeString;
-        }
-    }
-
-    function startDateTimeUpdate() {
-        updateDateTime();
-        setInterval(updateDateTime, 1000);
-    }
-
-    // FIXED: Authentication Functions
-    async function checkAuth() {
-        try {
-            console.log('Checking authentication...');
-            const { data: { session }, error } = await supabase.auth.getSession();
-            
-            if (error) {
-                console.error('Session error:', error);
-                showAuthModal();
-                return;
-            }
-            
-            if (session?.user) {
-                console.log('User found:', session.user.email);
-                currentUser = session.user;
-                isAuthenticated = true;
-                
-                // Get user profile from database
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (profileError && profileError.code === 'PGRST116') {
-                    // Profile doesn't exist, create it
-                    console.log('Profile not found, creating...');
-                    await createUserProfile();
-                } else if (profileError) {
-                    console.warn('Profile error:', profileError);
-                    // Still create profile as fallback
-                    await createUserProfile();
-                } else if (profile) {
-                    console.log('Profile loaded:', profile.username);
-                    gameState.playerName = profile.username || currentUser.email.split('@')[0];
-                    
-                    // Load game state from database
-                    if (profile.game_state) {
-                        try {
-                            const savedState = JSON.parse(profile.game_state);
-                            if (savedState) {
-                                // Preserve current game state structure while loading saved data
-                                gameState = {
-                                    ...defaultGameState,
-                                    ...savedState,
-                                    playerName: profile.username || currentUser.email.split('@')[0],
-                                    buildings: gameState.buildings.map((building, index) => ({
-                                        ...building,
-                                        count: savedState.buildings?.[index]?.count || 0
-                                    }))
-                                };
-                            }
-                        } catch (e) {
-                            console.warn('Error parsing saved game state:', e);
-                        }
-                    }
-                }
-                
-                updateUserInfo();
-                hideAuthModal();
-                initGame();
-            } else {
-                console.log('No session found, showing auth modal');
-                showAuthModal();
-            }
-        } catch (error) {
-            console.error('Auth check error:', error);
-            showAuthModal();
-        } finally {
-            authCheckComplete = true;
-        }
-    }
-
-    // FIXED: Create user profile
-    async function createUserProfile() {
-        if (!currentUser) return;
-        
-        try {
-            // Create default username from email
-            const baseUsername = currentUser.email.split('@')[0];
-            const username = baseUsername + Math.floor(Math.random() * 1000);
-            
-            const initialGameState = JSON.parse(JSON.stringify(defaultGameState));
-            initialGameState.playerName = username;
-            
-            // Use upsert to handle both insert and update
-            const { error } = await supabase
-                .from('profiles')
-                .upsert({
-                    id: currentUser.id,
-                    email: currentUser.email,
-                    username: username,
-                    created_at: new Date().toISOString(),
-                    game_state: JSON.stringify(initialGameState),
-                    bruh_count: 0,
-                    news_count: 0,
-                    player_level: 0,
-                    last_active: new Date().toISOString()
-                }, {
-                    onConflict: 'id',
-                    ignoreDuplicates: false
-                });
-            
-            if (error) {
-                console.error('Failed to create/update profile:', error);
-                
-                // Try with a different username
-                const newUsername = username + Math.floor(Math.random() * 1000);
-                const { error: retryError } = await supabase
-                    .from('profiles')
-                    .upsert({
-                        id: currentUser.id,
-                        email: currentUser.email,
-                        username: newUsername,
-                        created_at: new Date().toISOString(),
-                        game_state: JSON.stringify({ ...initialGameState, playerName: newUsername }),
-                        bruh_count: 0,
-                        news_count: 0,
-                        player_level: 0,
-                        last_active: new Date().toISOString()
-                    }, {
-                        onConflict: 'id',
-                        ignoreDuplicates: false
-                    });
-                
-                if (retryError) {
-                    console.error('Failed on retry too:', retryError);
-                    // Use a fallback username
-                    gameState.playerName = currentUser.email.split('@')[0];
-                } else {
-                    gameState.playerName = newUsername;
-                    gameState = { ...initialGameState, playerName: newUsername };
-                }
-            } else {
-                gameState.playerName = username;
-                gameState = initialGameState;
-            }
-            
-        } catch (error) {
-            console.error('Failed to create profile:', error);
-            // Use a fallback username
-            gameState.playerName = currentUser.email.split('@')[0];
-        }
-    }
-
-    // FIXED: Registration function
-    async function register() {
-        console.log('Register function called');
-        
-        const email = document.getElementById('register-email').value;
-        const username = document.getElementById('register-username').value;
-        const password = document.getElementById('register-password').value;
-        const confirmPassword = document.getElementById('register-confirm-password').value;
-        
-        // Validation
-        if (!email || !username || !password) {
-            showAuthError('Please fill in all fields');
-            return;
-        }
-        
-        if (password.length < 6) {
-            showAuthError('Password must be at least 6 characters');
-            return;
-        }
-        
-        if (password !== confirmPassword) {
-            showAuthError('Passwords do not match');
-            return;
-        }
-        
-        if (username.length < 3 || username.length > 20) {
-            showAuthError('Username must be between 3 and 20 characters');
-            return;
-        }
-        
-        // Disable button and show loading
-        const button = document.querySelector('#register-form .auth-button');
-        const originalText = button.textContent;
-        button.textContent = 'Creating account...';
-        button.disabled = true;
-        
-        try {
-            console.log('Attempting to sign up user...');
-            
-            // Create auth user with metadata
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        username: username,
-                        email_redirect_to: window.location.origin
-                    }
-                }
-            });
-            
-            console.log('Sign up response:', { authData, authError });
-            
-            if (authError) {
-                console.error('Sign up error:', authError);
-                throw authError;
-            }
-            
-            if (!authData.user) {
-                throw new Error('No user returned from sign up');
-            }
-            
-            console.log('User created:', authData.user.id);
-            
-            // Create initial game state
-            const initialGameState = JSON.parse(JSON.stringify(defaultGameState));
-            initialGameState.playerName = username;
-            
-            // Wait a moment for the user to be fully created in the database
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Create user profile using the user's ID
-            const { data: existingProfile, error: checkError } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('id', authData.user.id)
-                .maybeSingle();
-            
-            if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found"
-                console.warn('Profile check error:', checkError);
-            }
-            
-            // If profile doesn't exist, create it
-            if (!existingProfile) {
-                const { error: profileError } = await supabase
-                    .from('profiles')
-                    .upsert({
-                        id: authData.user.id,
-                        email: email,
-                        username: username,
-                        created_at: new Date().toISOString(),
-                        game_state: JSON.stringify(initialGameState),
-                        bruh_count: 0,
-                        news_count: 0,
-                        player_level: 0,
-                        last_active: new Date().toISOString()
-                    }, {
-                        onConflict: 'id'
-                    });
-                
-                if (profileError) {
-                    console.error('Profile creation error:', profileError);
-                    
-                    // If username already exists, try with a modified username
-                    if (profileError.code === '23505') {
-                        const modifiedUsername = username + Math.floor(Math.random() * 1000);
-                        const { error: retryError } = await supabase
-                            .from('profiles')
-                            .upsert({
-                                id: authData.user.id,
-                                email: email,
-                                username: modifiedUsername,
-                                created_at: new Date().toISOString(),
-                                game_state: JSON.stringify({ ...initialGameState, playerName: modifiedUsername }),
-                                bruh_count: 0,
-                                news_count: 0,
-                                player_level: 0,
-                                last_active: new Date().toISOString()
-                            }, {
-                                onConflict: 'id'
-                            });
-                        
-                        if (retryError) {
-                            console.error('Retry profile creation error:', retryError);
-                            throw retryError;
-                        }
-                        
-                        initialGameState.playerName = modifiedUsername;
-                        showAuthSuccess('Account created! Username modified due to conflict. Logging you in...');
-                    } else {
-                        throw profileError;
-                    }
-                } else {
-                    showAuthSuccess('Account created successfully! Logging you in...');
-                }
-            } else {
-                showAuthSuccess('Profile already exists. Logging you in...');
-            }
-            
-            // Auto-login after registration
-            setTimeout(async () => {
-                try {
-                    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-                        email,
-                        password
-                    });
-                    
-                    if (loginError) {
-                        console.error('Auto-login error:', loginError);
-                        showAuthSuccess('Account created! Please login manually.');
-                        switchAuthTab('login');
-                        document.getElementById('login-email').value = email;
-                        document.getElementById('login-password').value = password;
-                        return;
-                    }
-                    
-                    currentUser = loginData.user;
-                    isAuthenticated = true;
-                    gameState = initialGameState;
-                    
-                    updateUserInfo();
-                    hideAuthModal();
-                    initGame();
-                    
-                } catch (loginError) {
-                    console.error('Auto-login error:', loginError);
-                    showAuthSuccess('Account created! Please login manually.');
-                    switchAuthTab('login');
-                    document.getElementById('login-email').value = email;
-                    document.getElementById('login-password').value = password;
-                }
-            }, 1500);
-            
-        } catch (error) {
-            console.error('Registration error:', error);
-            
-            let errorMessage = 'Registration failed. Please try again.';
-            
-            if (error.message?.includes('already registered') || error.message?.includes('User already registered')) {
-                errorMessage = 'This email is already registered. Please login instead.';
-            } else if (error.message?.includes('duplicate key value')) {
-                errorMessage = 'Username already taken. Please choose another one.';
-            } else if (error.message?.includes('Email rate limit exceeded')) {
-                errorMessage = 'Too many attempts. Please try again in a few minutes.';
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            
-            showAuthError(errorMessage);
-        } finally {
-            button.textContent = originalText;
-            button.disabled = false;
-        }
-    }
-
-    // FIXED: Login function
-    async function login() {
-        console.log('Login function called');
-        
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        
-        console.log('Login attempt for:', email);
-        
-        if (!email || !password) {
-            showAuthError('Please fill in all fields');
-            return;
-        }
-        
-        // Disable button and show loading
-        const button = document.querySelector('#login-form .auth-button');
-        const originalText = button.textContent;
-        button.textContent = 'Logging in...';
-        button.disabled = true;
-        
-        try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password
-            });
-            
-            console.log('Login response:', { data, error });
-            
-            if (error) throw error;
-            
-            if (!data.user) {
-                throw new Error('No user returned from login');
-            }
-            
-            currentUser = data.user;
-            isAuthenticated = true;
-            
-            console.log('Login successful, getting profile...');
-            
-            // Get user profile
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', currentUser.id)
-                .single();
-            
-            if (profileError) {
-                console.warn('Profile error:', profileError);
-                
-                // If profile doesn't exist, create one
-                const username = currentUser.email.split('@')[0] + Math.floor(Math.random() * 1000);
-                const initialGameState = JSON.parse(JSON.stringify(defaultGameState));
-                initialGameState.playerName = username;
-                
-                const { error: createError } = await supabase
-                    .from('profiles')
-                    .upsert({
-                        id: currentUser.id,
-                        email: currentUser.email,
-                        username: username,
-                        created_at: new Date().toISOString(),
-                        game_state: JSON.stringify(initialGameState),
-                        bruh_count: 0,
-                        news_count: 0,
-                        player_level: 0,
-                        last_active: new Date().toISOString()
-                    });
-                
-                if (createError) {
-                    console.error('Failed to create profile:', createError);
-                    // Use fallback
-                    gameState.playerName = currentUser.email.split('@')[0];
-                    gameState = initialGameState;
-                } else {
-                    gameState = initialGameState;
-                }
-            } else if (profile) {
-                console.log('Profile loaded:', profile.username);
-                gameState.playerName = profile.username || currentUser.email.split('@')[0];
-                
-                // Load game state from database
-                if (profile.game_state) {
-                    try {
-                        const savedState = JSON.parse(profile.game_state);
-                        if (savedState) {
-                            // Preserve original game state structure while loading saved data
-                            gameState = {
-                                ...defaultGameState,
-                                ...savedState,
-                                playerName: profile.username || currentUser.email.split('@')[0],
-                                buildings: gameState.buildings.map((building, index) => ({
-                                    ...building,
-                                    count: savedState.buildings?.[index]?.count || 0
-                                }))
-                            };
-                        }
-                    } catch (e) {
-                        console.warn('Error parsing saved game state:', e);
-                    }
-                }
-            }
-            
-            showAuthSuccess('Login successful! Loading your game...');
-            
-            setTimeout(() => {
-                updateUserInfo();
-                hideAuthModal();
-                initGame();
-            }, 500);
-            
-        } catch (error) {
-            console.error('Login error:', error);
-            
-            let errorMessage = 'Invalid email or password. Please try again.';
-            
-            if (error.message?.includes('Invalid login credentials')) {
-                errorMessage = 'Invalid email or password. Please try again.';
-            } else if (error.message?.includes('Email not confirmed')) {
-                errorMessage = 'Please confirm your email address before logging in.';
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            
-            showAuthError(errorMessage);
-        } finally {
-            button.textContent = originalText;
-            button.disabled = false;
-        }
-    }
-
-    async function resetPassword() {
-        const email = document.getElementById('reset-email').value;
-        
-        if (!email) {
-            showAuthError('Please enter your email address');
-            return;
-        }
-        
-        // Disable button and show loading
-        const button = document.querySelector('#reset-form .auth-button');
-        const originalText = button.textContent;
-        button.textContent = 'Sending...';
-        button.disabled = true;
-        
-        try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.href,
-            });
-            
-            if (error) throw error;
-            
-            showAuthSuccess('Password reset link sent! Check your email.');
-            
-        } catch (error) {
-            console.error('Reset password error:', error);
-            showAuthError('Failed to send reset link. Please try again.');
-        } finally {
-            button.textContent = originalText;
-            button.disabled = false;
-        }
-    }
-
-    async function logout() {
-        try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-            
-            currentUser = null;
-            isAuthenticated = false;
-            
-            // Reset game state
-            gameState = JSON.parse(JSON.stringify(defaultGameState));
-            isInitialized = false;
-            
-            // Hide user info and show auth modal
-            document.getElementById('user-info').style.display = 'none';
-            showAuthModal();
-            
-            // Reset the game display
-            document.getElementById('upgrades-list').innerHTML = '';
-            document.getElementById('chat-messages').innerHTML = '<div class="chat-message other"><div class="message-sender">System <span class="message-timestamp">Just now</span></div><div class="message-content">Welcome to The News Bruh Online Edition! Chat with players worldwide.</div></div>';
-            document.getElementById('leaderboard-body').innerHTML = '';
-            document.getElementById('online-users').innerHTML = '';
-            
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
-    }
-
-    function updateUserInfo() {
-        const userInfo = document.getElementById('user-info');
-        const displayUsername = document.getElementById('display-username');
-        
-        if (currentUser && gameState.playerName) {
-            displayUsername.textContent = gameState.playerName;
-            userInfo.style.display = 'block';
-        }
-    }
-
-    function switchAuthTab(tab) {
-        console.log('Switching to tab:', tab);
-        // Update tabs
-        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-        
-        // Activate selected tab
-        const tabElement = document.querySelector(`.auth-tab[onclick*="${tab}"]`);
-        if (tabElement) {
-            tabElement.classList.add('active');
-        }
-        
-        const formElement = document.getElementById(`${tab}-form`);
-        if (formElement) {
-            formElement.classList.add('active');
-        }
-        
-        // Clear messages
-        document.getElementById('auth-error').style.display = 'none';
-        document.getElementById('auth-success').style.display = 'none';
-    }
-
-    function showAuthError(message) {
-        console.error('Auth error:', message);
-        const errorDiv = document.getElementById('auth-error');
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-        document.getElementById('auth-success').style.display = 'none';
-        
-        setTimeout(() => {
-            errorDiv.style.display = 'none';
-        }, 5000);
-    }
-
-    function showAuthSuccess(message) {
-        console.log('Auth success:', message);
-        const successDiv = document.getElementById('auth-success');
-        successDiv.textContent = message;
-        successDiv.style.display = 'block';
-        document.getElementById('auth-error').style.display = 'none';
-        
-        setTimeout(() => {
-            successDiv.style.display = 'none';
-        }, 5000);
-    }
-
-    function showAuthModal() {
-        console.log('Showing auth modal');
-        document.getElementById('auth-modal').style.display = 'flex';
-    }
-
-    function hideAuthModal() {
-        console.log('Hiding auth modal');
-        document.getElementById('auth-modal').style.display = 'none';
-    }
-
-    // Game Functions
+    // INFINITE ALPHABETICAL NUMBER SYSTEM
     function formatNumber(num) {
         if (typeof num !== 'number' || !isFinite(num)) return '0';
         if (num < 0) return '-' + formatNumber(-num);
         if (num < 1000) return Math.floor(num).toLocaleString();
         
+        // Convert to infinite alphabetical system
         return toAlphabetical(num);
     }
 
@@ -2509,10 +1647,7 @@
 
     function getAlphabeticalSuffix(index) {
         if (index < 0) return "";
-        
-        if (index < 26) {
-            return String.fromCharCode(97 + index);
-        }
+        if (index < 26) return String.fromCharCode(97 + index);
         
         let result = "";
         let remaining = index;
@@ -2520,16 +1655,581 @@
         while (remaining >= 0) {
             const charIndex = remaining % 26;
             result = String.fromCharCode(97 + charIndex) + result;
-            
             remaining = Math.floor(remaining / 26) - 1;
-            
             if (remaining < 0) break;
         }
         
         return result;
     }
 
-    // ENHANCED: Boost System Functions
+    // Update connection status display
+    function updateConnectionStatus(status) {
+        const statusElement = document.getElementById('connection-status');
+        const chatStatusElement = document.getElementById('chat-status');
+        
+        isConnected = status === 'connected';
+        
+        if (status === 'connected') {
+            statusElement.innerHTML = '<span class="connection-status status-connected"></span> Connected';
+            chatStatusElement.innerHTML = '<span class="connection-status status-connected"></span> Connected';
+            connectionRetries = 0;
+        } else if (status === 'connecting') {
+            statusElement.innerHTML = '<span class="connection-status status-connecting"></span> Connecting...';
+            chatStatusElement.innerHTML = '<span class="connection-status status-connecting"></span> Connecting...';
+        } else {
+            statusElement.innerHTML = '<span class="connection-status status-disconnected"></span> Disconnected';
+            chatStatusElement.innerHTML = '<span class="connection-status status-disconnected"></span> Disconnected';
+        }
+    }
+
+    // Initialize real-time subscriptions
+    async function initRealTimeSubscriptions() {
+        try {
+            // Subscribe to player count changes
+            const playerCountChannel = supabase.channel('player-count')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'players' }, 
+                    async () => {
+                        await updatePlayerCounts();
+                    }
+                )
+                .subscribe();
+
+            // Subscribe to leaderboard updates
+            leaderboardSubscription = supabase.channel('leaderboard-updates')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'players' }, 
+                    async () => {
+                        await updateLeaderboard();
+                    }
+                )
+                .subscribe();
+
+            // Subscribe to chat messages
+            chatSubscription = supabase.channel('chat-messages')
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'chat_messages' }, 
+                    (payload) => {
+                        handleNewChatMessage(payload.new);
+                    }
+                )
+                .subscribe();
+
+            // Subscribe to online players updates
+            onlinePlayersSubscription = supabase.channel('online-players')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'players' }, 
+                    async () => {
+                        await updateOnlinePlayers();
+                    }
+                )
+                .subscribe();
+
+            updateConnectionStatus('connected');
+            console.log('Real-time subscriptions initialized');
+            
+        } catch (error) {
+            console.error('Error initializing real-time subscriptions:', error);
+            updateConnectionStatus('disconnected');
+            
+            // Retry connection
+            if (connectionRetries < MAX_RETRIES) {
+                connectionRetries++;
+                setTimeout(initRealTimeSubscriptions, 2000 * connectionRetries);
+            }
+        }
+    }
+
+    // Update player counts from Supabase
+    async function updatePlayerCounts() {
+        try {
+            // Get total players
+            const { count: totalCount, error: totalError } = await supabase
+                .from('players')
+                .select('*', { count: 'exact', head: true });
+            
+            if (!totalError) {
+                document.getElementById('total-count').textContent = totalCount.toLocaleString();
+            }
+            
+            // Get online players (last 5 minutes)
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+            
+            const { count: onlineCount, error: onlineError } = await supabase
+                .from('players')
+                .select('*', { count: 'exact', head: true })
+                .gte('last_active', fiveMinutesAgo);
+            
+            if (!onlineError) {
+                document.getElementById('online-count').textContent = onlineCount.toLocaleString();
+            }
+            
+        } catch (error) {
+            console.error('Error updating player counts:', error);
+        }
+    }
+
+    // Load or create player in Supabase
+    async function loadOrCreatePlayer() {
+        try {
+            const playerName = gameState.playerName;
+            
+            // Check if player exists
+            const { data: existingPlayer, error: fetchError } = await supabase
+                .from('players')
+                .select('*')
+                .eq('name', playerName)
+                .single();
+            
+            if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows returned
+                console.error('Error fetching player:', fetchError);
+                return false;
+            }
+            
+            if (existingPlayer) {
+                // Load existing player
+                gameState.id = existingPlayer.id;
+                gameState.news = existingPlayer.news || 0;
+                gameState.bruh = existingPlayer.bruh || 0;
+                gameState.buildings = existingPlayer.buildings || defaultGameState.buildings;
+                gameState.version = existingPlayer.version || defaultGameState.version;
+                gameState.lastUpdate = new Date(existingPlayer.updated_at).getTime();
+                
+                // Load boost state
+                gameState.boostProgress = existingPlayer.boost_progress || 0;
+                gameState.isBoostActive = existingPlayer.is_boost_active || false;
+                gameState.boostTimeLeft = existingPlayer.boost_time_left || 0;
+                gameState.boostCooldown = existingPlayer.boost_cooldown || 0;
+                gameState.boostMultiplier = existingPlayer.boost_multiplier || 1;
+                gameState.lastDepletionTime = existingPlayer.last_depletion_time || Date.now();
+                
+                console.log('Player loaded from Supabase:', playerName);
+            } else {
+                // Create new player
+                const newPlayer = {
+                    name: playerName,
+                    news: gameState.news,
+                    bruh: gameState.bruh,
+                    buildings: gameState.buildings,
+                    version: gameState.version,
+                    level: calculateLevel(gameState.bruh, gameState.news),
+                    last_active: new Date().toISOString(),
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    boost_progress: gameState.boostProgress,
+                    is_boost_active: gameState.isBoostActive,
+                    boost_time_left: gameState.boostTimeLeft,
+                    boost_cooldown: gameState.boostCooldown,
+                    boost_multiplier: gameState.boostMultiplier,
+                    last_depletion_time: gameState.lastDepletionTime
+                };
+                
+                const { data, error } = await supabase
+                    .from('players')
+                    .insert([newPlayer])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('Error creating player:', error);
+                    return false;
+                }
+                
+                gameState.id = data.id;
+                console.log('New player created in Supabase:', playerName);
+            }
+            
+            // Update player's last active timestamp
+            await updatePlayerLastActive();
+            
+            return true;
+            
+        } catch (error) {
+            console.error('Error in loadOrCreatePlayer:', error);
+            return false;
+        }
+    }
+
+    // Save game state to Supabase
+    async function saveGameToSupabase() {
+        if (!gameState.id || !isConnected) return;
+        
+        try {
+            const updateData = {
+                news: gameState.news,
+                bruh: gameState.bruh,
+                buildings: gameState.buildings,
+                version: gameState.version,
+                level: calculateLevel(gameState.bruh, gameState.news),
+                updated_at: new Date().toISOString(),
+                boost_progress: gameState.boostProgress,
+                is_boost_active: gameState.isBoostActive,
+                boost_time_left: gameState.boostTimeLeft,
+                boost_cooldown: gameState.boostCooldown,
+                boost_multiplier: gameState.boostMultiplier,
+                last_depletion_time: gameState.lastDepletionTime
+            };
+            
+            const { error } = await supabase
+                .from('players')
+                .update(updateData)
+                .eq('id', gameState.id);
+            
+            if (error) {
+                console.error('Error saving game to Supabase:', error);
+            } else {
+                console.log('Game saved to Supabase');
+            }
+            
+        } catch (error) {
+            console.error('Error in saveGameToSupabase:', error);
+        }
+    }
+
+    // Update player's last active timestamp
+    async function updatePlayerLastActive() {
+        if (!gameState.id || !isConnected) return;
+        
+        try {
+            await supabase
+                .from('players')
+                .update({ last_active: new Date().toISOString() })
+                .eq('id', gameState.id);
+        } catch (error) {
+            console.error('Error updating last active:', error);
+        }
+    }
+
+    // Update leaderboard from Supabase
+    async function updateLeaderboard() {
+        try {
+            const { data: leaderboardData, error } = await supabase
+                .from('players')
+                .select('name, bruh, news, level, last_active')
+                .order('bruh', { ascending: false })
+                .order('news', { ascending: false })
+                .limit(100);
+            
+            if (error) {
+                console.error('Error fetching leaderboard:', error);
+                return;
+            }
+            
+            // Update leaderboard display
+            updateLeaderboardDisplay(leaderboardData);
+            
+            // Update timestamp
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const updateTimeElement = document.getElementById('leaderboard-update-time');
+            if (updateTimeElement) {
+                updateTimeElement.textContent = `Updated: ${timeStr}`;
+            }
+            
+        } catch (error) {
+            console.error('Error in updateLeaderboard:', error);
+        }
+    }
+
+    // Update leaderboard display
+    function updateLeaderboardDisplay(leaderboardData) {
+        const tbody = document.getElementById('leaderboard-body');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        
+        leaderboardData.forEach((player, index) => {
+            const row = document.createElement('tr');
+            
+            // Highlight current player
+            if (player.name === gameState.playerName) {
+                row.style.backgroundColor = '#e8f5e8';
+                row.style.fontWeight = 'bold';
+            }
+            
+            // Add rank class for top 3
+            let rankClass = '';
+            if (index === 0) rankClass = 'rank-1';
+            else if (index === 1) rankClass = 'rank-2';
+            else if (index === 2) rankClass = 'rank-3';
+            
+            row.innerHTML = `
+                <td class="player-rank ${rankClass}">${index + 1}</td>
+                <td class="player-name">${player.name} ${player.name === gameState.playerName ? ' (You)' : ''}</td>
+                <td class="player-bruh">${formatNumber(player.bruh)}</td>
+                <td class="player-level">${formatNumber(player.level)}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    }
+
+    // Update online players list
+    async function updateOnlinePlayers() {
+        try {
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+            
+            const { data: onlinePlayers, error } = await supabase
+                .from('players')
+                .select('name, bruh, last_active')
+                .gte('last_active', fiveMinutesAgo)
+                .order('bruh', { ascending: false });
+            
+            if (error) {
+                console.error('Error fetching online players:', error);
+                return;
+            }
+            
+            // Update online count
+            document.getElementById('online-users-count').textContent = onlinePlayers.length;
+            
+            // Update online users list
+            const onlineUsersContainer = document.getElementById('online-users');
+            if (onlineUsersContainer) {
+                onlineUsersContainer.innerHTML = '';
+                
+                onlinePlayers.forEach(player => {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'user-item';
+                    
+                    userDiv.innerHTML = `
+                        <div>
+                            <span class="user-online"></span>
+                            <span class="user-name">${player.name}</span>
+                        </div>
+                        <div class="user-bruh">${formatNumber(player.bruh)} Bruh</div>
+                    `;
+                    
+                    onlineUsersContainer.appendChild(userDiv);
+                });
+            }
+            
+        } catch (error) {
+            console.error('Error in updateOnlinePlayers:', error);
+        }
+    }
+
+    // Load chat messages from Supabase
+    async function loadChatMessages() {
+        try {
+            const { data: messages, error } = await supabase
+                .from('chat_messages')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(50);
+            
+            if (error) {
+                console.error('Error loading chat messages:', error);
+                return;
+            }
+            
+            // Reverse to show oldest first
+            messages.reverse().forEach(handleNewChatMessage);
+            
+        } catch (error) {
+            console.error('Error in loadChatMessages:', error);
+        }
+    }
+
+    // Handle new chat message from subscription
+    function handleNewChatMessage(message) {
+        // Add message to chat display
+        addChatMessageToDisplay(message);
+        
+        // Show notification if player is tagged
+        if (message.message && message.message.includes(`@${gameState.playerName}`) && 
+            message.sender !== gameState.playerName && gameState.chatNotifications) {
+            showChatNotification(message.sender, message.message);
+        }
+    }
+
+    // Add chat message to display
+    function addChatMessageToDisplay(message) {
+        const chatContainer = document.getElementById('chat-messages');
+        if (!chatContainer) return;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${message.sender === gameState.playerName ? 'self' : 'other'}`;
+        
+        // Check if this message tags the current player
+        if (message.message && message.message.includes(`@${gameState.playerName}`) && 
+            message.sender !== gameState.playerName) {
+            messageDiv.classList.add('tagged');
+        }
+        
+        // Format timestamp
+        const timestamp = new Date(message.created_at);
+        const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Format message content with highlighted tags
+        let content = message.message || '';
+        content = content.replace(/@([^\s@]+)/g, '<span class="tagged-player">@$1</span>');
+        
+        messageDiv.innerHTML = `
+            <div class="message-sender">${message.sender} <span class="message-timestamp">${timeStr}</span></div>
+            <div class="message-content">${content}</div>
+        `;
+        
+        chatContainer.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Send chat message to Supabase
+    async function sendChatMessage() {
+        const input = document.getElementById('chat-input');
+        const message = input.value.trim();
+        
+        if (!message || message.length === 0) return;
+        
+        if (message.length > 200) {
+            alert('Message too long (max 200 characters)');
+            return;
+        }
+        
+        if (!isConnected) {
+            alert('Cannot send message while disconnected');
+            return;
+        }
+        
+        try {
+            const { error } = await supabase
+                .from('chat_messages')
+                .insert([{
+                    sender: gameState.playerName,
+                    message: message,
+                    created_at: new Date().toISOString()
+                }]);
+            
+            if (error) {
+                console.error('Error sending chat message:', error);
+                alert('Failed to send message');
+                return;
+            }
+            
+            // Clear input
+            input.value = '';
+            
+        } catch (error) {
+            console.error('Error in sendChatMessage:', error);
+            alert('Failed to send message');
+        }
+    }
+
+    // Show chat notification
+    function showChatNotification(sender, message) {
+        const notification = document.getElementById('chat-notification');
+        const notificationSender = document.getElementById('notification-sender');
+        const notificationMessage = document.getElementById('notification-message');
+        
+        // Truncate message if too long
+        const truncatedMessage = message.length > 50 ? message.substring(0, 47) + '...' : message;
+        
+        notificationSender.textContent = `📨 ${sender} tagged you!`;
+        notificationMessage.textContent = truncatedMessage;
+        
+        notification.style.display = 'block';
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 5000);
+        
+        // Click to hide
+        notification.onclick = () => {
+            notification.style.display = 'none';
+        };
+    }
+
+    // Calculate player level
+    function calculateLevel(bruh, news) {
+        return Math.floor(Math.sqrt(bruh * 10 + news / 1000));
+    }
+
+    // Name validation
+    function validatePlayerName(name) {
+        if (!name || name.trim() === '') {
+            alert('Please enter a name!');
+            return false;
+        }
+        
+        if (name.length > 20) {
+            alert('Name must be 20 characters or less!');
+            return false;
+        }
+        
+        if (name.includes('@') && name.indexOf('@') === 0) {
+            alert('Name cannot start with @ (reserved for tagging system)');
+            return false;
+        }
+        
+        const excessiveSpecialChars = /[<>{}[\]\\]/;
+        if (excessiveSpecialChars.test(name)) {
+            alert('Name contains invalid characters: < > { } [ ] \\ are not allowed');
+            return false;
+        }
+        
+        return true;
+    }
+
+    // Start game with name
+    async function startGameWithName() {
+        const nameInput = document.getElementById('player-name-input');
+        const playerName = nameInput.value.trim();
+        
+        if (!validatePlayerName(playerName)) {
+            return;
+        }
+        
+        // Save player name locally
+        localStorage.setItem('newsBruhPlayerName', playerName);
+        gameState.playerName = playerName;
+        
+        // Show loading state
+        document.getElementById('name-selection-modal').classList.add('hidden');
+        updateConnectionStatus('connecting');
+        
+        // Try to load/create player in Supabase
+        const success = await loadOrCreatePlayer();
+        
+        if (!success) {
+            alert('Failed to connect to game server. Please try again.');
+            document.getElementById('name-selection-modal').classList.remove('hidden');
+            return;
+        }
+        
+        // Show the game
+        document.getElementById('newspaper').style.display = 'flex';
+        
+        // Initialize the game
+        init();
+    }
+
+    // Live Date & Time Display
+    function updateDateTime() {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        
+        const dateTimeString = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+        const dateTimeElement = document.getElementById('currentDateTime');
+        if (dateTimeElement) {
+            dateTimeElement.textContent = dateTimeString;
+        }
+    }
+
+    // Start updating date/time
+    function startDateTimeUpdate() {
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    }
+
+    // BOOST SYSTEM FUNCTIONS
     function updateBoostProgress() {
         const boostButton = document.getElementById('boost-button');
         const progressBar = document.getElementById('boost-progress-bar');
@@ -2546,26 +2246,21 @@
             timerElement.style.display = 'none';
             percentageElement.textContent = '0%';
             progressBar.style.width = '0%';
-            progressBar.style.background = 'linear-gradient(90deg, #cccccc, #999999)';
         } else if (gameState.isBoostActive) {
             boostButton.disabled = false;
             percentageElement.textContent = 'ACTIVE!';
             percentageElement.style.color = '#ff0000';
-            percentageElement.style.textShadow = '0 0 10px rgba(255, 0, 0, 0.8)';
             progressBar.style.width = '100%';
             progressBar.style.background = 'linear-gradient(90deg, #ff0000, #ff8800, #ff0000)';
-            progressBar.style.animation = 'progressShimmer 1s infinite linear';
             cooldownElement.style.display = 'none';
             timerElement.style.display = 'block';
             timerElement.textContent = `${gameState.boostTimeLeft}s`;
         } else {
             boostButton.disabled = false;
             percentageElement.style.color = '';
-            percentageElement.style.textShadow = '';
             percentageElement.textContent = `${Math.floor(gameState.boostProgress)}%`;
             progressBar.style.width = `${gameState.boostProgress}%`;
             progressBar.style.background = 'linear-gradient(90deg, #ff4444, #ff0000, #ff4444)';
-            progressBar.style.animation = 'progressShimmer 2s infinite linear';
             cooldownElement.style.display = 'none';
             timerElement.style.display = 'none';
             
@@ -2573,7 +2268,6 @@
                 cooldownElement.textContent = 'READY!';
                 cooldownElement.style.display = 'block';
                 cooldownElement.style.color = '#ff0000';
-                cooldownElement.style.background = 'rgba(255, 0, 0, 0.2)';
             } else {
                 cooldownElement.style.display = 'none';
             }
@@ -2627,7 +2321,6 @@
         banner.style.display = 'block';
         
         startEmojiRain();
-        
         updateBoostTimer();
         
         if (boostTimerInterval) clearInterval(boostTimerInterval);
@@ -2640,25 +2333,7 @@
         
         updateUI();
         updateBoostProgress();
-        
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
-            oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
-            oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
-        } catch (e) {}
+        saveGame();
     }
 
     function updateBoostTimer() {
@@ -2667,7 +2342,6 @@
         gameState.boostTimeLeft--;
         
         const timerElement = document.getElementById('boost-timer');
-        
         if (timerElement) {
             timerElement.textContent = `${gameState.boostTimeLeft}s`;
             
@@ -2692,7 +2366,6 @@
         gameState.boostTimeLeft = 15;
         
         const timerElement = document.getElementById('boost-timer');
-        
         if (timerElement) {
             timerElement.textContent = `${gameState.boostTimeLeft}s`;
             timerElement.style.color = '#ff0000';
@@ -2701,11 +2374,9 @@
         
         const banner = document.getElementById('breaking-news-banner');
         banner.style.transform = 'perspective(500px) rotateX(5deg) scale(1.05)';
-        banner.style.boxShadow = '0 6px 25px rgba(255, 0, 0, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.4)';
         
         setTimeout(() => {
             banner.style.transform = 'perspective(500px) rotateX(5deg)';
-            banner.style.boxShadow = '0 4px 20px rgba(255, 0, 0, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.3)';
         }, 300);
     }
 
@@ -2742,6 +2413,7 @@
         
         updateUI();
         updateBoostProgress();
+        saveGame();
     }
 
     function startEmojiRain() {
@@ -2789,8 +2461,6 @@
         emoji.style.fontSize = `${Math.random() * 20 + 20}px`;
         emoji.style.animationDuration = `${Math.random() * 1 + 1.5}s`;
         
-        emoji.style.transform = `rotate(${Math.random() > 0.5 ? '' : '-'}${Math.random() * 30}deg)`;
-        
         newspaper.appendChild(emoji);
         breakingNewsEmojis.push(emoji);
         
@@ -2805,6 +2475,7 @@
         }, 2000);
     }
 
+    // GAME FUNCTIONS
     const getPrestigeCost = (bruhCount) => {
         return Math.floor(1000 * Math.pow(2.5, bruhCount));
     };
@@ -2842,7 +2513,7 @@
         const maxIterations = 1000;
         
         for (let i = 0; i < maxIterations; i++) {
-            let nextCost = getCost(building);
+            let nextCost = getCost({...building, count: tempCount});
             if (tempNews >= nextCost) {
                 canBuy++;
                 tempNews -= nextCost;
@@ -2855,75 +2526,30 @@
         return canBuy;
     };
 
-    const calculateLevel = (bruh, news) => {
-        return Math.floor(Math.sqrt(bruh * 10 + news / 1000));
-    };
-
-    // FIXED: Save game function
-    async function saveGame() {
+    // Save game (combine local and Supabase)
+    function saveGame() {
         try {
             gameState.lastUpdate = Date.now();
-            
-            // Save to local storage as backup
             localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
             
-            // Save to database if authenticated
-            if (isAuthenticated && currentUser) {
-                await supabase
-                    .from('profiles')
-                    .update({
-                        game_state: JSON.stringify(gameState),
-                        bruh_count: gameState.bruh,
-                        news_count: gameState.news,
-                        player_level: calculateLevel(gameState.bruh, gameState.news),
-                        last_active: new Date().toISOString()
-                    })
-                    .eq('id', currentUser.id);
-                
-                // Update leaderboard
-                await updateLeaderboard();
+            // Also save to Supabase if connected
+            if (isConnected && gameState.id) {
+                saveGameToSupabase();
             }
         } catch (e) {
             console.warn('Could not save game state:', e);
         }
     }
 
-    // FIXED: Load game function
-    async function loadGame() {
+    // Load game from local storage
+    function loadGame() {
         try {
-            // First try to load from database if authenticated
-            if (isAuthenticated && currentUser) {
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (!error && profile?.game_state) {
-                    const savedState = JSON.parse(profile.game_state);
-                    if (savedState) {
-                        // Merge saved state while preserving structure
-                        gameState = {
-                            ...defaultGameState,
-                            ...savedState,
-                            playerName: profile.username || currentUser.email.split('@')[0],
-                            buildings: gameState.buildings.map((building, index) => ({
-                                ...building,
-                                count: savedState.buildings?.[index]?.count || 0
-                            }))
-                        };
-                        return;
-                    }
-                }
-            }
-            
-            // Fallback to local storage
             const saved = localStorage.getItem('newsBruhGameState');
             if (saved) {
                 const parsed = JSON.parse(saved);
                 
-                if (!parsed.version || parsed.version !== gameState.version) {
-                    console.log('Migrating save data...');
+                // Migrate old saves
+                if (!parsed.version || parsed.version !== defaultGameState.version) {
                     if (parsed.buildings && Array.isArray(parsed.buildings)) {
                         parsed.buildings.forEach((savedBuilding, index) => {
                             if (gameState.buildings[index]) {
@@ -2933,7 +2559,7 @@
                     }
                     gameState.news = parsed.news || 0;
                     gameState.bruh = parsed.bruh || 0;
-                    gameState.version = gameState.version;
+                    gameState.version = defaultGameState.version;
                     
                     gameState.boostProgress = parsed.boostProgress || 0;
                     gameState.isBoostActive = parsed.isBoostActive || false;
@@ -2942,17 +2568,10 @@
                     gameState.boostMultiplier = parsed.boostMultiplier || 1;
                     gameState.lastDepletionTime = parsed.lastDepletionTime || Date.now();
                 } else {
-                    // Merge while preserving structure
-                    gameState = {
-                        ...defaultGameState,
-                        ...parsed,
-                        buildings: gameState.buildings.map((building, index) => ({
-                            ...building,
-                            count: parsed.buildings?.[index]?.count || 0
-                        }))
-                    };
+                    gameState = parsed;
                 }
                 
+                // Ensure valid numbers
                 gameState.news = Math.max(0, Number(gameState.news) || 0);
                 gameState.bruh = Math.max(0, Number(gameState.bruh) || 0);
                 gameState.boostProgress = Math.max(0, Number(gameState.boostProgress) || 0);
@@ -2963,139 +2582,6 @@
             }
         } catch (e) {
             console.warn('Could not load saved game:', e);
-        }
-    }
-
-    // FIXED: Online Chat Functions
-    async function sendChatMessage() {
-        if (!isAuthenticated) {
-            alert('Please login to send messages');
-            return;
-        }
-        
-        const input = document.getElementById('chat-input');
-        const message = input.value.trim();
-        
-        if (!message || message.length === 0) return;
-        
-        if (message.length > 200) {
-            alert('Message too long (max 200 characters)');
-            return;
-        }
-        
-        const chatMessage = {
-            sender_id: currentUser.id,
-            sender_name: gameState.playerName,
-            content: message,
-            created_at: new Date().toISOString()
-        };
-        
-        try {
-            const { error } = await supabase
-                .from('chat_messages')
-                .insert([chatMessage]);
-            
-            if (error) throw error;
-            
-            input.value = '';
-            
-            // Reload chat messages
-            loadChatMessages();
-            
-        } catch (error) {
-            console.error('Failed to send message:', error);
-            alert('Failed to send message. Please try again.');
-        }
-    }
-
-    async function loadChatMessages() {
-        try {
-            const { data: messages, error } = await supabase
-                .from('chat_messages')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(50);
-            
-            if (error) throw error;
-            
-            chatMessages = messages || [];
-            updateChatDisplay();
-            
-        } catch (error) {
-            console.error('Failed to load chat messages:', error);
-        }
-    }
-
-    // FIXED: Online Leaderboard Functions
-    async function updateLeaderboard() {
-        if (!isAuthenticated) return;
-        
-        try {
-            // Update player's data
-            await supabase
-                .from('profiles')
-                .update({
-                    bruh_count: gameState.bruh,
-                    news_count: gameState.news,
-                    player_level: calculateLevel(gameState.bruh, gameState.news),
-                    last_active: new Date().toISOString()
-                })
-                .eq('id', currentUser.id);
-            
-            // Load leaderboard
-            loadLeaderboard();
-            
-        } catch (error) {
-            console.error('Failed to update leaderboard:', error);
-        }
-    }
-
-    async function loadLeaderboard() {
-        try {
-            const { data: players, error } = await supabase
-                .from('profiles')
-                .select('username, bruh_count, news_count, player_level, last_active')
-                .order('bruh_count', { ascending: false })
-                .limit(50);
-            
-            if (error) throw error;
-            
-            leaderboardData = (players || []).map((player, index) => ({
-                rank: index + 1,
-                name: player.username,
-                bruh: player.bruh_count || 0,
-                news: player.news_count || 0,
-                level: player.player_level || 0,
-                lastActive: player.last_active,
-                formattedBruh: formatNumber(player.bruh_count || 0),
-                formattedLevel: formatNumber(player.player_level || 0)
-            }));
-            
-            updateLeaderboardDisplay();
-            
-        } catch (error) {
-            console.error('Failed to load leaderboard:', error);
-        }
-    }
-
-    async function loadOnlinePlayers() {
-        try {
-            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-            
-            const { data: players, error } = await supabase
-                .from('profiles')
-                .select('username, bruh_count')
-                .gte('last_active', fiveMinutesAgo)
-                .order('bruh_count', { ascending: false })
-                .limit(20);
-            
-            if (error) throw error;
-            
-            onlinePlayers = players || [];
-            updateOnlinePlayersDisplay();
-            
-        } catch (error) {
-            console.error('Failed to load online players:', error);
         }
     }
 
@@ -3157,8 +2643,6 @@
         
         if (bought > 0) {
             const card = document.getElementById(`card-${id}`);
-            const btn = document.getElementById(`btn-${id}`);
-            
             card.style.transform = 'scale(1.02)';
             card.style.backgroundColor = '#e8f5e8';
             card.classList.add('purchased');
@@ -3173,7 +2657,7 @@
         }
     }
 
-    function prestige() {
+    async function prestige() {
         let bruhsToBuy = 0;
         let tempNews = gameState.news;
         let tempBruh = gameState.bruh;
@@ -3192,9 +2676,7 @@
             if (bruhsToBuy >= 100) break;
         }
         
-        if (bruhsToBuy === 0) {
-            return;
-        }
+        if (bruhsToBuy === 0) return;
         
         if (!confirm(`Are you sure? You will lose all News and Assets, but gain ${bruhsToBuy} Bruh${bruhsToBuy > 1 ? 's' : ''} (permanent +${bruhsToBuy * 100}% multiplier).\n\nCurrent Bruh: ${gameState.bruh}\nNew Bruh: ${gameState.bruh + bruhsToBuy}\nTotal Multiplier: x${1 + (gameState.bruh + bruhsToBuy)}`)) {
             return;
@@ -3243,11 +2725,9 @@
         if (gameState.isBoostActive) {
             document.getElementById('multiplier').textContent = formatNumber(getMultiplier()) + ' (5x BOOST!)';
             document.getElementById('multiplier').style.color = '#ff0000';
-            document.getElementById('multiplier').style.textShadow = '0 0 10px rgba(255, 0, 0, 0.5)';
         } else {
             document.getElementById('multiplier').textContent = formatNumber(getMultiplier());
             document.getElementById('multiplier').style.color = 'var(--red-accent)';
-            document.getElementById('multiplier').style.textShadow = 'none';
         }
         
         document.getElementById('bruh-owned').textContent = formatNumber(gameState.bruh);
@@ -3319,261 +2799,115 @@
                 }
             }
         });
-        
-        // Update player rank if available
-        if (leaderboardData.length > 0) {
-            const playerRank = leaderboardData.findIndex(p => p.name === gameState.playerName);
-            if (playerRank !== -1) {
-                document.getElementById('player-rank').textContent = `#${playerRank + 1}`;
-            }
-        }
     }
 
-    function updateChatDisplay() {
-        const chatContainer = document.getElementById('chat-messages');
-        if (!chatContainer) return;
+    // Initialize the game
+    async function init() {
+        if (isInitialized) return;
         
-        chatContainer.innerHTML = '';
+        loadGame();
         
-        [...chatMessages].reverse().forEach(msg => {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chat-message ${msg.sender_name === gameState.playerName ? 'self' : 'other'}`;
+        const container = document.getElementById('upgrades-list');
+        container.innerHTML = '';
+        
+        gameState.buildings.forEach(building => {
+            const div = document.createElement('div');
+            div.className = 'upgrade-card';
+            div.id = `card-${building.id}`;
             
-            if (msg.content.includes(`@${gameState.playerName}`) && msg.sender_name !== gameState.playerName) {
-                messageDiv.classList.add('tagged');
-            }
-            
-            const timestamp = new Date(msg.created_at);
-            const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            let content = msg.content;
-            content = content.replace(/@(\w+)/g, '<span class="tagged-player">@$1</span>');
-            
-            messageDiv.innerHTML = `
-                <div class="message-sender">${msg.sender_name} <span class="message-timestamp">${timeStr}</span></div>
-                <div class="message-content">${content}</div>
+            div.innerHTML = `
+                <div class="upgrade-top">
+                    <span class="upgrade-name">${building.name}</span>
+                    <span class="upgrade-count" id="count-${building.id}">0</span>
+                </div>
+                <div class="upgrade-info">
+                    +${building.baseCPS} CPS (Base)
+                </div>
+                <button class="upgrade-btn" id="btn-${building.id}" onclick="buyMax(${building.id})">
+                    <div class="upgrade-cost" id="cost-text-${building.id}">Cost: 0</div>
+                    <div class="upgrade-max" id="max-text-${building.id}">Max: 0</div>
+                </button>
             `;
             
-            chatContainer.appendChild(messageDiv);
+            container.appendChild(div);
         });
         
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-
-    function updateLeaderboardDisplay() {
-        const tbody = document.getElementById('leaderboard-body');
-        if (!tbody) return;
+        const printBtn = document.getElementById('print-btn');
+        printBtn.addEventListener('mousedown', manualClick);
+        printBtn.addEventListener('touchstart', function(e) {
+            manualClick(e);
+        }, { passive: false });
+        printBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+        }, { passive: false });
         
-        tbody.innerHTML = '';
+        const boostButton = document.getElementById('boost-button');
+        boostButton.addEventListener('click', function() {
+            // Auto-activates at 100%
+        });
         
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const updateTimeElement = document.getElementById('leaderboard-update-time');
-        if (updateTimeElement) {
-            updateTimeElement.textContent = `Updated: ${timeStr}`;
-        }
-        
-        const displayCount = Math.min(20, leaderboardData.length);
-        
-        for (let i = 0; i < displayCount; i++) {
-            const player = leaderboardData[i];
-            const row = document.createElement('tr');
-            
-            if (player.name === gameState.playerName) {
-                row.style.backgroundColor = '#e8f5e8';
-                row.style.fontWeight = 'bold';
+        const chatInput = document.getElementById('chat-input');
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
             }
-            
-            let rankClass = '';
-            if (player.rank === 1) rankClass = 'rank-1';
-            else if (player.rank === 2) rankClass = 'rank-2';
-            else if (player.rank === 3) rankClass = 'rank-3';
-            
-            row.innerHTML = `
-                <td class="player-rank ${rankClass}">${player.rank}</td>
-                <td class="player-name">${player.name} ${player.name === gameState.playerName ? ' (You)' : ''}</td>
-                <td class="player-bruh">${player.formattedBruh}</td>
-                <td class="player-level">${player.formattedLevel}</td>
-            `;
-            
-            tbody.appendChild(row);
-        }
+        });
         
-        const currentPlayerIndex = leaderboardData.findIndex(p => p.name === gameState.playerName);
-        if (currentPlayerIndex >= 20 && currentPlayerIndex !== -1) {
-            const player = leaderboardData[currentPlayerIndex];
-            const row = document.createElement('tr');
-            row.style.backgroundColor = '#e8f5e8';
-            row.style.fontWeight = 'bold';
-            
-            row.innerHTML = `
-                <td class="player-rank">${player.rank}</td>
-                <td class="player-name">${player.name} (You)</td>
-                <td class="player-bruh">${player.formattedBruh}</td>
-                <td class="player-level">${player.formattedLevel}</td>
-            `;
-            
-            tbody.appendChild(row);
-        }
-    }
-
-    function updateOnlinePlayersDisplay() {
-        document.getElementById('online-users-count').textContent = onlinePlayers.length;
-        
-        const onlineUsersContainer = document.getElementById('online-users');
-        if (onlineUsersContainer) {
-            onlineUsersContainer.innerHTML = '';
-            
-            onlinePlayers.forEach(player => {
-                const userDiv = document.createElement('div');
-                userDiv.className = 'user-item';
-                
-                userDiv.innerHTML = `
-                    <div>
-                        <span class="user-online"></span>
-                        <span class="user-name">${player.username}</span>
-                    </div>
-                    <div class="user-bruh">${formatNumber(player.bruh_count || 0)} Bruh</div>
-                `;
-                
-                onlineUsersContainer.appendChild(userDiv);
-            });
-        }
-    }
-
-    // FIXED: Initialize game
-    function initGame() {
-        if (isInitialized) {
-            console.log('Game already initialized');
-            return;
-        }
-        
-        console.log('Initializing game...');
-        
-        // Load game state first
-        loadGame().then(() => {
-            console.log('Game loaded, setting up UI...');
-            
-            startDateTimeUpdate();
-            
-            const container = document.getElementById('upgrades-list');
-            container.innerHTML = '';
-            
-            gameState.buildings.forEach(building => {
-                const div = document.createElement('div');
-                div.className = 'upgrade-card';
-                div.id = `card-${building.id}`;
-                
-                div.innerHTML = `
-                    <div class="upgrade-top">
-                        <span class="upgrade-name">${building.name}</span>
-                        <span class="upgrade-count" id="count-${building.id}">0</span>
-                    </div>
-                    <div class="upgrade-info">
-                        +${building.baseCPS} CPS (Base)
-                    </div>
-                    <button class="upgrade-btn" id="btn-${building.id}" onclick="buyMax(${building.id})">
-                        <div class="upgrade-cost" id="cost-text-${building.id}">Cost: 0</div>
-                        <div class="upgrade-max" id="max-text-${building.id}">Max: 0</div>
-                    </button>
-                `;
-                
-                container.appendChild(div);
-            });
-            
-            const printBtn = document.getElementById('print-btn');
-            
-            printBtn.addEventListener('mousedown', manualClick);
-            
-            printBtn.addEventListener('touchstart', function(e) {
-                manualClick(e);
-            }, { passive: false });
-            
-            printBtn.addEventListener('touchend', function(e) {
-                e.preventDefault();
-            }, { passive: false });
-            
-            const boostButton = document.getElementById('boost-button');
-            boostButton.addEventListener('click', function() {
-                if (gameState.boostProgress >= 100 && !gameState.isBoostActive && gameState.boostCooldown <= 0) {
-                    activateBoost();
-                }
-            });
-            
-            const chatInput = document.getElementById('chat-input');
-            chatInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    sendChatMessage();
-                }
-            });
-            
-            printBtn.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                return false;
-            });
-            
-            const now = Date.now();
-            const lastUpdate = gameState.lastUpdate || now;
-            const timeDiff = (now - lastUpdate) / 1000;
-            
-            if (timeDiff > 1 && timeDiff < 86400) {
-                const offlineEarnings = getCPS() * timeDiff;
-                if (offlineEarnings > 0) {
-                    gameState.news += offlineEarnings;
-                    console.log(`Offline earnings: ${formatNumber(offlineEarnings)} New (${Math.floor(timeDiff)} seconds)`);
-                }
+        const nameInput = document.getElementById('player-name-input');
+        nameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startGameWithName();
             }
+        });
+        
+        printBtn.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Initialize real-time features
+        await initRealTimeSubscriptions();
+        await updatePlayerCounts();
+        await updateLeaderboard();
+        await updateOnlinePlayers();
+        await loadChatMessages();
+        
+        startDateTimeUpdate();
+        updateUI();
+        updateBoostProgress();
+        
+        if (gameState.isBoostActive) {
+            if (boostTimerInterval) clearInterval(boostTimerInterval);
+            boostTimerInterval = setInterval(updateBoostTimer, 1000);
             
-            updateUI();
-            updateBoostProgress();
+            const banner = document.getElementById('breaking-news-banner');
+            banner.style.display = 'block';
+            startEmojiRain();
             
-            if (gameState.isBoostActive) {
-                if (boostTimerInterval) clearInterval(boostTimerInterval);
-                boostTimerInterval = setInterval(updateBoostTimer, 1000);
+            const statBlocks = document.querySelectorAll('.stat-block');
+            statBlocks.forEach(block => {
+                block.classList.add('active-boost');
+            });
+        }
+        
+        if (gameState.boostCooldown > 0) {
+            const cooldownInterval = setInterval(() => {
+                gameState.boostCooldown--;
+                updateBoostProgress();
                 
-                const banner = document.getElementById('breaking-news-banner');
-                banner.style.display = 'block';
-                
-                startEmojiRain();
-                
-                const statBlocks = document.querySelectorAll('.stat-block');
-                statBlocks.forEach(block => {
-                    block.classList.add('active-boost');
-                });
-            }
-            
-            if (gameState.boostCooldown > 0) {
-                const cooldownInterval = setInterval(() => {
-                    gameState.boostCooldown--;
+                if (gameState.boostCooldown <= 0) {
+                    clearInterval(cooldownInterval);
+                    gameState.boostCooldown = 0;
                     updateBoostProgress();
-                    
-                    if (gameState.boostCooldown <= 0) {
-                        clearInterval(cooldownInterval);
-                        gameState.boostCooldown = 0;
-                        updateBoostProgress();
-                    }
-                }, 1000);
-            }
-            
-            if (isAuthenticated) {
-                console.log('Loading online features...');
-                loadChatMessages();
-                loadLeaderboard();
-                loadOnlinePlayers();
-            }
-            
-            updateChatDisplay();
-            updateUserInfo();
-            
-            isInitialized = true;
-            console.log('Game initialization complete');
-            
-            startGameLoops();
-        }).catch(error => {
-            console.error('Failed to initialize game:', error);
-        });
+                }
+            }, 1000);
+        }
+        
+        isInitialized = true;
+        startGameLoops();
     }
 
+    // Game loops
     function startGameLoops() {
         function updateNews() {
             const cps = getCPS();
@@ -3614,11 +2948,7 @@
                 "Alphabetical scaling revolutionizes finance.",
                 "Numbers grow beyond traditional notation.",
                 "From k to z to aa: The new math frontier.",
-                "Infinity now has a proper naming convention.",
-                "Online edition launches with multiplayer features!",
-                "Players worldwide competing for top leaderboard spots.",
-                "Real-time chat connects global newspaper tycoons.",
-                "Email recovery system implemented for account security."
+                "Infinity now has a proper naming convention."
             ];
             
             const randomHeadline = headlines[Math.floor(Math.random() * headlines.length)];
@@ -3633,202 +2963,55 @@
 
         function autoSave() {
             saveGame();
-        }
-
-        function updateLeaderboardPeriodically() {
-            if (isAuthenticated) {
-                const now = Date.now();
-                if (now - lastLeaderboardUpdate > 30000) { // Every 30 seconds
-                    loadLeaderboard();
-                    lastLeaderboardUpdate = now;
-                }
+            if (isConnected && gameState.id) {
+                updatePlayerLastActive();
             }
         }
 
-        function updateChatPeriodically() {
-            if (isAuthenticated) {
-                const now = Date.now();
-                if (now - lastChatUpdate > 10000) { // Every 10 seconds
-                    loadChatMessages();
-                    loadOnlinePlayers();
-                    lastChatUpdate = now;
-                }
+        function updateLeaderboardPeriodically() {
+            if (isConnected) {
+                updateLeaderboard();
+            }
+        }
+
+        function updateOnlinePlayersPeriodically() {
+            if (isConnected) {
+                updateOnlinePlayers();
+            }
+        }
+
+        function updatePlayerCountsPeriodically() {
+            if (isConnected) {
+                updatePlayerCounts();
             }
         }
 
         gameLoop();
         setInterval(rotateHeadlines, 10000);
         setInterval(autoSave, 30000);
-        
-        if (isAuthenticated) {
-            setInterval(updateLeaderboardPeriodically, 5000);
-            setInterval(updateChatPeriodically, 10000);
-        }
-        
-        setInterval(() => {
-            const online = document.getElementById('online-count');
-            const total = document.getElementById('total-count');
-            
-            const onlineChange = Math.floor(Math.random() * 100) - 50;
-            const totalChange = Math.floor(Math.random() * 1000);
-            
-            let currentOnline = parseInt(online.textContent.replace(/,/g, '')) || 12403;
-            let currentTotal = parseInt(total.textContent.replace(/,/g, '')) || 842019;
-            
-            currentOnline = Math.max(10000, currentOnline + onlineChange);
-            currentTotal = Math.max(842000, currentTotal + totalChange);
-            
-            online.textContent = currentOnline.toLocaleString();
-            total.textContent = currentTotal.toLocaleString();
-        }, 30000);
-    }
-
-    function showResetConfirmation() {
-        document.getElementById('reset-current-bruh').textContent = formatNumber(gameState.bruh);
-        document.getElementById('reset-current-news').textContent = formatNumber(gameState.news);
-        
-        const totalBuildings = gameState.buildings.reduce((sum, b) => sum + b.count, 0);
-        document.getElementById('reset-buildings-count').textContent = formatNumber(totalBuildings);
-        
-        document.getElementById('reset-chat-count').textContent = chatMessages.length;
-        
-        document.getElementById('reset-confirmation-modal').style.display = 'flex';
-        
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-            oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.1);
-            oscillator.frequency.setValueAtTime(200, audioContext.currentTime + 0.2);
-            oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.3);
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
-        } catch (e) {}
-    }
-
-    function hideResetConfirmation() {
-        document.getElementById('reset-confirmation-modal').style.display = 'none';
-    }
-
-    async function performHardReset() {
-        if (isAuthenticated && currentUser) {
-            // Reset game state in database
-            const resetState = JSON.parse(JSON.stringify(defaultGameState));
-            resetState.playerName = gameState.playerName; // Keep username
-            
-            await supabase
-                .from('profiles')
-                .update({
-                    game_state: JSON.stringify(resetState),
-                    bruh_count: 0,
-                    news_count: 0,
-                    player_level: 0
-                })
-                .eq('id', currentUser.id);
-            
-            gameState = resetState;
-        } else {
-            localStorage.removeItem('newsBruhGameState');
-            sessionStorage.clear();
-            gameState = JSON.parse(JSON.stringify(defaultGameState));
-        }
-        
-        hideResetConfirmation();
-        
-        const resetBox = document.querySelector('.reset-confirmation-box');
-        const originalContent = resetBox.innerHTML;
-        
-        resetBox.innerHTML = `
-            <span style="font-size: 3rem; color: #4CAF50;">✓</span>
-            <h3 style="color: #4CAF50;">RESET COMPLETE!</h3>
-            <p>All game progress has been reset. Your account remains active.</p>
-            <div style="margin-top: 20px; font-family: var(--font-mono);">
-                <strong>Game has been reset to beginning!</strong><br>
-            </div>
-        `;
-        
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
-            oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
-            oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
-        } catch (e) {}
-        
-        setTimeout(() => {
-            location.reload();
-        }, 2000);
+        setInterval(updateLeaderboardPeriodically, 15000);
+        setInterval(updateOnlinePlayersPeriodically, 30000);
+        setInterval(updatePlayerCountsPeriodically, 60000);
     }
 
     // Initialize on load
-    window.addEventListener('DOMContentLoaded', async () => {
-        console.log('DOM loaded, initializing...');
-        
-        // Check authentication status
-        await checkAuth();
-        
-        // Listen for auth changes
-        supabase.auth.onAuthStateChange((event, session) => {
-            console.log('Auth state changed:', event, session);
-            if (event === 'SIGNED_IN') {
-                console.log('User signed in, reloading...');
-                location.reload();
-            } else if (event === 'SIGNED_OUT') {
-                console.log('User signed out, reloading...');
-                location.reload();
-            }
-        });
+    window.addEventListener('DOMContentLoaded', function() {
+        const savedName = localStorage.getItem('newsBruhPlayerName');
+        if (savedName && savedName.trim() !== '') {
+            gameState.playerName = savedName;
+            init();
+        }
     });
     
     window.addEventListener('beforeunload', saveGame);
-    
-    // Add event listeners for reset modal
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            hideResetConfirmation();
-        }
-    });
-
-    document.getElementById('reset-confirmation-modal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            hideResetConfirmation();
-        }
-    });
     
     // Export functions to global scope
     window.manualClick = manualClick;
     window.buyMax = buyMax;
     window.prestige = prestige;
     window.sendChatMessage = sendChatMessage;
-    window.showResetConfirmation = showResetConfirmation;
-    window.hideResetConfirmation = hideResetConfirmation;
-    window.performHardReset = performHardReset;
+    window.startGameWithName = startGameWithName;
     window.formatNumber = formatNumber;
-    window.switchAuthTab = switchAuthTab;
-    window.register = register;
-    window.login = login;
-    window.resetPassword = resetPassword;
-    window.logout = logout;
 </script>
 </body>
 </html>
