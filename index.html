@@ -1898,30 +1898,14 @@
                     .eq('id', currentUser.id)
                     .single();
                 
-                if (profileError) {
-                    console.warn('Profile error:', profileError);
-                    // Create profile if it doesn't exist
+                if (profileError && profileError.code === 'PGRST116') {
+                    // Profile doesn't exist, create it
+                    console.log('Profile not found, creating...');
                     await createUserProfile();
-                    // Re-fetch profile after creation
-                    const { data: newProfile } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', currentUser.id)
-                        .single();
-                    
-                    if (newProfile) {
-                        gameState.playerName = newProfile.username || currentUser.email.split('@')[0];
-                        if (newProfile.game_state) {
-                            try {
-                                const savedState = JSON.parse(newProfile.game_state);
-                                if (savedState && savedState.version === gameState.version) {
-                                    gameState = { ...gameState, ...savedState };
-                                }
-                            } catch (e) {
-                                console.warn('Error parsing saved game state:', e);
-                            }
-                        }
-                    }
+                } else if (profileError) {
+                    console.warn('Profile error:', profileError);
+                    // Still create profile as fallback
+                    await createUserProfile();
                 } else if (profile) {
                     console.log('Profile loaded:', profile.username);
                     gameState.playerName = profile.username || currentUser.email.split('@')[0];
@@ -1969,54 +1953,59 @@
         
         try {
             // Create default username from email
-            const username = currentUser.email.split('@')[0] + Math.floor(Math.random() * 1000);
+            const baseUsername = currentUser.email.split('@')[0];
+            const username = baseUsername + Math.floor(Math.random() * 1000);
             
             const initialGameState = JSON.parse(JSON.stringify(defaultGameState));
             initialGameState.playerName = username;
             
+            // Use upsert to handle both insert and update
             const { error } = await supabase
                 .from('profiles')
-                .insert([
-                    {
+                .upsert({
+                    id: currentUser.id,
+                    email: currentUser.email,
+                    username: username,
+                    created_at: new Date().toISOString(),
+                    game_state: JSON.stringify(initialGameState),
+                    bruh_count: 0,
+                    news_count: 0,
+                    player_level: 0,
+                    last_active: new Date().toISOString()
+                }, {
+                    onConflict: 'id',
+                    ignoreDuplicates: false
+                });
+            
+            if (error) {
+                console.error('Failed to create/update profile:', error);
+                
+                // Try with a different username
+                const newUsername = username + Math.floor(Math.random() * 1000);
+                const { error: retryError } = await supabase
+                    .from('profiles')
+                    .upsert({
                         id: currentUser.id,
                         email: currentUser.email,
-                        username: username,
+                        username: newUsername,
                         created_at: new Date().toISOString(),
-                        game_state: JSON.stringify(initialGameState),
+                        game_state: JSON.stringify({ ...initialGameState, playerName: newUsername }),
                         bruh_count: 0,
                         news_count: 0,
                         player_level: 0,
                         last_active: new Date().toISOString()
-                    }
-                ]);
-            
-            if (error) {
-                console.error('Failed to create profile:', error);
-                // If username already exists, try with a different one
-                if (error.code === '23505') {
-                    const newUsername = username + Math.floor(Math.random() * 1000);
-                    const { error: retryError } = await supabase
-                        .from('profiles')
-                        .insert([
-                            {
-                                id: currentUser.id,
-                                email: currentUser.email,
-                                username: newUsername,
-                                created_at: new Date().toISOString(),
-                                game_state: JSON.stringify({ ...initialGameState, playerName: newUsername }),
-                                bruh_count: 0,
-                                news_count: 0,
-                                player_level: 0,
-                                last_active: new Date().toISOString()
-                            }
-                        ]);
-                    
-                    if (retryError) throw retryError;
-                    
+                    }, {
+                        onConflict: 'id',
+                        ignoreDuplicates: false
+                    });
+                
+                if (retryError) {
+                    console.error('Failed on retry too:', retryError);
+                    // Use a fallback username
+                    gameState.playerName = currentUser.email.split('@')[0];
+                } else {
                     gameState.playerName = newUsername;
                     gameState = { ...initialGameState, playerName: newUsername };
-                } else {
-                    throw error;
                 }
             } else {
                 gameState.playerName = username;
@@ -2069,13 +2058,14 @@
         try {
             console.log('Attempting to sign up user...');
             
-            // Create auth user
+            // Create auth user with metadata
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
                     data: {
-                        username: username
+                        username: username,
+                        email_redirect_to: window.location.origin
                     }
                 }
             });
@@ -2097,11 +2087,25 @@
             const initialGameState = JSON.parse(JSON.stringify(defaultGameState));
             initialGameState.playerName = username;
             
-            // Create user profile
-            const { error: profileError } = await supabase
+            // Wait a moment for the user to be fully created in the database
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Create user profile using the user's ID
+            const { data: existingProfile, error: checkError } = await supabase
                 .from('profiles')
-                .insert([
-                    {
+                .select('id')
+                .eq('id', authData.user.id)
+                .maybeSingle();
+            
+            if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found"
+                console.warn('Profile check error:', checkError);
+            }
+            
+            // If profile doesn't exist, create it
+            if (!existingProfile) {
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .upsert({
                         id: authData.user.id,
                         email: email,
                         username: username,
@@ -2111,19 +2115,19 @@
                         news_count: 0,
                         player_level: 0,
                         last_active: new Date().toISOString()
-                    }
-                ]);
-            
-            if (profileError) {
-                console.error('Profile creation error:', profileError);
+                    }, {
+                        onConflict: 'id'
+                    });
                 
-                // If profile already exists (duplicate username), try with a modified username
-                if (profileError.code === '23505') {
-                    const modifiedUsername = username + Math.floor(Math.random() * 1000);
-                    const { error: retryError } = await supabase
-                        .from('profiles')
-                        .insert([
-                            {
+                if (profileError) {
+                    console.error('Profile creation error:', profileError);
+                    
+                    // If username already exists, try with a modified username
+                    if (profileError.code === '23505') {
+                        const modifiedUsername = username + Math.floor(Math.random() * 1000);
+                        const { error: retryError } = await supabase
+                            .from('profiles')
+                            .upsert({
                                 id: authData.user.id,
                                 email: email,
                                 username: modifiedUsername,
@@ -2133,18 +2137,26 @@
                                 news_count: 0,
                                 player_level: 0,
                                 last_active: new Date().toISOString()
-                            }
-                        ]);
-                    
-                    if (retryError) throw retryError;
-                    
-                    initialGameState.playerName = modifiedUsername;
+                            }, {
+                                onConflict: 'id'
+                            });
+                        
+                        if (retryError) {
+                            console.error('Retry profile creation error:', retryError);
+                            throw retryError;
+                        }
+                        
+                        initialGameState.playerName = modifiedUsername;
+                        showAuthSuccess('Account created! Username modified due to conflict. Logging you in...');
+                    } else {
+                        throw profileError;
+                    }
                 } else {
-                    throw profileError;
+                    showAuthSuccess('Account created successfully! Logging you in...');
                 }
+            } else {
+                showAuthSuccess('Profile already exists. Logging you in...');
             }
-            
-            showAuthSuccess('Account created successfully! Logging you in...');
             
             // Auto-login after registration
             setTimeout(async () => {
@@ -2156,8 +2168,7 @@
                     
                     if (loginError) {
                         console.error('Auto-login error:', loginError);
-                        // Show login form with pre-filled credentials
-                        showAuthError('Account created! Please login manually.');
+                        showAuthSuccess('Account created! Please login manually.');
                         switchAuthTab('login');
                         document.getElementById('login-email').value = email;
                         document.getElementById('login-password').value = password;
@@ -2174,12 +2185,12 @@
                     
                 } catch (loginError) {
                     console.error('Auto-login error:', loginError);
-                    showAuthError('Account created but failed to auto-login. Please login manually.');
+                    showAuthSuccess('Account created! Please login manually.');
                     switchAuthTab('login');
                     document.getElementById('login-email').value = email;
                     document.getElementById('login-password').value = password;
                 }
-            }, 1000);
+            }, 1500);
             
         } catch (error) {
             console.error('Registration error:', error);
@@ -2190,6 +2201,8 @@
                 errorMessage = 'This email is already registered. Please login instead.';
             } else if (error.message?.includes('duplicate key value')) {
                 errorMessage = 'Username already taken. Please choose another one.';
+            } else if (error.message?.includes('Email rate limit exceeded')) {
+                errorMessage = 'Too many attempts. Please try again in a few minutes.';
             } else if (error.message) {
                 errorMessage = error.message;
             }
@@ -2257,19 +2270,17 @@
                 
                 const { error: createError } = await supabase
                     .from('profiles')
-                    .insert([
-                        {
-                            id: currentUser.id,
-                            email: currentUser.email,
-                            username: username,
-                            created_at: new Date().toISOString(),
-                            game_state: JSON.stringify(initialGameState),
-                            bruh_count: 0,
-                            news_count: 0,
-                            player_level: 0,
-                            last_active: new Date().toISOString()
-                        }
-                    ]);
+                    .upsert({
+                        id: currentUser.id,
+                        email: currentUser.email,
+                        username: username,
+                        created_at: new Date().toISOString(),
+                        game_state: JSON.stringify(initialGameState),
+                        bruh_count: 0,
+                        news_count: 0,
+                        player_level: 0,
+                        last_active: new Date().toISOString()
+                    });
                 
                 if (createError) {
                     console.error('Failed to create profile:', createError);
