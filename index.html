@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The News Bruh | Online Multiplayer</title>
+    <style>
+        /* Copy ALL your existing CSS styles here */
+        /* They will work exactly as before */
+    </style>
+</head>
+<body>
+    <!-- Copy ALL your existing HTML structure here -->
+    <!-- The login overlay, newspaper, leaderboard, chat, etc. -->
+    
+    <!-- Add at the end of your HTML, before closing body tag: -->
+    <script src="game.js"></script>
+    
+    <!-- Add chat input event listener -->
+    <script>
+    document.getElementById('chat-input')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            window.sendChatMessage();
+        }
+    });
+    </script>
+</body>
+</html>
