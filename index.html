@@ -1752,24 +1752,19 @@
 
 <script>
     // ============================================
-    // SUPABASE SETUP - Add this at the beginning
+    // SUPABASE SETUP
     // ============================================
     
-    // Supabase Configuration - YOU NEED TO SET THESE VALUES
-    // 1. Go to https://supabase.com and create a free account
-    // 2. Create a new project
-    // 3. Go to Settings > API to get your credentials
-    const SUPABASE_URL = 'https://qlwtovkrmfoqfgrtynrv.supabase.co'; // Replace with your Supabase URL
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsd3RvdmtybWZvcWZncnR5bnJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzE4NTksImV4cCI6MjA4Mzg0Nzg1OX0.XMPhSftpLtTeM3gTS0Acf6DrFuI_H0U-iAfxAas9n8Y'; // Replace with your Supabase Anon Key
+    // Supabase Configuration
+    const SUPABASE_URL = 'https://qlwtovkrmfoqfgrtynrv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsd3RvdmtybWZvcWZncnR5bnJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzE4NTksImV4cCI6MjA4Mzg0Nzg1OX0.XMPhSftpLtTeM3gTS0Acf6DrFuI_H0U-iAfxAas9n8Y';
     
     // Initialize Supabase client
     let supabase = null;
     
     // Function to initialize Supabase
     function initSupabase() {
-        if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY && 
-            SUPABASE_URL !== 'https://your-project-id.supabase.co' && 
-            SUPABASE_ANON_KEY !== 'your-anon-key') {
+        if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
             try {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 console.log('Supabase initialized successfully');
@@ -1784,52 +1779,127 @@
         }
     }
     
-    // Enhanced Player Counter System with Supabase Fallback
+    // ============================================
+    // COMPLETE SQL SETUP SCRIPT
+    // ============================================
+    /*
+    COPY AND RUN THIS IN SUPABASE SQL EDITOR:
+    
+    -- Drop all existing tables if they exist
+    DROP TABLE IF EXISTS player_sessions CASCADE;
+    DROP TABLE IF EXISTS chat_messages CASCADE;
+    DROP TABLE IF EXISTS leaderboard CASCADE;
+    DROP FUNCTION IF EXISTS get_player_stats CASCADE;
+
+    -- Create player_sessions table
+    CREATE TABLE player_sessions (
+        id BIGSERIAL PRIMARY KEY,
+        session_id TEXT UNIQUE,
+        player_name TEXT,
+        last_active TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    -- Create chat_messages table
+    CREATE TABLE chat_messages (
+        id BIGSERIAL PRIMARY KEY,
+        sender TEXT,
+        message TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    -- Create leaderboard table
+    CREATE TABLE leaderboard (
+        player_name TEXT PRIMARY KEY,
+        bruh_count BIGINT DEFAULT 0,
+        news_count BIGINT DEFAULT 0,
+        level INT DEFAULT 1,
+        last_active TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    -- Enable Row Level Security
+    ALTER TABLE player_sessions ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE leaderboard ENABLE ROW LEVEL SECURITY;
+
+    -- Create policies for public access
+    CREATE POLICY "Allow all operations on player_sessions" ON player_sessions
+        FOR ALL USING (true);
+
+    CREATE POLICY "Allow all operations on chat_messages" ON chat_messages
+        FOR ALL USING (true);
+
+    CREATE POLICY "Allow all operations on leaderboard" ON leaderboard
+        FOR ALL USING (true);
+
+    -- Create the get_player_stats function
+    CREATE OR REPLACE FUNCTION get_player_stats()
+    RETURNS TABLE(active_players BIGINT, total_players BIGINT) 
+    LANGUAGE SQL
+    AS $$
+        SELECT 
+            COUNT(DISTINCT player_name) as active_players,
+            (SELECT COUNT(DISTINCT player_name) FROM leaderboard) as total_players
+        FROM player_sessions 
+        WHERE last_active > NOW() - INTERVAL '5 minutes';
+    $$;
+
+    -- Enable Realtime for all tables
+    BEGIN;
+        DROP PUBLICATION IF EXISTS supabase_realtime CASCADE;
+        CREATE PUBLICATION supabase_realtime FOR ALL TABLES;
+    COMMIT;
+
+    -- Insert some test data
+    INSERT INTO leaderboard (player_name, bruh_count, news_count, level) VALUES
+    ('Inky', 15, 15000, 5),
+    ('PressBot', 12, 12000, 4),
+    ('NewsHound', 8, 8000, 3),
+    ('TypeSet', 5, 5000, 2),
+    ('PrintMaster', 3, 3000, 1)
+    ON CONFLICT (player_name) DO NOTHING;
+
+    INSERT INTO chat_messages (sender, message) VALUES
+    ('System', 'Welcome to The News Bruh Press Room!'),
+    ('Inky', 'Just started playing this game!'),
+    ('PressBot', 'The leaderboard looks interesting'),
+    ('NewsHound', 'Working on getting more Bruhs');
+    */
+    
+    // ============================================
+    // GAME SYSTEMS
+    // ============================================
+    
+    // Enhanced Player Counter System
     const PlayerCounter = {
-        // Base values for fallback
         baseOnline: 12403,
         baseTotal: 842019,
-        
-        // Current values
         online: 12403,
         total: 842019,
-        
-        // Track player sessions
         playerSessions: [],
-        sessionTimeout: 300000, // 5 minutes for session timeout
+        sessionTimeout: 300000,
         
-        // Initialize the counter system
         async init() {
-            // Load existing stats
             this.loadStats();
-            
-            // Try to initialize Supabase
             const supabaseReady = initSupabase();
             
             if (supabaseReady) {
                 try {
-                    // Add current player session to Supabase
                     await this.addSupabaseSession();
-                    
-                    // Update online count from Supabase
                     await this.updateFromSupabase();
                 } catch (error) {
                     console.warn('Supabase connection failed, using local storage:', error);
                     this.addLocalSession();
                 }
             } else {
-                // Use local storage if Supabase not configured
                 this.addLocalSession();
             }
             
-            // Start update intervals
             this.startIntervals();
-            
-            // Initial update
             await this.updateDisplay();
         },
         
-        // Add session to Supabase
         async addSupabaseSession() {
             try {
                 const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -1847,7 +1917,6 @@
                 
                 if (error) throw error;
                 
-                // Store session ID for updates
                 localStorage.setItem('supabase_session_id', sessionId);
                 return sessionId;
             } catch (error) {
@@ -1855,7 +1924,6 @@
             }
         },
         
-        // Add local session (fallback)
         addLocalSession() {
             const sessionId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             const session = {
@@ -1870,10 +1938,8 @@
             return sessionId;
         },
         
-        // Update from Supabase
         async updateFromSupabase() {
             try {
-                // Update session activity in Supabase
                 const sessionId = localStorage.getItem('supabase_session_id');
                 if (sessionId && supabase) {
                     await supabase
@@ -1882,15 +1948,13 @@
                         .eq('session_id', sessionId);
                 }
                 
-                // Get player stats
-                const { data, error } = await supabase
-                    .rpc('get_player_stats');
+                const { data, error } = await supabase.rpc('get_player_stats');
                 
                 if (error) throw error;
                 
-                if (data) {
-                    this.online = data.active_players || this.baseOnline;
-                    this.total = data.total_players || this.baseTotal;
+                if (data && data.length > 0) {
+                    this.online = data[0].active_players || this.baseOnline;
+                    this.total = data[0].total_players || this.baseTotal;
                 }
             } catch (error) {
                 console.warn('Could not update from Supabase:', error);
@@ -1898,7 +1962,6 @@
             }
         },
         
-        // Calculate local count (fallback)
         calculateLocalCount() {
             this.cleanupSessions();
             
@@ -1910,9 +1973,7 @@
             const sessionCount = activeSessions.length;
             
             this.online = Math.max(10000, this.baseOnline + baseVariation + (sessionCount * 10));
-            
-            const totalGrowth = Math.floor(Math.random() * 1000) + 500;
-            this.total = this.baseTotal + totalGrowth + (sessionCount * 100);
+            this.total = this.baseTotal + (sessionCount * 100);
             
             return {
                 online: this.online,
@@ -1921,13 +1982,11 @@
             };
         },
         
-        // Update session activity
         async updateSession() {
             if (supabase) {
                 try {
                     await this.updateFromSupabase();
                 } catch (error) {
-                    console.warn('Supabase update failed:', error);
                     this.updateLocalSession();
                 }
             } else {
@@ -1946,7 +2005,6 @@
             this.saveStats();
         },
         
-        // Load saved stats from localStorage
         loadStats() {
             try {
                 const savedStats = localStorage.getItem('newsBruhPlayerStats');
@@ -1968,7 +2026,6 @@
             }
         },
         
-        // Save stats to localStorage
         saveStats() {
             try {
                 const stats = {
@@ -1985,7 +2042,6 @@
             }
         },
         
-        // Clean up old sessions
         cleanupSessions() {
             const now = Date.now();
             const activeSessions = this.playerSessions.filter(session => 
@@ -1998,7 +2054,6 @@
             }
         },
         
-        // Update the display
         async updateDisplay() {
             let counts;
             
@@ -2017,32 +2072,27 @@
                 counts = this.calculateLocalCount();
             }
             
-            // Update online count
             const onlineElement = document.getElementById('online-count');
             const totalElement = document.getElementById('total-count');
             
             if (onlineElement) {
                 const oldOnline = parseInt(onlineElement.textContent.replace(/,/g, '')) || 0;
                 const newOnline = counts.online;
-                
                 this.animateNumberChange(onlineElement, oldOnline, newOnline);
             }
             
             if (totalElement) {
                 const oldTotal = parseInt(totalElement.textContent.replace(/,/g, '')) || 0;
                 const newTotal = counts.total;
-                
                 this.animateNumberChange(totalElement, oldTotal, newTotal);
             }
             
-            // Update online users count in chat
             const onlineUsersCount = document.getElementById('online-users-count');
             if (onlineUsersCount) {
                 onlineUsersCount.textContent = counts.activeSessions + 1;
             }
         },
         
-        // Animate number change
         animateNumberChange(element, oldValue, newValue) {
             if (oldValue === newValue) {
                 element.textContent = this.formatNumber(newValue);
@@ -2071,19 +2121,15 @@
             requestAnimationFrame(animate);
         },
         
-        // Format number with commas
         formatNumber(num) {
             return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         },
         
-        // Start update intervals
         startIntervals() {
-            // Update display every 10 seconds
             setInterval(() => {
                 this.updateDisplay();
             }, 10000);
             
-            // Update base values occasionally (every 30 minutes)
             setInterval(() => {
                 this.baseOnline += Math.floor(Math.random() * 1000) - 500;
                 this.baseTotal += Math.floor(Math.random() * 5000) + 2000;
@@ -2091,26 +2137,23 @@
                 this.saveStats();
             }, 1800000);
             
-            // Save stats every minute
             setInterval(() => {
                 this.saveStats();
             }, 60000);
             
-            // Update session activity every minute
             setInterval(() => {
                 this.updateSession();
             }, 60000);
         }
     };
     
-    // Chat System with Supabase
+    // Chat System
     const ChatSystem = {
         messages: [],
         onlinePlayers: [],
         supabaseConnected: false,
         
         async init() {
-            // Initialize Supabase
             this.supabaseConnected = initSupabase();
             
             if (this.supabaseConnected) {
@@ -2137,7 +2180,6 @@
         async setupRealtime() {
             if (!supabase) return;
             
-            // Subscribe to chat messages
             supabase
                 .channel('chat-messages')
                 .on('postgres_changes', 
@@ -2171,7 +2213,6 @@
                 this.messages = data ? data.reverse() : [];
                 this.updateChatDisplay();
                 
-                // Save to local storage as backup
                 localStorage.setItem('newsBruhChat', JSON.stringify(this.messages));
             } catch (error) {
                 console.warn('Could not load chat messages from Supabase:', error);
@@ -2207,14 +2248,12 @@
                 return false;
             }
             
-            // Create message object
             const chatMessage = {
                 sender: gameState.playerName,
                 message: message,
                 created_at: new Date().toISOString()
             };
             
-            // Try to send to Supabase
             if (this.supabaseConnected && supabase) {
                 try {
                     const { data, error } = await supabase
@@ -2223,7 +2262,6 @@
                     
                     if (error) throw error;
                     
-                    // Message will be added via real-time subscription
                     return true;
                 } catch (error) {
                     console.warn('Could not send message to Supabase:', error);
@@ -2233,7 +2271,6 @@
                 }
             }
             
-            // Fallback to local storage
             this.addLocalMessage(chatMessage);
             return true;
         },
@@ -2244,25 +2281,20 @@
             
             this.messages.push(chatMessage);
             
-            // Keep only last 100 messages
             if (this.messages.length > 100) {
                 this.messages = this.messages.slice(-100);
             }
             
-            // Save to localStorage
             localStorage.setItem('newsBruhChat', JSON.stringify(this.messages));
             
-            // Update display
             this.updateChatDisplay();
             
-            // Check for tags
             if (chatMessage.message.includes(`@${gameState.playerName}`) && 
                 chatMessage.sender !== gameState.playerName &&
                 gameState.chatNotifications) {
                 this.showNotification(chatMessage);
             }
             
-            // Simulate other players occasionally responding
             if (Math.random() < 0.3) {
                 setTimeout(() => {
                     this.simulateOtherPlayerResponse();
@@ -2271,7 +2303,6 @@
         },
         
         onNewMessage(message) {
-            // Add message if not already in list
             const exists = this.messages.some(m => m.id === message.id || 
                 (m.sender === message.sender && m.message === message.message && 
                  m.created_at === message.created_at));
@@ -2280,17 +2311,14 @@
                 message.isSystem = false;
                 this.messages.push(message);
                 
-                // Keep only last 100 messages
                 if (this.messages.length > 100) {
                     this.messages = this.messages.slice(-100);
                 }
                 
-                // Save to localStorage as backup
                 localStorage.setItem('newsBruhChat', JSON.stringify(this.messages));
                 
                 this.updateChatDisplay();
                 
-                // Check for tags
                 if (message.message.includes(`@${gameState.playerName}`) && 
                     message.sender !== gameState.playerName &&
                     gameState.chatNotifications) {
@@ -2323,7 +2351,6 @@
         },
         
         updateLocalOnlinePlayers() {
-            // Get players from local leaderboard
             try {
                 const savedLeaderboard = localStorage.getItem('newsBruhLeaderboard');
                 let players = [];
@@ -2332,7 +2359,6 @@
                     players = JSON.parse(savedLeaderboard);
                 }
                 
-                // Filter active players (last 5 minutes)
                 const activePlayers = players.filter(player => {
                     return Date.now() - player.lastActive < 5 * 60 * 1000;
                 });
@@ -2385,7 +2411,6 @@
             
             onlineUsersContainer.innerHTML = '';
             
-            // Sort by last active
             const sortedPlayers = [...this.onlinePlayers].sort((a, b) => 
                 new Date(b.last_active) - new Date(a.last_active)
             );
@@ -2472,9 +2497,7 @@
                 supabase
                     .from('chat_messages')
                     .insert([chatMessage])
-                    .then(() => {
-                        // Message will be added via real-time
-                    })
+                    .then(() => {})
                     .catch(() => {
                         this.addLocalMessage(chatMessage);
                     });
@@ -2484,13 +2507,12 @@
         }
     };
     
-    // Leaderboard System with Supabase
+    // Leaderboard System
     const LeaderboardSystem = {
         players: [],
         supabaseConnected: false,
         
         async init() {
-            // Initialize Supabase
             this.supabaseConnected = initSupabase();
             
             if (this.supabaseConnected) {
@@ -2526,7 +2548,6 @@
                 this.players = data || [];
                 this.updateLeaderboardDisplay();
                 
-                // Save to local storage as backup
                 localStorage.setItem('newsBruhLeaderboard', JSON.stringify(this.players));
             } catch (error) {
                 console.warn('Could not load leaderboard from Supabase:', error);
@@ -2570,7 +2591,6 @@
                 }
             }
             
-            // Always update local leaderboard
             this.updateLocalLeaderboard();
         },
         
@@ -2591,7 +2611,6 @@
                     leaderboard = JSON.parse(savedLeaderboard);
                 }
                 
-                // Update or add player
                 const existingIndex = leaderboard.findIndex(p => p.name === gameState.playerName);
                 if (existingIndex >= 0) {
                     leaderboard[existingIndex] = playerData;
@@ -2603,7 +2622,6 @@
                     }
                 }
                 
-                // Sort by level, then bruh count
                 leaderboard.sort((a, b) => {
                     if (b.level !== a.level) return b.level - a.level;
                     return b.bruh - a.bruh;
@@ -2642,7 +2660,6 @@
             
             tbody.innerHTML = '';
             
-            // Update timestamp
             const now = new Date();
             const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const updateTimeElement = document.getElementById('leaderboard-update-time');
@@ -2650,7 +2667,6 @@
                 updateTimeElement.textContent = `Updated: ${timeStr}`;
             }
             
-            // Show top players
             const displayCount = Math.min(20, this.players.length);
             
             for (let i = 0; i < displayCount; i++) {
@@ -2677,7 +2693,6 @@
                 tbody.appendChild(row);
             }
             
-            // If current player is not in top 20, add them at the bottom
             const currentPlayerIndex = this.players.findIndex(p => p.name === gameState.playerName);
             if (currentPlayerIndex >= 20) {
                 const player = this.players[currentPlayerIndex];
@@ -2699,7 +2714,6 @@
         async autoUpdateLeaderboard() {
             await this.updatePlayerScore();
             
-            // Visual feedback
             const leaderboardSection = document.getElementById('leaderboard-section');
             if (leaderboardSection) {
                 leaderboardSection.style.backgroundColor = '#e9e7df';
@@ -2711,7 +2725,7 @@
     };
     
     // ============================================
-    // ORIGINAL GAME CODE BELOW (UNCHANGED)
+    // ORIGINAL GAME CODE
     // ============================================
     
     // Player Name Display Functions
@@ -2720,7 +2734,6 @@
         const playerName = gameState.playerName || 'Anonymous';
         nameDisplay.textContent = playerName;
         
-        // Also update the player name in the leaderboard and chat if needed
         LeaderboardSystem.updatePlayerScore();
     }
 
@@ -2731,16 +2744,12 @@
         const subtitle = document.querySelector('.name-modal-subtitle');
         const startBtn = document.querySelector('.start-game-btn');
         
-        // Change modal content for name change
         title.textContent = 'Change Your Name';
         subtitle.textContent = 'Enter a new newsroom name';
         nameInput.value = gameState.playerName || '';
         startBtn.textContent = 'UPDATE NAME';
-        
-        // Change button function to update name instead of starting game
         startBtn.onclick = updatePlayerName;
         
-        // Show modal
         modal.classList.remove('hidden');
         nameInput.focus();
         nameInput.select();
@@ -2754,17 +2763,13 @@
             return;
         }
         
-        // Save the player name
         localStorage.setItem('newsBruhPlayerName', playerName);
         gameState.playerName = playerName;
         
-        // Update display
         updatePlayerNameDisplay();
         
-        // Hide modal
         document.getElementById('name-selection-modal').classList.add('hidden');
         
-        // Reset modal for next time
         const title = document.querySelector('.name-modal-title');
         const subtitle = document.querySelector('.name-modal-subtitle');
         const startBtn = document.querySelector('.start-game-btn');
@@ -2774,10 +2779,8 @@
         startBtn.textContent = 'START PRINTING';
         startBtn.onclick = startGameWithName;
         
-        // Update leaderboard with new name
         LeaderboardSystem.updatePlayerScore();
         
-        // Show confirmation
         showFloatingText('Name updated!', document.querySelector('.header-name-display'));
     }
 
@@ -2829,66 +2832,42 @@
             return;
         }
         
-        // Save the player name
         localStorage.setItem('newsBruhPlayerName', playerName);
         gameState.playerName = playerName;
         
-        // Update player name display
         updatePlayerNameDisplay();
         
-        // Hide name selection modal
         document.getElementById('name-selection-modal').classList.add('hidden');
         
-        // Show the game
         document.getElementById('newspaper').style.display = 'flex';
         
-        // Initialize the game
         init();
         
-        // Initialize player counter
         PlayerCounter.init();
-        
-        // Initialize chat system
         ChatSystem.init();
-        
-        // Initialize leaderboard
         LeaderboardSystem.init();
     }
 
     // Live Date & Time Display
     function updateDateTime() {
         const now = new Date();
-        
-        // Format day with leading zero
         const day = String(now.getDate()).padStart(2, '0');
-        
-        // Format month with leading zero (months are 0-indexed in JavaScript)
         const month = String(now.getMonth() + 1).padStart(2, '0');
-        
-        // Get full year
         const year = now.getFullYear();
-        
-        // Format time with leading zeros
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const seconds = String(now.getSeconds()).padStart(2, '0');
         
-        // Create the formatted string: dd/mm/yyyy HH:MM:SS
         const dateTimeString = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
         
-        // Update the element
         const dateTimeElement = document.getElementById('currentDateTime');
         if (dateTimeElement) {
             dateTimeElement.textContent = dateTimeString;
         }
     }
 
-    // Start updating the date/time every second
     function startDateTimeUpdate() {
-        // Update immediately
         updateDateTime();
-        
-        // Then update every second
         setInterval(updateDateTime, 1000);
     }
 
@@ -2908,14 +2887,12 @@
         version: "1.0.8",
         playerName: "",
         chatNotifications: true,
-        // Enhanced: Boost System State
         boostProgress: 0,
         isBoostActive: false,
         boostTimeLeft: 0,
         boostCooldown: 0,
         boostMultiplier: 1,
         lastDepletionTime: Date.now(),
-        // New: Level System State
         level: 1,
         xp: 0,
         totalXpEarned: 0
@@ -2924,22 +2901,12 @@
     let gameState = JSON.parse(JSON.stringify(defaultGameState));
     let isInitialized = false;
     
-    // Enhanced: Boost system variables
     let breakingNewsEmojis = [];
     let boostEmojiInterval = null;
     let boostTimerInterval = null;
 
-    // Chat System Variables
-    let chatMessages = [];
-    let onlinePlayers = [];
-    let leaderboardData = [];
-    let lastChatUpdate = 0;
-    let lastLeaderboardUpdate = 0;
-
     // Level System Functions
     function calculateXPForLevel(level) {
-        // Exponential scaling for infinite progression
-        // Base: 100 XP for level 1, increasing exponentially
         return Math.floor(100 * Math.pow(1.15, level - 1));
     }
 
@@ -2972,13 +2939,10 @@
         const newLevelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
         const newLevel = newLevelInfo.level;
         
-        // Update level in gameState
         gameState.level = newLevel;
         gameState.xp = newLevelInfo.currentXP;
         
-        // Check for level up
         if (newLevel > oldLevel) {
-            // Add visual effect for level up
             const levelContainer = document.querySelector('.level-container');
             levelContainer.style.animation = 'none';
             setTimeout(() => {
@@ -2986,7 +2950,6 @@
             }, 10);
         }
         
-        // Update level display
         updateLevelDisplay();
         
         return newLevel > oldLevel;
@@ -2995,19 +2958,15 @@
     function updateLevelDisplay() {
         const levelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
         
-        // Update level number
         document.getElementById('current-level').textContent = formatNumber(levelInfo.level);
         
-        // Update XP display
         const xpDisplay = document.getElementById('xp-display');
         xpDisplay.textContent = `${formatNumber(levelInfo.currentXP)}/${formatNumber(levelInfo.nextLevelXP)} XP`;
         
-        // Update progress bar
         const progressBar = document.getElementById('level-progress-bar');
         const progressPercent = levelInfo.progress;
         progressBar.style.width = `${progressPercent}%`;
         
-        // Show/hide level up indicator
         const levelUpIndicator = document.getElementById('level-up-indicator');
         if (progressPercent >= 95) {
             levelUpIndicator.style.display = 'block';
@@ -3015,39 +2974,30 @@
             levelUpIndicator.style.display = 'none';
         }
         
-        // Update leaderboard with new level
         LeaderboardSystem.updatePlayerScore();
     }
 
     // INFINITE ALPHABETICAL NUMBER SYSTEM
-    // ===================================
     function formatNumber(num) {
         if (typeof num !== 'number' || !isFinite(num)) return '0';
         if (num < 0) return '-' + formatNumber(-num);
         if (num < 1000) return Math.floor(num).toLocaleString();
         
-        // Convert to infinite alphabetical system
         return toAlphabetical(num);
     }
 
-    // New: Infinite alphabetical number system
     function toAlphabetical(num) {
-        // Handle scientific notation for very large numbers
         if (num >= 1e6) {
-            // Use log10 to determine the magnitude
             const log = Math.log10(num);
-            const magnitude = Math.floor(log / 3); // Every 3 orders of magnitude = new letter group
+            const magnitude = Math.floor(log / 3);
             
             if (magnitude < 1) return Math.floor(num).toLocaleString();
             
-            // Calculate the base value (1e3, 1e6, 1e9, etc.)
             const baseValue = Math.pow(1000, magnitude);
             const scaled = num / baseValue;
             
-            // Get the letter suffix for this magnitude
             const suffix = getAlphabeticalSuffix(magnitude - 1);
             
-            // Format with 2 decimal places for readability
             if (scaled >= 100) {
                 return Math.floor(scaled) + suffix;
             } else if (scaled >= 10) {
@@ -3057,7 +3007,6 @@
             }
         }
         
-        // Traditional formatting for smaller numbers
         if (num >= 1e15) return (num / 1e15).toFixed(2) + "Qa";
         if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
         if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
@@ -3067,25 +3016,20 @@
         return Math.floor(num).toLocaleString();
     }
 
-    // New: Generate alphabetical suffixes infinitely
     function getAlphabeticalSuffix(index) {
         if (index < 0) return "";
         
-        // First 26: a-z (for magnitudes 0-25)
         if (index < 26) {
-            return String.fromCharCode(97 + index); // 97 = 'a'
+            return String.fromCharCode(97 + index);
         }
         
-        // For indices >= 26, we need to build a multi-letter suffix
         let result = "";
         let remaining = index;
         
         while (remaining >= 0) {
-            // Get the current character (0-25 = a-z)
             const charIndex = remaining % 26;
             result = String.fromCharCode(97 + charIndex) + result;
             
-            // Move to next "digit" (like base-26 counting)
             remaining = Math.floor(remaining / 26) - 1;
             
             if (remaining < 0) break;
@@ -3100,7 +3044,6 @@
             return;
         }
         
-        // Double confirmation for safety
         if (!confirm("FINAL WARNING: This action cannot be undone!\n\nAll your progress will be lost forever.\n\nType 'RESET' to confirm:")) {
             return;
         }
@@ -3111,19 +3054,15 @@
             return;
         }
         
-        // Save the player's name
         const playerName = gameState.playerName;
         
-        // Clear all game data from localStorage
         localStorage.removeItem('newsBruhGameState');
         localStorage.removeItem('newsBruhChat');
         localStorage.removeItem('newsBruhLeaderboard');
         
-        // Reset the game state to default
         gameState = JSON.parse(JSON.stringify(defaultGameState));
-        gameState.playerName = playerName; // Keep the player name
+        gameState.playerName = playerName;
         
-        // Reset all visual elements
         gameState.news = 0;
         gameState.bruh = 0;
         gameState.level = 1;
@@ -3135,39 +3074,30 @@
         gameState.boostCooldown = 0;
         gameState.boostMultiplier = 1;
         
-        // Reset all buildings
         gameState.buildings.forEach(building => {
             building.count = 0;
         });
         
-        // Hide breaking news banner
         const banner = document.getElementById('breaking-news-banner');
         if (banner) banner.style.display = 'none';
         
-        // Stop emoji rain
         stopEmojiRain();
         
-        // Clear boost timer interval
         if (boostTimerInterval) {
             clearInterval(boostTimerInterval);
             boostTimerInterval = null;
         }
         
-        // Update UI
         updateUI();
         updateLevelDisplay();
         updateBoostProgress();
         
-        // Update leaderboard with reset stats
         LeaderboardSystem.updatePlayerScore();
         
-        // Save the reset state
         saveGame();
         
-        // Show confirmation message
         alert("✅ Game has been reset successfully!\n\nYou're starting fresh with:\n• 0 New currency\n• 0 Buildings\n• 0 Bruhs\n• Level 1\n\nYour player name has been kept.");
         
-        // Visual feedback
         const resetButton = document.getElementById('reset-button');
         if (resetButton) {
             resetButton.style.backgroundColor = '#4CAF50';
@@ -3188,7 +3118,6 @@
         const timerElement = document.getElementById('boost-timer');
         
         if (gameState.boostCooldown > 0) {
-            // In cooldown
             boostButton.disabled = true;
             const minutes = Math.floor(gameState.boostCooldown / 60);
             const seconds = Math.floor(gameState.boostCooldown % 60);
@@ -3199,7 +3128,6 @@
             progressBar.style.width = '0%';
             progressBar.style.background = 'linear-gradient(90deg, #cccccc, #999999)';
         } else if (gameState.isBoostActive) {
-            // Boost is active
             boostButton.disabled = false;
             percentageElement.textContent = 'ACTIVE!';
             percentageElement.style.color = '#ff0000';
@@ -3211,7 +3139,6 @@
             timerElement.style.display = 'block';
             timerElement.textContent = `${gameState.boostTimeLeft}s`;
         } else {
-            // Normal charging state
             boostButton.disabled = false;
             percentageElement.style.color = '';
             percentageElement.style.textShadow = '';
@@ -3222,7 +3149,6 @@
             cooldownElement.style.display = 'none';
             timerElement.style.display = 'none';
             
-            // Update cooldown display
             if (gameState.boostProgress >= 100) {
                 cooldownElement.textContent = 'READY!';
                 cooldownElement.style.display = 'block';
@@ -3234,21 +3160,18 @@
         }
     }
 
-    // Deplete boost progress over time
     function depleteBoostProgress() {
         if (gameState.isBoostActive || gameState.boostCooldown > 0 || gameState.boostProgress <= 0) {
             return;
         }
         
         const now = Date.now();
-        const timeSinceLastDepletion = (now - gameState.lastDepletionTime) / 1000; // Convert to seconds
+        const timeSinceLastDepletion = (now - gameState.lastDepletionTime) / 1000;
         
-        // Deplete 2% per second
         if (timeSinceLastDepletion >= 1) {
             gameState.boostProgress = Math.max(0, gameState.boostProgress - 2);
             gameState.lastDepletionTime = now;
             
-            // Update display if needed
             if (gameState.boostProgress % 10 === 0 || gameState.boostProgress <= 1) {
                 updateBoostProgress();
             }
@@ -3260,16 +3183,12 @@
             return;
         }
         
-        // Each click adds 5% progress
         gameState.boostProgress += 5;
-        
-        // Reset depletion timer
         gameState.lastDepletionTime = Date.now();
         
-        // AUTO-ACTIVATE when reaching 100%
         if (gameState.boostProgress >= 100) {
             gameState.boostProgress = 100;
-            activateBoost(); // Auto-activate immediately
+            activateBoost();
         }
         
         updateBoostProgress();
@@ -3280,31 +3199,25 @@
         if (gameState.isBoostActive || gameState.boostProgress < 100) return;
         
         gameState.isBoostActive = true;
-        gameState.boostTimeLeft = 15; // 15 seconds
-        gameState.boostMultiplier = 5; // 5x multiplier
+        gameState.boostTimeLeft = 15;
+        gameState.boostMultiplier = 5;
         gameState.boostProgress = 0;
         
-        // Show enhanced breaking news banner
         const banner = document.getElementById('breaking-news-banner');
         banner.style.display = 'block';
         
-        // Start dropping emojis
         startEmojiRain();
         
-        // Update timer display
         updateBoostTimer();
         
-        // Start boost timer
         if (boostTimerInterval) clearInterval(boostTimerInterval);
         boostTimerInterval = setInterval(updateBoostTimer, 1000);
         
-        // Add visual effect to stats
         const statBlocks = document.querySelectorAll('.stat-block');
         statBlocks.forEach(block => {
             block.classList.add('active-boost');
         });
         
-        // Update UI immediately
         updateUI();
         updateBoostProgress();
     }
@@ -3314,13 +3227,11 @@
         
         gameState.boostTimeLeft--;
         
-        // Update timer displays
         const timerElement = document.getElementById('boost-timer');
         
         if (timerElement) {
             timerElement.textContent = `${gameState.boostTimeLeft}s`;
             
-            // Flash red when time is running low
             if (gameState.boostTimeLeft <= 5) {
                 timerElement.style.animation = 'none';
                 setTimeout(() => {
@@ -3339,10 +3250,8 @@
     function resetBoostTimer() {
         if (!gameState.isBoostActive) return;
         
-        // Reset timer to 15 seconds when print edition is clicked
         gameState.boostTimeLeft = 15;
         
-        // Update timer displays
         const timerElement = document.getElementById('boost-timer');
         
         if (timerElement) {
@@ -3351,7 +3260,6 @@
             timerElement.style.borderColor = '#ff0000';
         }
         
-        // Visual feedback on banner
         const banner = document.getElementById('breaking-news-banner');
         banner.style.transform = 'perspective(500px) rotateX(5deg) scale(1.05)';
         banner.style.boxShadow = '0 6px 25px rgba(255, 0, 0, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.4)';
@@ -3365,28 +3273,23 @@
     function endBoost() {
         gameState.isBoostActive = false;
         gameState.boostMultiplier = 1;
-        gameState.boostCooldown = 600; // 10 minutes cooldown = 600 seconds
+        gameState.boostCooldown = 600;
         
-        // Hide breaking news banner
         const banner = document.getElementById('breaking-news-banner');
         banner.style.display = 'none';
         
-        // Stop dropping emojis
         stopEmojiRain();
         
-        // Clear boost timer interval
         if (boostTimerInterval) {
             clearInterval(boostTimerInterval);
             boostTimerInterval = null;
         }
         
-        // Remove visual effect from stats
         const statBlocks = document.querySelectorAll('.stat-block');
         statBlocks.forEach(block => {
             block.classList.remove('active-boost');
         });
         
-        // Start cooldown timer
         const cooldownInterval = setInterval(() => {
             gameState.boostCooldown--;
             updateBoostProgress();
@@ -3398,19 +3301,15 @@
             }
         }, 1000);
         
-        // Update UI
         updateUI();
         updateBoostProgress();
     }
 
     function startEmojiRain() {
-        // Clear any existing interval
         if (boostEmojiInterval) clearInterval(boostEmojiInterval);
         
-        // Create falling emojis every 300ms for more intense effect
         boostEmojiInterval = setInterval(() => {
             createFallingEmoji();
-            // Sometimes create two at once
             if (Math.random() > 0.5) {
                 setTimeout(createFallingEmoji, 150);
             }
@@ -3423,7 +3322,6 @@
             boostEmojiInterval = null;
         }
         
-        // Remove all emojis
         breakingNewsEmojis.forEach(emoji => {
             if (emoji.parentNode) {
                 emoji.parentNode.removeChild(emoji);
@@ -3440,12 +3338,10 @@
         emoji.className = 'breaking-news-flash';
         emoji.textContent = '📰';
         
-        // Random position across the entire newspaper width
         const newspaper = document.getElementById('newspaper');
         const newspaperRect = newspaper.getBoundingClientRect();
         const bannerRect = banner.getBoundingClientRect();
         
-        // Start position relative to newspaper
         const startX = Math.random() * newspaperRect.width;
         const startY = bannerRect.top - newspaperRect.top;
         
@@ -3454,13 +3350,11 @@
         emoji.style.fontSize = `${Math.random() * 20 + 20}px`;
         emoji.style.animationDuration = `${Math.random() * 1 + 1.5}s`;
         
-        // Random rotation direction
         emoji.style.transform = `rotate(${Math.random() > 0.5 ? '' : '-'}${Math.random() * 30}deg)`;
         
         newspaper.appendChild(emoji);
         breakingNewsEmojis.push(emoji);
         
-        // Remove emoji after animation
         setTimeout(() => {
             if (emoji.parentNode) {
                 emoji.parentNode.removeChild(emoji);
@@ -3479,9 +3373,7 @@
 
     const getMultiplier = () => {
         const bruh = gameState.bruh || 0;
-        // Handle very large numbers safely
         if (bruh > 1e12) {
-            // Use logarithmic scaling for extreme values
             return (1 + Math.pow(Math.log10(bruh + 1), 2)) * gameState.boostMultiplier;
         }
         return (1 + bruh) * gameState.boostMultiplier;
@@ -3491,9 +3383,7 @@
         const count = building.count || 0;
         const baseCost = building.baseCost || 15;
         
-        // Handle very large counts safely
         if (count > 1000) {
-            // Use exponential scaling but cap the growth rate
             const exponent = Math.min(count, 10000) * 0.15;
             return Math.floor(baseCost * Math.pow(1.15, Math.min(exponent, 100)));
         }
@@ -3512,7 +3402,6 @@
         let tempCount = building.count;
         let nextCost = getCost({...building, count: tempCount});
         
-        // Safety limit
         const maxIterations = 1000;
         
         for (let i = 0; i < maxIterations; i++) {
@@ -3529,30 +3418,20 @@
         return canBuy;
     };
 
-    // Calculate player level based on total XP earned
-    const calculateLevel = () => {
-        return calculateLevelFromTotalXP(gameState.totalXpEarned).level;
-    };
-
-    // Award XP for various actions
     function awardXPForAction(action, amount = 1) {
         let xpAmount = 0;
         
         switch(action) {
             case 'click':
-                // Small XP for clicking
                 xpAmount = 1;
                 break;
             case 'building':
-                // More XP for buying buildings
                 xpAmount = Math.floor(amount * 5);
                 break;
             case 'bruh':
-                // Significant XP for buying Bruhs
                 xpAmount = Math.floor(amount * 50);
                 break;
             case 'time':
-                // XP for passive time (capped)
                 xpAmount = Math.min(amount, 100);
                 break;
         }
@@ -3562,7 +3441,6 @@
         }
     }
 
-    // Chat System Functions
     function sendChatMessage() {
         const input = document.getElementById('chat-input');
         const message = input.value.trim();
@@ -3571,56 +3449,9 @@
         
         ChatSystem.sendMessage(message).then(success => {
             if (success) {
-                // Clear input
                 input.value = '';
             }
         });
-    }
-
-    function saveChatMessage(message) {
-        // This is now handled by ChatSystem
-        console.warn('saveChatMessage is deprecated, use ChatSystem instead');
-    }
-
-    function loadChatMessages() {
-        // This is now handled by ChatSystem
-        console.warn('loadChatMessages is deprecated, use ChatSystem instead');
-    }
-
-    function updateChatDisplay() {
-        // This is now handled by ChatSystem
-        console.warn('updateChatDisplay is deprecated, use ChatSystem instead');
-    }
-
-    function showChatNotification(sender, message) {
-        // This is now handled by ChatSystem
-        console.warn('showChatNotification is deprecated, use ChatSystem instead');
-    }
-
-    function simulateOtherPlayerResponse() {
-        // This is now handled by ChatSystem
-        console.warn('simulateOtherPlayerResponse is deprecated, use ChatSystem instead');
-    }
-
-    // Leaderboard Functions
-    function updateLeaderboard() {
-        // This is now handled by LeaderboardSystem
-        console.warn('updateLeaderboard is deprecated, use LeaderboardSystem instead');
-    }
-
-    function updateLeaderboardDisplay() {
-        // This is now handled by LeaderboardSystem
-        console.warn('updateLeaderboardDisplay is deprecated, use LeaderboardSystem instead');
-    }
-
-    // Auto-update leaderboard function
-    function autoUpdateLeaderboard() {
-        LeaderboardSystem.autoUpdateLeaderboard();
-    }
-
-    // Update online players list
-    function updateOnlinePlayers() {
-        ChatSystem.updateOnlinePlayers();
     }
 
     function saveGame() {
@@ -3638,10 +3469,7 @@
             if (saved) {
                 const parsed = JSON.parse(saved);
                 
-                // Migrate old saves if needed
                 if (!parsed.version || parsed.version !== defaultGameState.version) {
-                    console.log('Migrating save data...');
-                    // Keep building counts if they exist
                     if (parsed.buildings && Array.isArray(parsed.buildings)) {
                         parsed.buildings.forEach((savedBuilding, index) => {
                             if (gameState.buildings[index]) {
@@ -3653,7 +3481,6 @@
                     gameState.bruh = parsed.bruh || 0;
                     gameState.version = defaultGameState.version;
                     
-                    // Initialize boost system for migrated saves
                     gameState.boostProgress = parsed.boostProgress || 0;
                     gameState.isBoostActive = parsed.isBoostActive || false;
                     gameState.boostTimeLeft = parsed.boostTimeLeft || 0;
@@ -3661,8 +3488,6 @@
                     gameState.boostMultiplier = parsed.boostMultiplier || 1;
                     gameState.lastDepletionTime = parsed.lastDepletionTime || Date.now();
                     
-                    // Initialize level system for migrated saves
-                    // Calculate total XP from existing progress
                     gameState.totalXpEarned = parsed.totalXpEarned || 
                         (parsed.news / 10) + (parsed.bruh * 50);
                     const levelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
@@ -3672,7 +3497,6 @@
                     gameState = parsed;
                 }
                 
-                // Ensure we have valid numbers
                 gameState.news = Math.max(0, Number(gameState.news) || 0);
                 gameState.bruh = Math.max(0, Number(gameState.bruh) || 0);
                 gameState.boostProgress = Math.max(0, Number(gameState.boostProgress) || 0);
@@ -3688,7 +3512,6 @@
             }
         } catch (e) {
             console.warn('Could not load saved game:', e);
-            // Reset to default if corrupted
             gameState = JSON.parse(JSON.stringify(defaultGameState));
         }
     }
@@ -3701,13 +3524,10 @@
         const amount = 1 * getMultiplier();
         gameState.news += amount;
         
-        // Award XP for clicking
         awardXPForAction('click');
         
-        // Increment boost progress
         incrementBoostProgress();
         
-        // If boost is active, reset the timer
         if (gameState.isBoostActive) {
             resetBoostTimer();
         }
@@ -3716,12 +3536,10 @@
         btn.classList.add('pulse');
         setTimeout(() => btn.classList.remove('pulse'), 300);
         
-        // Create floating text
         const floater = document.createElement('div');
         floater.className = 'floater';
         floater.innerText = `📰 +${formatNumber(amount)}`;
         
-        // Get position
         let x, y;
         if (e.type === 'touchstart' || e.type === 'touchmove') {
             const touch = e.touches[0] || e.changedTouches[0];
@@ -3752,7 +3570,6 @@
                 gameState.news -= cost;
                 building.count++;
                 bought++;
-                // Calculate next cost
                 cost = getCost({...building, count: building.count});
             } else {
                 break;
@@ -3760,10 +3577,8 @@
         }
         
         if (bought > 0) {
-            // Award XP for buying buildings
             awardXPForAction('building', bought);
             
-            // Visual feedback
             const card = document.getElementById(`card-${id}`);
             const btn = document.getElementById(`btn-${id}`);
             
@@ -3781,15 +3596,12 @@
         }
     }
 
-    // UPDATED: Prestige function that resets everything except name and bruh count
     function prestige() {
-        // Calculate how many Bruhs can be bought
         let bruhsToBuy = 0;
         let tempNews = gameState.news;
         let tempBruh = gameState.bruh;
         let totalCost = 0;
         
-        // Calculate max affordable Bruhs
         while (true) {
             const nextCost = getPrestigeCost(tempBruh);
             if (tempNews >= nextCost) {
@@ -3800,7 +3612,7 @@
             } else {
                 break;
             }
-            if (bruhsToBuy >= 100) break; // Safety limit
+            if (bruhsToBuy >= 100) break;
         }
         
         if (bruhsToBuy === 0) {
@@ -3811,26 +3623,18 @@
             return;
         }
         
-        // Save the player's current name and bruh count
         const playerName = gameState.playerName;
         const newBruhCount = gameState.bruh + bruhsToBuy;
         
-        // RESET EVERYTHING except name and bruh count
         gameState = JSON.parse(JSON.stringify(defaultGameState));
         
-        // Restore name and bruh count
         gameState.playerName = playerName;
         gameState.bruh = newBruhCount;
         
-        // Reset news (start from 0)
         gameState.news = 0;
-        
-        // Reset level system
         gameState.level = 1;
         gameState.xp = 0;
         gameState.totalXpEarned = 0;
-        
-        // Reset boost system
         gameState.boostProgress = 0;
         gameState.isBoostActive = false;
         gameState.boostTimeLeft = 0;
@@ -3838,23 +3642,18 @@
         gameState.boostMultiplier = 1;
         gameState.lastDepletionTime = Date.now();
         
-        // Reset all buildings
         gameState.buildings.forEach(b => b.count = 0);
         
-        // Hide breaking news banner
         const banner = document.getElementById('breaking-news-banner');
         banner.style.display = 'none';
         
-        // Stop emoji rain
         stopEmojiRain();
         
-        // Clear boost timer interval
         if (boostTimerInterval) {
             clearInterval(boostTimerInterval);
             boostTimerInterval = null;
         }
         
-        // Visual feedback
         const prestigeBox = document.querySelector('.prestige-box');
         prestigeBox.style.backgroundColor = '#ffe6e6';
         prestigeBox.style.transform = 'scale(1.05)';
@@ -3865,22 +3664,19 @@
         }, 500);
         
         updateUI();
-        updateLevelDisplay(); // Make sure level display shows Level 1
+        updateLevelDisplay();
         updateBoostProgress();
-        LeaderboardSystem.updatePlayerScore(); // Update leaderboard with reset level
+        LeaderboardSystem.updatePlayerScore();
         saveGame();
     }
 
     // Fixed UI Update
     function updateUI() {
-        // Update level display
         updateLevelDisplay();
         
-        // Update stats
         document.getElementById('currency').textContent = formatNumber(gameState.news);
         document.getElementById('cps').textContent = formatNumber(getCPS());
         
-        // Show boost multiplier in multiplier display
         if (gameState.isBoostActive) {
             document.getElementById('multiplier').textContent = formatNumber(getMultiplier()) + ' (5x BOOST!)';
             document.getElementById('multiplier').style.color = '#ff0000';
@@ -3894,7 +3690,6 @@
         document.getElementById('bruh-owned').textContent = formatNumber(gameState.bruh);
         document.getElementById('tap-value-display').textContent = `📰 +${formatNumber(1 * getMultiplier())} New per Tap`;
 
-        // Update prestige button
         const pBtn = document.getElementById('prestige-btn');
         const prestigeCost = getPrestigeCost(gameState.bruh);
         const prestigeCostElement = document.getElementById('prestige-cost');
@@ -3902,7 +3697,6 @@
         
         prestigeCostElement.textContent = `Costs: ${formatNumber(prestigeCost)} New`;
         
-        // Calculate max Bruhs that can be bought
         let maxBuy = 0;
         let tempNews = gameState.news;
         let tempBruh = gameState.bruh;
@@ -3916,7 +3710,7 @@
             } else {
                 break;
             }
-            if (maxBuy >= 100) break; // Safety limit
+            if (maxBuy >= 100) break;
         }
         
         prestigeMaxElement.textContent = `Max: ${maxBuy}`;
@@ -3929,7 +3723,6 @@
             pBtn.innerHTML = `Need ${formatNumber(prestigeCost)} New <div id="prestige-cost" class="prestige-cost">Costs: ${formatNumber(prestigeCost)} New</div> <div id="prestige-max" class="prestige-max">Max: 0</div>`;
         }
 
-        // Update building cards
         gameState.buildings.forEach(building => {
             const currentCost = getCost(building);
             const maxBuy = getMaxBuy(building);
@@ -3940,7 +3733,6 @@
                 document.getElementById(`count-${building.id}`).textContent = formatNumber(building.count);
                 document.getElementById(`cost-text-${building.id}`).textContent = `Cost: ${formatNumber(currentCost)}`;
                 
-                // Update card classes
                 if (building.count > 0) {
                     card.classList.add('purchased');
                 } else {
@@ -3970,18 +3762,13 @@
     function init() {
         if (isInitialized) return;
         
-        // Check if player has a name saved
         const savedName = localStorage.getItem('newsBruhPlayerName');
         if (!savedName || savedName.trim() === '') {
-            // Show name selection modal
             document.getElementById('name-selection-modal').classList.remove('hidden');
             document.getElementById('newspaper').style.display = 'none';
-            
-            // Focus on the name input
             document.getElementById('player-name-input').focus();
             return;
         } else {
-            // Player has a name, hide modal and show game
             gameState.playerName = savedName;
             document.getElementById('name-selection-modal').classList.add('hidden');
             document.getElementById('newspaper').style.display = 'flex';
@@ -3989,10 +3776,8 @@
         
         loadGame();
         
-        // Update player name display
         updatePlayerNameDisplay();
         
-        // Start updating the date/time display
         startDateTimeUpdate();
         
         const container = document.getElementById('upgrades-list');
@@ -4020,13 +3805,10 @@
             container.appendChild(div);
         });
         
-        // Add event listeners
         const printBtn = document.getElementById('print-btn');
         
-        // Mouse events
         printBtn.addEventListener('mousedown', manualClick);
         
-        // Touch events with proper handling
         printBtn.addEventListener('touchstart', function(e) {
             manualClick(e);
         }, { passive: false });
@@ -4035,14 +3817,11 @@
             e.preventDefault();
         }, { passive: false });
         
-        // ENHANCED: Boost button is now display-only since it auto-activates
         const boostButton = document.getElementById('boost-button');
         boostButton.addEventListener('click', function() {
-            // Do nothing - boost auto-activates at 100%
-            // Button is just for display
+            // Auto-activates at 100%
         });
         
-        // Chat input enter key support
         const chatInput = document.getElementById('chat-input');
         chatInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -4050,7 +3829,6 @@
             }
         });
         
-        // Name input enter key support
         const nameInput = document.getElementById('player-name-input');
         nameInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -4058,7 +3836,6 @@
             }
         });
         
-        // Change name link event listener - FIXED
         const changeNameLink = document.getElementById('change-name-link');
         if (changeNameLink) {
             changeNameLink.addEventListener('click', function(e) {
@@ -4067,29 +3844,25 @@
             });
         }
         
-        // Reset button event listener
         const resetButton = document.getElementById('reset-button');
         if (resetButton) {
             resetButton.addEventListener('click', resetGame);
         }
         
-        // Prevent context menu on button
         printBtn.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             return false;
         });
         
-        // Initialize offline progress
         const now = Date.now();
         const lastUpdate = gameState.lastUpdate || now;
-        const timeDiff = (now - lastUpdate) / 1000; // Convert to seconds
+        const timeDiff = (now - lastUpdate) / 1000;
         
-        if (timeDiff > 1 && timeDiff < 86400) { // Between 1 second and 24 hours
+        if (timeDiff > 1 && timeDiff < 86400) {
             const offlineEarnings = getCPS() * timeDiff;
             if (offlineEarnings > 0) {
                 gameState.news += offlineEarnings;
-                // Award XP for offline time (capped)
-                awardXPForAction('time', Math.min(timeDiff, 3600)); // Max 1 hour worth
+                awardXPForAction('time', Math.min(timeDiff, 3600));
                 console.log(`Offline earnings: ${formatNumber(offlineEarnings)} New (${Math.floor(timeDiff)} seconds)`);
             }
         }
@@ -4097,27 +3870,21 @@
         updateUI();
         updateBoostProgress();
         
-        // ENHANCED: If boost was active when saved, reactivate it
         if (gameState.isBoostActive) {
-            // Restart the boost timer
             if (boostTimerInterval) clearInterval(boostTimerInterval);
             boostTimerInterval = setInterval(updateBoostTimer, 1000);
             
-            // Show enhanced breaking news banner
             const banner = document.getElementById('breaking-news-banner');
             banner.style.display = 'block';
             
-            // Start dropping emojis
             startEmojiRain();
             
-            // Add visual effect to stats
             const statBlocks = document.querySelectorAll('.stat-block');
             statBlocks.forEach(block => {
                 block.classList.add('active-boost');
             });
         }
         
-        // ENHANCED: If in cooldown, start cooldown timer
         if (gameState.boostCooldown > 0) {
             const cooldownInterval = setInterval(() => {
                 gameState.boostCooldown--;
@@ -4133,39 +3900,33 @@
         
         isInitialized = true;
         
-        // Start game loops
         startGameLoops();
     }
 
     // Fixed Game Loops
     function startGameLoops() {
-        // Update news based on CPS
         function updateNews() {
             const cps = getCPS();
             if (cps > 0) {
-                gameState.news += cps * 0.1; // Update 10 times per second
+                gameState.news += cps * 0.1;
                 if (gameState.news < 0) gameState.news = 0;
                 if (gameState.news > Number.MAX_SAFE_INTEGER) {
-                    // Handle extremely large numbers
                     gameState.news = Number.MAX_SAFE_INTEGER;
                 }
                 
-                // Award XP for passive production (every 10 seconds)
-                if (Math.random() < 0.01) { // 1% chance per update = ~10% per second
+                if (Math.random() < 0.01) {
                     awardXPForAction('time', 1);
                 }
             }
         }
 
-        // Main game loop
         function gameLoop() {
             updateNews();
-            depleteBoostProgress(); // Deplete boost over time
+            depleteBoostProgress();
             updateUI();
             requestAnimationFrame(gameLoop);
         }
 
-        // Rotate headlines
         function rotateHeadlines() {
             const headlines = [
                 "Local cat appointed Editor-in-Chief.",
@@ -4200,38 +3961,27 @@
             }, 500);
         }
 
-        // Auto-save every 30 seconds
         function autoSave() {
             saveGame();
         }
 
-        // Update leaderboard periodically
         function updateLeaderboardPeriodically() {
-            const now = Date.now();
-            if (now - lastLeaderboardUpdate > 15000) { // Every 15 seconds
-                autoUpdateLeaderboard();
-                lastLeaderboardUpdate = now;
-            }
+            LeaderboardSystem.autoUpdateLeaderboard();
         }
 
-        // Update online players periodically
         function updateOnlinePlayersPeriodically() {
-            updateOnlinePlayers();
+            ChatSystem.updateOnlinePlayers();
         }
 
-        // Simulate other players chatting
         function simulateRandomChat() {
-            if (Math.random() < 0.1) { // 10% chance every check
+            if (Math.random() < 0.1) {
                 ChatSystem.simulateOtherPlayerResponse();
             }
         }
 
-        // Start loops
         gameLoop();
         setInterval(rotateHeadlines, 10000);
         setInterval(autoSave, 30000);
-        
-        // Start multiplayer loops
         setInterval(updateLeaderboardPeriodically, 5000);
         setInterval(updateOnlinePlayersPeriodically, 10000);
         setInterval(simulateRandomChat, 15000);
@@ -4239,16 +3989,13 @@
 
     // Initialize on load
     window.addEventListener('DOMContentLoaded', function() {
-        // Check if player already has a name
         const savedName = localStorage.getItem('newsBruhPlayerName');
         if (savedName && savedName.trim() !== '') {
-            // Player has a name, hide modal and initialize game
             document.getElementById('name-selection-modal').classList.add('hidden');
             document.getElementById('newspaper').style.display = 'flex';
             gameState.playerName = savedName;
             init();
         } else {
-            // Show name selection modal
             document.getElementById('name-selection-modal').classList.remove('hidden');
             document.getElementById('player-name-input').focus();
         }
@@ -4256,7 +4003,7 @@
     
     window.addEventListener('beforeunload', saveGame);
     
-    // Export functions to global scope for onclick handlers
+    // Export functions to global scope
     window.manualClick = manualClick;
     window.buyMax = buyMax;
     window.prestige = prestige;
@@ -4265,8 +4012,6 @@
     window.resetGame = resetGame;
     window.updatePlayerName = updatePlayerName;
     window.openChangeNameModal = openChangeNameModal;
-    
-    // Export the formatting function for debugging
     window.formatNumber = formatNumber;
 </script>
 
