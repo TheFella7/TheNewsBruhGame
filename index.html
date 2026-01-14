@@ -1169,6 +1169,15 @@
             margin-right: 20px;
         }
 
+        .chat-message.ai-message {
+            opacity: 0.8;
+            border-left: 3px solid #999;
+        }
+
+        .chat-message.ai-message .message-sender {
+            color: #666;
+        }
+
         .chat-message.tagged {
             background: #fff8e1;
             border-left: 3px solid #ff9800;
@@ -1785,11 +1794,10 @@
     /*
     COPY AND RUN THIS IN SUPABASE SQL EDITOR:
     
-    -- Drop all existing tables if they exist
+    -- Drop existing tables if they exist
     DROP TABLE IF EXISTS player_sessions CASCADE;
     DROP TABLE IF EXISTS chat_messages CASCADE;
     DROP TABLE IF EXISTS leaderboard CASCADE;
-    DROP FUNCTION IF EXISTS get_player_stats CASCADE;
 
     -- Create player_sessions table
     CREATE TABLE player_sessions (
@@ -1800,11 +1808,11 @@
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
 
-    -- Create chat_messages table
+    -- Create chat_messages table (for REAL player messages only)
     CREATE TABLE chat_messages (
         id BIGSERIAL PRIMARY KEY,
-        sender TEXT,
-        message TEXT,
+        sender TEXT NOT NULL,
+        message TEXT NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
 
@@ -1818,60 +1826,58 @@
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
 
-    -- Enable Row Level Security
-    ALTER TABLE player_sessions ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE leaderboard ENABLE ROW LEVEL SECURITY;
+    -- Disable RLS for simplicity
+    ALTER TABLE player_sessions DISABLE ROW LEVEL SECURITY;
+    ALTER TABLE chat_messages DISABLE ROW LEVEL SECURITY;
+    ALTER TABLE leaderboard DISABLE ROW LEVEL SECURITY;
 
-    -- Create policies for public access
-    CREATE POLICY "Allow all operations on player_sessions" ON player_sessions
-        FOR ALL USING (true);
-
-    CREATE POLICY "Allow all operations on chat_messages" ON chat_messages
-        FOR ALL USING (true);
-
-    CREATE POLICY "Allow all operations on leaderboard" ON leaderboard
-        FOR ALL USING (true);
-
-    -- Create the get_player_stats function
-    CREATE OR REPLACE FUNCTION get_player_stats()
-    RETURNS TABLE(active_players BIGINT, total_players BIGINT) 
-    LANGUAGE SQL
+    -- Create function to get player stats
+    CREATE OR REPLACE FUNCTION get_newsbruh_stats()
+    RETURNS JSON
+    LANGUAGE plpgsql
     AS $$
-        SELECT 
-            COUNT(DISTINCT player_name) as active_players,
-            (SELECT COUNT(DISTINCT player_name) FROM leaderboard) as total_players
+    DECLARE
+        active_count INTEGER;
+        total_count INTEGER;
+        result JSON;
+    BEGIN
+        -- Get active players (last 5 minutes)
+        SELECT COUNT(DISTINCT player_name) INTO active_count
         FROM player_sessions 
         WHERE last_active > NOW() - INTERVAL '5 minutes';
+        
+        -- Get total players
+        SELECT COUNT(DISTINCT player_name) INTO total_count
+        FROM leaderboard;
+        
+        -- Build result
+        SELECT json_build_object(
+            'active_players', COALESCE(active_count, 0),
+            'total_players', COALESCE(total_count, 0)
+        ) INTO result;
+        
+        RETURN result;
+    END;
     $$;
+
+    -- Insert initial leaderboard data
+    INSERT INTO leaderboard (player_name, bruh_count, news_count, level) VALUES
+    ('Inky', 15, 15000, 5),
+    ('PressBot', 12, 12000, 4),
+    ('NewsHound', 8, 8000, 3)
+    ON CONFLICT (player_name) DO NOTHING;
 
     -- Enable Realtime for all tables
     BEGIN;
         DROP PUBLICATION IF EXISTS supabase_realtime CASCADE;
         CREATE PUBLICATION supabase_realtime FOR ALL TABLES;
     COMMIT;
-
-    -- Insert some test data
-    INSERT INTO leaderboard (player_name, bruh_count, news_count, level) VALUES
-    ('Inky', 15, 15000, 5),
-    ('PressBot', 12, 12000, 4),
-    ('NewsHound', 8, 8000, 3),
-    ('TypeSet', 5, 5000, 2),
-    ('PrintMaster', 3, 3000, 1)
-    ON CONFLICT (player_name) DO NOTHING;
-
-    INSERT INTO chat_messages (sender, message) VALUES
-    ('System', 'Welcome to The News Bruh Press Room!'),
-    ('Inky', 'Just started playing this game!'),
-    ('PressBot', 'The leaderboard looks interesting'),
-    ('NewsHound', 'Working on getting more Bruhs');
     */
     
     // ============================================
-    // GAME SYSTEMS
+    // PLAYER COUNTER SYSTEM
     // ============================================
     
-    // Enhanced Player Counter System
     const PlayerCounter = {
         baseOnline: 12403,
         baseTotal: 842019,
@@ -1948,13 +1954,14 @@
                         .eq('session_id', sessionId);
                 }
                 
-                const { data, error } = await supabase.rpc('get_player_stats');
+                // Use the new function name get_newsbruh_stats
+                const { data, error } = await supabase.rpc('get_newsbruh_stats');
                 
                 if (error) throw error;
                 
-                if (data && data.length > 0) {
-                    this.online = data[0].active_players || this.baseOnline;
-                    this.total = data[0].total_players || this.baseTotal;
+                if (data) {
+                    this.online = data.active_players || this.baseOnline;
+                    this.total = data.total_players || this.baseTotal;
                 }
             } catch (error) {
                 console.warn('Could not update from Supabase:', error);
@@ -2147,7 +2154,10 @@
         }
     };
     
-    // Chat System
+    // ============================================
+    // CHAT SYSTEM - FIXED VERSION
+    // ============================================
+    
     const ChatSystem = {
         messages: [],
         onlinePlayers: [],
@@ -2175,6 +2185,9 @@
                 document.getElementById('chat-status').textContent = 'Local Only';
                 document.getElementById('chat-status').style.color = '#FF9800';
             }
+            
+            // Start AI chat simulation
+            this.startAIChatSimulation();
         },
         
         async setupRealtime() {
@@ -2189,7 +2202,7 @@
                         table: 'chat_messages'
                     },
                     (payload) => {
-                        this.onNewMessage(payload.new);
+                        this.onNewRealMessage(payload.new);
                     }
                 )
                 .subscribe();
@@ -2206,13 +2219,25 @@
                     .from('chat_messages')
                     .select('*')
                     .order('created_at', { ascending: false })
-                    .limit(50);
+                    .limit(30);
                 
                 if (error) throw error;
                 
-                this.messages = data ? data.reverse() : [];
+                // Load real messages from Supabase
+                if (data) {
+                    this.messages = data.map(msg => ({
+                        ...msg,
+                        isAI: false,
+                        isReal: true
+                    })).reverse();
+                }
+                
+                // Add initial AI messages
+                this.addInitialAIMessages();
+                
                 this.updateChatDisplay();
                 
+                // Save to local storage as backup
                 localStorage.setItem('newsBruhChat', JSON.stringify(this.messages));
             } catch (error) {
                 console.warn('Could not load chat messages from Supabase:', error);
@@ -2226,17 +2251,57 @@
                 if (savedChat) {
                     this.messages = JSON.parse(savedChat);
                 } else {
-                    this.messages = [{
-                        id: 1,
-                        sender: 'System',
-                        message: 'Welcome to The News Bruh Press Room! Chat with other players here.',
-                        created_at: new Date().toISOString(),
-                        isSystem: true
-                    }];
+                    this.messages = [];
+                    this.addInitialAIMessages();
                 }
                 this.updateChatDisplay();
             } catch (e) {
                 console.warn('Could not load chat messages:', e);
+                this.messages = [];
+                this.addInitialAIMessages();
+                this.updateChatDisplay();
+            }
+        },
+        
+        addInitialAIMessages() {
+            // Add initial AI messages if chat is empty
+            if (this.messages.length === 0) {
+                const aiMessages = [
+                    {
+                        id: 'system_1',
+                        sender: 'System',
+                        message: 'Welcome to The News Bruh Press Room! Chat with other players here.',
+                        created_at: new Date().toISOString(),
+                        isAI: true,
+                        isReal: false
+                    },
+                    {
+                        id: 'ai_1',
+                        sender: 'Inky',
+                        message: 'Just started playing this game!',
+                        created_at: new Date(Date.now() - 300000).toISOString(),
+                        isAI: true,
+                        isReal: false
+                    },
+                    {
+                        id: 'ai_2',
+                        sender: 'PressBot',
+                        message: 'The leaderboard looks interesting',
+                        created_at: new Date(Date.now() - 600000).toISOString(),
+                        isAI: true,
+                        isReal: false
+                    },
+                    {
+                        id: 'ai_3',
+                        sender: 'NewsHound',
+                        message: 'Working on getting more Bruhs',
+                        created_at: new Date(Date.now() - 900000).toISOString(),
+                        isAI: true,
+                        isReal: false
+                    }
+                ];
+                
+                this.messages = [...aiMessages, ...this.messages];
             }
         },
         
@@ -2248,83 +2313,223 @@
                 return false;
             }
             
-            const chatMessage = {
+            // Create REAL player message object
+            const realMessage = {
                 sender: gameState.playerName,
                 message: message,
                 created_at: new Date().toISOString()
             };
             
+            // Send to Supabase if connected
             if (this.supabaseConnected && supabase) {
                 try {
                     const { data, error } = await supabase
                         .from('chat_messages')
-                        .insert([chatMessage]);
+                        .insert([realMessage]);
                     
                     if (error) throw error;
                     
+                    // Message will be added via real-time subscription
                     return true;
                 } catch (error) {
                     console.warn('Could not send message to Supabase:', error);
                     this.supabaseConnected = false;
                     document.getElementById('chat-status').textContent = 'Local Only';
                     document.getElementById('chat-status').style.color = '#FF9800';
+                    
+                    // Fallback: add as local message
+                    this.addLocalMessage(realMessage, true);
                 }
+            } else {
+                // Supabase not connected, add as local message
+                this.addLocalMessage(realMessage, true);
             }
             
-            this.addLocalMessage(chatMessage);
             return true;
         },
         
-        addLocalMessage(chatMessage) {
-            chatMessage.id = Date.now() + Math.random();
-            chatMessage.isSystem = false;
+        addLocalMessage(message, isReal = false) {
+            const chatMessage = {
+                ...message,
+                id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                isAI: !isReal,
+                isReal: isReal
+            };
             
             this.messages.push(chatMessage);
             
+            // Keep only last 100 messages
             if (this.messages.length > 100) {
                 this.messages = this.messages.slice(-100);
             }
             
+            // Save to localStorage
             localStorage.setItem('newsBruhChat', JSON.stringify(this.messages));
             
             this.updateChatDisplay();
             
-            if (chatMessage.message.includes(`@${gameState.playerName}`) && 
+            // Check for tags (only for real messages from other players)
+            if (chatMessage.isReal && 
+                chatMessage.message.includes(`@${gameState.playerName}`) && 
                 chatMessage.sender !== gameState.playerName &&
                 gameState.chatNotifications) {
                 this.showNotification(chatMessage);
             }
             
-            if (Math.random() < 0.3) {
-                setTimeout(() => {
-                    this.simulateOtherPlayerResponse();
-                }, 2000 + Math.random() * 5000);
-            }
+            return chatMessage;
         },
         
-        onNewMessage(message) {
-            const exists = this.messages.some(m => m.id === message.id || 
-                (m.sender === message.sender && m.message === message.message && 
-                 m.created_at === message.created_at));
+        onNewRealMessage(message) {
+            // Check if message already exists
+            const exists = this.messages.some(m => 
+                m.id === message.id || 
+                (m.sender === message.sender && 
+                 m.message === message.message && 
+                 Math.abs(new Date(m.created_at) - new Date(message.created_at)) < 1000)
+            );
             
             if (!exists) {
-                message.isSystem = false;
-                this.messages.push(message);
+                const enhancedMessage = {
+                    ...message,
+                    isAI: false,
+                    isReal: true
+                };
                 
+                this.messages.push(enhancedMessage);
+                
+                // Keep only last 100 messages
                 if (this.messages.length > 100) {
                     this.messages = this.messages.slice(-100);
                 }
                 
+                // Save to localStorage as backup
                 localStorage.setItem('newsBruhChat', JSON.stringify(this.messages));
                 
                 this.updateChatDisplay();
                 
-                if (message.message.includes(`@${gameState.playerName}`) && 
-                    message.sender !== gameState.playerName &&
+                // Check for tags
+                if (enhancedMessage.message.includes(`@${gameState.playerName}`) && 
+                    enhancedMessage.sender !== gameState.playerName &&
                     gameState.chatNotifications) {
-                    this.showNotification(message);
+                    this.showNotification(enhancedMessage);
                 }
             }
+        },
+        
+        // AI CHAT SIMULATION - LOCAL ONLY
+        startAIChatSimulation() {
+            // AI responds occasionally
+            setInterval(() => {
+                if (Math.random() < 0.3 && this.messages.length > 0) {
+                    this.simulateAIResponse();
+                }
+            }, 30000);
+        },
+        
+        simulateAIResponse() {
+            const aiNames = ['Inky', 'PressBot', 'NewsHound', 'TypeSet', 'PrintMaster'];
+            const aiMessages = [
+                "Just started playing!",
+                "Working on getting more Bruhs",
+                "The leaderboard is interesting",
+                "Nice progress everyone!",
+                "What's your production rate?",
+                "The number system is unique",
+                "Making good progress",
+                "Bruhs are helpful",
+                "Good luck to all players",
+                "Enjoying the game",
+                "The boost system is cool!",
+                "Leveling up feels rewarding",
+                "Anyone reached level 10 yet?",
+                "The newspaper theme is creative",
+                "Chat is working great!"
+            ];
+            
+            const randomName = aiNames[Math.floor(Math.random() * aiNames.length)];
+            let randomMessage = aiMessages[Math.floor(Math.random() * aiMessages.length)];
+            
+            // Occasionally tag the player
+            if (Math.random() < 0.2 && gameState.playerName) {
+                randomMessage = `@${gameState.playerName} ${randomMessage.toLowerCase()}`;
+            }
+            
+            const aiMessage = {
+                id: 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                sender: randomName,
+                message: randomMessage,
+                created_at: new Date().toISOString(),
+                isAI: true,
+                isReal: false
+            };
+            
+            // Add AI message locally (NOT to Supabase)
+            this.messages.push(aiMessage);
+            
+            // Keep only last 100 messages
+            if (this.messages.length > 100) {
+                this.messages = this.messages.slice(-100);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('newsBruhChat', JSON.stringify(this.messages));
+            
+            this.updateChatDisplay();
+            
+            // Show notification if AI tags player
+            if (aiMessage.message.includes(`@${gameState.playerName}`) && 
+                gameState.chatNotifications) {
+                this.showNotification(aiMessage);
+            }
+        },
+        
+        updateChatDisplay() {
+            const chatContainer = document.getElementById('chat-messages');
+            if (!chatContainer) return;
+            
+            chatContainer.innerHTML = '';
+            
+            // Show newest messages at the bottom
+            const messagesToShow = [...this.messages].slice(-50);
+            
+            messagesToShow.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                
+                // Determine message class
+                if (msg.sender === gameState.playerName) {
+                    messageDiv.className = 'chat-message self';
+                } else if (msg.isAI) {
+                    messageDiv.className = 'chat-message other ai-message';
+                } else {
+                    messageDiv.className = 'chat-message other';
+                }
+                
+                // Add tagged class if player is mentioned
+                if (msg.message.includes(`@${gameState.playerName}`) && msg.sender !== gameState.playerName) {
+                    messageDiv.classList.add('tagged');
+                }
+                
+                // Format timestamp
+                const timestamp = new Date(msg.created_at);
+                const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // Process message content (highlight tags)
+                let content = msg.message;
+                content = content.replace(/@([^\s@]+)/g, '<span class="tagged-player">@$1</span>');
+                
+                // Add AI indicator if it's an AI message
+                const senderName = msg.isAI ? `${msg.sender} 🤖` : msg.sender;
+                
+                messageDiv.innerHTML = `
+                    <div class="message-sender">${senderName} <span class="message-timestamp">${timeStr}</span></div>
+                    <div class="message-content">${content}</div>
+                `;
+                
+                chatContainer.appendChild(messageDiv);
+            });
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         },
         
         async updateOnlinePlayers() {
@@ -2342,7 +2547,12 @@
                 
                 if (error) throw error;
                 
-                this.onlinePlayers = data || [];
+                // Filter out AI names
+                const aiNames = ['Inky', 'PressBot', 'NewsHound', 'TypeSet', 'PrintMaster', 'System'];
+                this.onlinePlayers = (data || []).filter(player => 
+                    !aiNames.includes(player.player_name)
+                );
+                
                 this.updateOnlinePlayersDisplay();
             } catch (error) {
                 console.warn('Could not update online players:', error);
@@ -2359,8 +2569,12 @@
                     players = JSON.parse(savedLeaderboard);
                 }
                 
+                // Filter active players (last 5 minutes) and exclude AI names
+                const aiNames = ['Inky', 'PressBot', 'NewsHound', 'TypeSet', 'PrintMaster', 'System'];
                 const activePlayers = players.filter(player => {
-                    return Date.now() - player.lastActive < 5 * 60 * 1000;
+                    const isActive = Date.now() - player.lastActive < 5 * 60 * 1000;
+                    const isNotAI = !aiNames.includes(player.name);
+                    return isActive && isNotAI;
                 });
                 
                 this.onlinePlayers = activePlayers.map(p => ({
@@ -2374,50 +2588,35 @@
             }
         },
         
-        updateChatDisplay() {
-            const chatContainer = document.getElementById('chat-messages');
-            if (!chatContainer) return;
-            
-            chatContainer.innerHTML = '';
-            
-            this.messages.forEach(msg => {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `chat-message ${msg.sender === gameState.playerName ? 'self' : 'other'}`;
-                
-                if (msg.message.includes(`@${gameState.playerName}`) && msg.sender !== gameState.playerName) {
-                    messageDiv.classList.add('tagged');
-                }
-                
-                const timestamp = new Date(msg.created_at);
-                const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                let content = msg.message;
-                content = content.replace(/@([^\s@]+)/g, '<span class="tagged-player">@$1</span>');
-                
-                messageDiv.innerHTML = `
-                    <div class="message-sender">${msg.sender} <span class="message-timestamp">${timeStr}</span></div>
-                    <div class="message-content">${content}</div>
-                `;
-                
-                chatContainer.appendChild(messageDiv);
-            });
-            
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        },
-        
         updateOnlinePlayersDisplay() {
             const onlineUsersContainer = document.getElementById('online-users');
             if (!onlineUsersContainer) return;
             
             onlineUsersContainer.innerHTML = '';
             
+            // Sort by last active
             const sortedPlayers = [...this.onlinePlayers].sort((a, b) => 
                 new Date(b.last_active) - new Date(a.last_active)
             );
             
+            // Add current player if not already in list
+            const currentPlayerName = gameState.playerName;
+            if (currentPlayerName && !sortedPlayers.some(p => p.player_name === currentPlayerName)) {
+                sortedPlayers.unshift({
+                    player_name: currentPlayerName,
+                    last_active: new Date().toISOString()
+                });
+            }
+            
             sortedPlayers.forEach(player => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
+                
+                // Highlight current player
+                if (player.player_name === currentPlayerName) {
+                    userDiv.style.backgroundColor = '#e8f5e8';
+                    userDiv.style.fontWeight = 'bold';
+                }
                 
                 userDiv.innerHTML = `
                     <div>
@@ -2429,6 +2628,12 @@
                 
                 onlineUsersContainer.appendChild(userDiv);
             });
+            
+            // Update online count
+            const onlineUsersCount = document.getElementById('online-users-count');
+            if (onlineUsersCount) {
+                onlineUsersCount.textContent = sortedPlayers.length;
+            }
         },
         
         formatLastActive(timestamp) {
@@ -2451,7 +2656,10 @@
             const truncatedMessage = message.message.length > 50 ? 
                 message.message.substring(0, 47) + '...' : message.message;
             
-            notificationSender.textContent = `📨 ${message.sender} tagged you!`;
+            // Add AI indicator if it's an AI message
+            const senderDisplay = message.isAI ? `🤖 ${message.sender}` : message.sender;
+            
+            notificationSender.textContent = `📨 ${senderDisplay} tagged you!`;
             notificationMessage.textContent = truncatedMessage;
             
             notification.style.display = 'block';
@@ -2463,51 +2671,13 @@
             notification.onclick = () => {
                 notification.style.display = 'none';
             };
-        },
-        
-        simulateOtherPlayerResponse() {
-            const playerNames = ['Inky', 'PressBot', 'NewsHound', 'TypeSet', 'PrintMaster'];
-            const responses = [
-                "Just started playing!",
-                "Working on getting more Bruhs",
-                "The leaderboard is interesting",
-                `Nice progress everyone!`,
-                "What's your production rate?",
-                "The number system is unique",
-                "Making good progress",
-                "Bruhs are helpful",
-                "Good luck to all players",
-                "Enjoying the game"
-            ];
-            
-            const randomName = playerNames[Math.floor(Math.random() * playerNames.length)];
-            let randomResponse = responses[Math.floor(Math.random() * responses.length)];
-            
-            if (Math.random() < 0.3) {
-                randomResponse = `@${gameState.playerName} ${randomResponse.toLowerCase()}`;
-            }
-            
-            const chatMessage = {
-                sender: randomName,
-                message: randomResponse,
-                created_at: new Date().toISOString()
-            };
-            
-            if (this.supabaseConnected && supabase) {
-                supabase
-                    .from('chat_messages')
-                    .insert([chatMessage])
-                    .then(() => {})
-                    .catch(() => {
-                        this.addLocalMessage(chatMessage);
-                    });
-            } else {
-                this.addLocalMessage(chatMessage);
-            }
         }
     };
     
-    // Leaderboard System
+    // ============================================
+    // LEADERBOARD SYSTEM
+    // ============================================
+    
     const LeaderboardSystem = {
         players: [],
         supabaseConnected: false,
@@ -2871,7 +3041,7 @@
         setInterval(updateDateTime, 1000);
     }
 
-    // Fixed Game State Management
+    // Game State Management
     const defaultGameState = {
         news: 0,
         bruh: 0,
@@ -3973,18 +4143,11 @@
             ChatSystem.updateOnlinePlayers();
         }
 
-        function simulateRandomChat() {
-            if (Math.random() < 0.1) {
-                ChatSystem.simulateOtherPlayerResponse();
-            }
-        }
-
         gameLoop();
         setInterval(rotateHeadlines, 10000);
         setInterval(autoSave, 30000);
         setInterval(updateLeaderboardPeriodically, 5000);
         setInterval(updateOnlinePlayersPeriodically, 10000);
-        setInterval(simulateRandomChat, 15000);
     }
 
     // Initialize on load
