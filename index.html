@@ -920,7 +920,7 @@
         }
         .prestige-cost {
             font-size: 0.9rem;
-            font-weight = normal;
+            font-weight: normal;
             margin-top: 5px;
             color: #ffcccc;
         }
@@ -969,7 +969,7 @@
             top: -50%;
             left: -50%;
             width: 200%;
-            height = 200%;
+            height: 200%;
             background: linear-gradient(
                 45deg,
                 transparent 30%,
@@ -1757,30 +1757,44 @@
     <div class="notification-message" id="notification-message"></div>
 </div>
 
-<script>
-    // ============================================
-    // SUPABASE SETUP
-    // ============================================
+<script type="module">
+    // Import Supabase client
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     
+    // Supabase configuration
     const SUPABASE_URL = 'https://qlwtovkrmfoqfgrtynrv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsd3RvdmtybWZvcWZncnR5bnJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzE4NTksImV4cCI6MjA4Mzg0Nzg1OX0.XMPhSftpLtTeM3gTS0Acf6DrFuI_H0U-iAfxAas9n8Y';
     
-    let supabase = null;
-    
-    function initSupabase() {
-        if (window.supabase) {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                realtime: {
-                    params: {
-                        eventsPerSecond: 10
-                    }
-                }
-            });
-            console.log('Supabase initialized');
-            return true;
+    // Create Supabase client
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        realtime: {
+            params: {
+                eventsPerSecond: 5
+            }
         }
-        return false;
-    }
+    });
+    
+    console.log('Supabase initialized successfully');
+    
+    // Make supabase available globally
+    window.supabaseClient = supabase;
+    
+    // Now run the rest of your game code
+    window.addEventListener('DOMContentLoaded', function() {
+        // Initialize your game systems after Supabase is loaded
+        if (window.gameSystemsReady) {
+            window.gameSystemsReady();
+        }
+    });
+</script>
+
+<script>
+    // ============================================
+    // SUPABASE SETUP (Now loaded via ES module)
+    // ============================================
+    
+    // Supabase client is now available as window.supabaseClient
+    // from the ES module above
     
     // ============================================
     // REAL PLAYER TRACKING SYSTEM
@@ -1799,69 +1813,27 @@
             this.sessionId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             localStorage.setItem('player_session_id', this.sessionId);
             
-            // Initialize Supabase
-            const supabaseReady = initSupabase();
+            // Register this player session
+            await this.registerSession();
             
-            if (supabaseReady) {
-                // Create tables if they don't exist
-                await this.createTablesIfNeeded();
-                
-                // Register this player session
-                await this.registerSession();
-                
-                // Start tracking
-                this.startTracking();
-                
-                // Update player counts
-                await this.updatePlayerCounts();
-                
-                // Set up real-time updates
-                this.setupRealtime();
-            } else {
-                // Fallback to simulated tracking
-                this.startSimulatedTracking();
-            }
-        },
-        
-        async createTablesIfNeeded() {
-            try {
-                // Check if player_sessions table exists
-                const { error: sessionsError } = await supabase
-                    .from('player_sessions')
-                    .select('id')
-                    .limit(1);
-                
-                if (sessionsError && sessionsError.code === '42P01') {
-                    // Table doesn't exist, create it
-                    console.log('Creating player_sessions table...');
-                    
-                    // We can't create tables directly from client, so we'll handle this differently
-                    // For now, we'll just note that tables need to be created via SQL editor
-                    console.warn('Please run the SQL setup script in Supabase SQL Editor');
-                }
-                
-                // Check if leaderboard table exists
-                const { error: leaderboardError } = await supabase
-                    .from('leaderboard')
-                    .select('player_name')
-                    .limit(1);
-                
-                if (leaderboardError && leaderboardError.code === '42P01') {
-                    console.warn('Please run the SQL setup script in Supabase SQL Editor');
-                }
-            } catch (error) {
-                console.warn('Error checking tables:', error);
-            }
+            // Start tracking
+            this.startTracking();
+            
+            // Update player counts
+            await this.updatePlayerCounts();
+            
+            // Set up real-time updates
+            this.setupRealtime();
         },
         
         async registerSession() {
-            if (!supabase || !gameState.playerName) return;
+            if (!window.supabaseClient || !gameState.playerName) return;
             
             try {
                 const now = new Date().toISOString();
                 
                 // Insert or update player session
-                const { error } = await supabase
+                const { error } = await window.supabaseClient
                     .from('player_sessions')
                     .upsert({
                         session_id: this.sessionId,
@@ -1881,10 +1853,10 @@
         },
         
         async updateSessionActivity() {
-            if (!supabase || !gameState.playerName) return;
+            if (!window.supabaseClient || !gameState.playerName) return;
             
             try {
-                await supabase
+                await window.supabaseClient
                     .from('player_sessions')
                     .update({ last_active: new Date().toISOString() })
                     .eq('session_id', this.sessionId);
@@ -1894,7 +1866,7 @@
         },
         
         async updatePlayerCounts() {
-            if (!supabase) {
+            if (!window.supabaseClient) {
                 // Simulate player counts
                 this.onlinePlayers = Math.max(1, Math.floor(Math.random() * 100) + 20);
                 this.totalPlayers = Math.max(this.onlinePlayers, Math.floor(Math.random() * 1000) + 100);
@@ -1906,7 +1878,7 @@
                 // Get online players (active in last 5 minutes)
                 const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
                 
-                const { data: onlineData, error: onlineError } = await supabase
+                const { data: onlineData, error: onlineError } = await window.supabaseClient
                     .from('player_sessions')
                     .select('player_name', { count: 'exact' })
                     .gt('last_active', fiveMinutesAgo);
@@ -1918,7 +1890,7 @@
                 }
                 
                 // Get total players from leaderboard
-                const { data: totalData, error: totalError } = await supabase
+                const { data: totalData, error: totalError } = await window.supabaseClient
                     .from('leaderboard')
                     .select('player_name', { count: 'exact' });
                 
@@ -2011,27 +1983,11 @@
             });
         },
         
-        startSimulatedTracking() {
-            console.log('Starting simulated player tracking');
-            
-            // Simulate player growth
-            setInterval(() => {
-                // Random small changes to simulate real players coming and going
-                const onlineChange = Math.floor(Math.random() * 10) - 5;
-                const totalChange = Math.floor(Math.random() * 5);
-                
-                this.onlinePlayers = Math.max(1, this.onlinePlayers + onlineChange);
-                this.totalPlayers = Math.max(this.onlinePlayers, this.totalPlayers + totalChange);
-                
-                this.updateDisplay();
-            }, 15000);
-        },
-        
         setupRealtime() {
-            if (!supabase) return;
+            if (!window.supabaseClient) return;
             
             // Subscribe to player_sessions changes
-            supabase
+            window.supabaseClient
                 .channel('player-sessions-channel')
                 .on('postgres_changes', 
                     { 
@@ -2088,9 +2044,9 @@
             ];
             
             // Try to load from Supabase
-            if (supabase) {
+            if (window.supabaseClient) {
                 try {
-                    const { data, error } = await supabase
+                    const { data, error } = await window.supabaseClient
                         .from('chat_messages')
                         .select('*')
                         .order('created_at', { ascending: false })
@@ -2127,9 +2083,9 @@
             }, true);
             
             // Send to Supabase if connected
-            if (supabase) {
+            if (window.supabaseClient) {
                 try {
-                    const { error } = await supabase
+                    const { error } = await window.supabaseClient
                         .from('chat_messages')
                         .insert({
                             sender: playerName,
@@ -2268,9 +2224,9 @@
             ];
             
             // Try to load from Supabase
-            if (supabase) {
+            if (window.supabaseClient) {
                 try {
-                    const { data, error } = await supabase
+                    const { data, error } = await window.supabaseClient
                         .from('leaderboard')
                         .select('*')
                         .order('bruh_count', { ascending: false })
@@ -2317,9 +2273,9 @@
             this.updateLeaderboardDisplay();
             
             // Send to Supabase if connected
-            if (supabase) {
+            if (window.supabaseClient) {
                 try {
-                    const { error } = await supabase
+                    const { error } = await window.supabaseClient
                         .from('leaderboard')
                         .upsert(playerData, {
                             onConflict: 'player_name'
@@ -3489,17 +3445,32 @@
         setInterval(autoSave, 30000);
     }
 
-    // Initialize on load
-    window.addEventListener('DOMContentLoaded', function() {
+    // Function to run when Supabase is ready
+    window.gameSystemsReady = function() {
+        console.log('Supabase is ready, initializing game systems...');
+        
         const savedName = localStorage.getItem('newsBruhPlayerName');
         if (savedName && savedName.trim() !== '') {
             document.getElementById('name-selection-modal').classList.add('hidden');
             document.getElementById('newspaper').style.display = 'flex';
             gameState.playerName = savedName;
             init();
+            
+            // Initialize tracking systems
+            PlayerTracker.init();
+            ChatSystem.init();
+            LeaderboardSystem.init();
         } else {
             document.getElementById('name-selection-modal').classList.remove('hidden');
             document.getElementById('player-name-input').focus();
+        }
+    };
+    
+    // Start initialization when DOM is loaded
+    window.addEventListener('DOMContentLoaded', function() {
+        // If Supabase is already loaded (from module), run systems
+        if (window.supabaseClient) {
+            window.gameSystemsReady();
         }
     });
     
@@ -3516,9 +3487,6 @@
     window.openChangeNameModal = openChangeNameModal;
     window.formatNumber = formatNumber;
 </script>
-
-<!-- Add Supabase JS library -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 </body>
 </html>
