@@ -1,3492 +1,1607 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The News Bruh | Tycoon</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
-
-    <style>
-        /* Name Selection Modal Styles */
-        #name-selection-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            padding: 20px;
-        }
-
-        #name-selection-modal.hidden {
-            display: none;
-        }
-
-        .name-modal-content {
-            background: var(--bg-paper);
-            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
-            border: 6px solid var(--ink);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-            position: relative;
-            text-align: center;
-        }
-
-        .name-modal-content::before {
-            content: '';
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            bottom: 10px;
-            border: 2px solid var(--red-accent);
-            pointer-events: none;
-        }
-
-        .name-modal-title {
-            font-family: var(--font-old-english);
-            font-size: 3.5rem;
-            margin-bottom: 10px;
-            color: var(--ink);
-        }
-
-        .name-modal-subtitle {
-            font-family: var(--font-head);
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            color: var(--ink-light);
-            font-style: italic;
-        }
-
-        .name-input-container {
-            margin: 30px 0;
-        }
-
-        #player-name-input {
-            width: 100%;
-            padding: 20px;
-            font-family: var(--font-mono);
-            font-size: 1.2rem;
-            border: 3px solid var(--ink);
-            background: white;
-            text-align: center;
-            outline: none;
-            transition: all 0.3s;
-        }
-
-        #player-name-input:focus {
-            border-color: var(--red-accent);
-            box-shadow: 0 0 20px rgba(204, 0, 0, 0.3);
-        }
-
-        .name-rules {
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: var(--ink-light);
-            margin-top: 10px;
-            text-align: left;
-            padding: 15px;
-            background: var(--bg-paper-dark);
-            border: 1px solid var(--ink);
-        }
-
-        .name-rules ul {
-            list-style: none;
-            padding-left: 10px;
-        }
-
-        .name-rules li {
-            margin-bottom: 5px;
-            position: relative;
-            padding-left: 20px;
-        }
-
-        .name-rules li::before {
-            content: '•';
-            position: absolute;
-            left: 0;
-            color: var(--red-accent);
-        }
-
-        .start-game-btn {
-            background: var(--red-accent);
-            color: white;
-            border: none;
-            padding: 20px 40px;
-            font-family: var(--font-head);
-            font-size: 1.3rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-top: 20px;
-            width: 100%;
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .start-game-btn:hover {
-            background: #b30000;
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        }
-
-        .start-game-btn:active {
-            transform: translateY(1px);
-            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
-        }
-
-        .start-game-btn::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(
-                45deg,
-                transparent 30%,
-                rgba(255,255,255,0.1) 50%,
-                transparent 70%
-            );
-            transform: rotate(45deg);
-            animation: shine 3s infinite linear;
-        }
-
-        @keyframes shine {
-            0% { transform: rotate(45deg) translateX(-100%); }
-            100% { transform: rotate(45deg) translateX(100%); }
-        }
-
-        :root {
-            --bg-paper: #f9f7f1; 
-            --bg-paper-dark: #e6e4dc;
-            --ink: #0a0a0a;
-            --ink-light: #454545;
-            --red-accent: #cc0000;
-            --green-accent: #006400;
-            --blue-accent: #0066cc;
-            --border: 2px solid #1a1a1a;
-            --font-head: 'Playfair Display', serif;
-            --font-mono: 'Courier Prime', monospace;
-            --font-old-english: 'UnifrakturMaguntia', cursive; 
-        }
-
-        * { 
-            box-sizing: border-box; 
-            -webkit-tap-highlight-color: transparent; 
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: #2e2e2e;
-            margin: 0;
-            padding: 0;
-            font-family: var(--font-head);
-            color: var(--ink);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: auto;
-            position: relative;
-            padding: 10px;
-        }
-
-        #newspaper {
-            background-color: var(--bg-paper);
-            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
-            width: 100%;
-            max-width: 1400px;
-            height: auto;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
-            position: relative;
-        }
-
-        /* Header Player Name Display */
-        .header-name-display {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            text-align: left;
-            z-index: 1;
-        }
-
-        .player-name-text {
-            font-family: var(--font-mono);
-            font-size: 1rem;
-            font-weight: bold;
-            color: var(--ink);
-            background: var(--bg-paper-dark);
-            padding: 5px 10px;
-            border: 1px solid var(--ink);
-            border-radius: 3px;
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .change-name-link {
-            font-family: var(--font-mono);
-            font-size: 0.7rem;
-            color: var(--blue-accent);
-            text-decoration: underline;
-            cursor: pointer;
-            margin-top: 3px;
-            display: inline-block;
-            transition: color 0.2s;
-        }
-
-        .change-name-link:hover {
-            color: var(--red-accent);
-        }
-
-        #ticker-tape {
-            background: var(--ink);
-            color: #ffffff; 
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            padding: 6px 0;
-            overflow: hidden;
-            white-space: nowrap;
-            border-bottom: 3px solid var(--ink);
-            position: relative;
-            width: 100%;
-        }
-        .ticker-content {
-            display: inline-block;
-            animation: marquee 25s linear infinite;
-            padding-left: 100%;
-            white-space: nowrap;
-        }
-        .ticker-content a {
-            color: #4dabf7;
-            text-decoration: underline;
-            font-weight: bold;
-            margin: 0 20px;
-        }
-        @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-100%); }
-        }
-
-        header {
-            position: relative;
-            text-align: center;
-            padding: 15px 20px;
-            border-bottom: 5px double var(--ink);
-        }
-        h1 {
-            font-family: var(--font-old-english);
-            font-size: clamp(2.5rem, 5vw, 3.5rem);
-            margin: 0;
-            font-weight: normal;
-            line-height: 1;
-        }
-        
-        .player-counts {
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: var(--ink-light);
-            margin-top: 5px;
-            margin-bottom: 5px;
-            letter-spacing: -0.5px;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .player-counts span {
-            font-weight: bold;
-        }
-        .online-indicator {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: #4CAF50;
-            border-radius: 50%;
-            margin-right: 5px;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 0.7; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
-            100% { opacity: 0.7; transform: scale(1); }
-        }
-
-        .meta-line {
-            display: flex;
-            justify-content: space-between;
-            border-top: 1px solid var(--ink);
-            border-bottom: 1px solid var(--ink);
-            margin-top: 5px;
-            padding: 4px 0;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            flex-wrap: wrap;
-        }
-        .meta-line span {
-            margin: 0 5px;
-        }
-
-        #main-content {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr 1fr;
-            gap: 0;
-            flex: 1;
-            min-height: 500px;
-        }
-
-        .column {
-            padding: 20px;
-            overflow-y: auto;
-            border-right: 1px solid #aaa;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            min-height: 400px;
-        }
-        .column:last-child { border-right: none; }
-
-        .column::-webkit-scrollbar { width: 8px; }
-        .column::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
-        .column::-webkit-scrollbar-track { background: transparent; }
-
-        h2 {
-            font-family: var(--font-head);
-            border-bottom: 3px double var(--ink);
-            margin-top: 0;
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-            font-weight: 900;
-            padding-bottom: 5px;
-        }
-
-        /* Level System Styles */
-        .level-container {
-            margin-bottom: 20px;
-            border: 2px solid var(--ink);
-            background: white;
-            padding: 15px;
-            box-shadow: 3px 3px 0 rgba(0,0,0,0.1);
-        }
-
-        .level-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            font-family: var(--font-mono);
-        }
-
-        .level-title {
-            font-weight: bold;
-            font-size: 1.1rem;
-            color: var(--ink);
-        }
-
-        .level-number {
-            font-weight: bold;
-            font-size: 1.3rem;
-            color: var(--blue-accent);
-            margin-left: 5px;
-        }
-
-        .level-xp-display {
-            font-size: 0.9rem;
-            color: var(--ink-light);
-        }
-
-        .level-bar-container {
-            height: 20px;
-            background: var(--bg-paper-dark);
-            border: 1px solid var(--ink);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .level-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--blue-accent), #4dabf7);
-            width: 0%;
-            transition: width 0.5s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .level-progress-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-
-        .level-up-indicator {
-            position: absolute;
-            right: -30px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--red-accent);
-            color: white;
-            padding: 3px 8px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            border-radius: 3px;
-            animation: levelUpPulse 1s infinite;
-        }
-
-        @keyframes levelUpPulse {
-            0% { opacity: 0.7; transform: translateY(-50%) scale(1); }
-            50% { opacity: 1; transform: translateY(-50%) scale(1.1); }
-            100% { opacity: 0.7; transform: translateY(-50%) scale(1); }
-        }
-
-        .stat-block {
-            background: rgba(0,0,0,0.02);
-            border: 1px solid var(--ink);
-            padding: 12px;
-            margin-bottom: 15px;
-            font-family: var(--font-mono);
-            transition: transform 0.2s;
-        }
-        .stat-block:hover {
-            transform: translateY(-2px);
-        }
-        .stat-label { 
-            font-size: 0.9rem; 
-            color: var(--ink-light); 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 5px;
-        }
-        .stat-value { 
-            font-size: 1.6rem; 
-            font-weight: bold; 
-            color: var(--ink);
-        }
-
-        /* Enhanced: Breaking News Banner (now without timer) */
-        #breaking-news-container {
-            position: relative;
-            margin-bottom: 20px;
-            min-height: 80px;
-        }
-
-        #breaking-news-banner {
-            display: none;
-            background: linear-gradient(45deg, #cc0000 0%, #ff0000 25%, #cc0000 50%, #ff0000 75%, #cc0000 100%);
-            background-size: 400% 400%;
-            animation: breakingNewsGradient 3s ease infinite;
-            color: #ffffff;
-            padding: 12px 20px;
-            text-align: center;
-            font-family: var(--font-mono);
-            font-weight: bold;
-            font-size: 1.2rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            border: 3px solid #ffcc00;
-            border-radius: 0;
-            box-shadow: 0 4px 20px rgba(255, 0, 0, 0.4), 
-                        inset 0 0 20px rgba(255, 255, 255, 0.3);
-            position: relative;
-            overflow: hidden;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-            transform: perspective(500px) rotateX(5deg);
-            transition: all 0.3s ease;
-        }
-
-        @keyframes breakingNewsGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        #breaking-news-banner::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, #ffcc00, transparent);
-            animation: scanLine 2s linear infinite;
-        }
-
-        @keyframes scanLine {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        #breaking-news-banner::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(255, 255, 255, 0.1) 2px,
-                rgba(255, 255, 255, 0.1) 4px
-            );
-            pointer-events: none;
-        }
-
-        .breaking-news-text {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        .breaking-news-icon {
-            font-size: 1.5rem;
-            animation: flash 1s infinite;
-        }
-
-        @keyframes flash {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.1); }
-        }
-
-        .breaking-news-title {
-            font-size: 1.3rem;
-            background: linear-gradient(to bottom, #fff, #ffcc00);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-        }
-
-        #print-btn {
-            background: #ffffff;
-            border: 4px solid var(--ink);
-            padding: 40px 20px;
-            width: 100%;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            position: relative;
-            margin-bottom: 20px;
-            overflow: hidden;
-            box-shadow: 6px 6px 0px rgba(0,0,0,0.8);
-            touch-action: manipulation;
-            user-select: none;
-        }
-        #print-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 8px 8px 0px rgba(0,0,0,0.8);
-        }
-        #print-btn:active {
-            transform: translate(4px, 4px);
-            box-shadow: 2px 2px 0px rgba(0,0,0,0.8);
-        }
-        #print-btn.pulse {
-            animation: pulse 0.3s ease;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(0.98); }
-            100% { transform: scale(1); }
-        }
-        .print-title {
-            font-family: var(--font-head);
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
-            font-weight: 900;
-            display: block;
-            text-transform: uppercase;
-            line-height: 1.2;
-        }
-        .print-sub {
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            display: block;
-            margin-top: 10px;
-            color: var(--ink-light);
-            font-weight: bold;
-        }
-
-        /* Enhanced: Boost System Styles - RED THEME */
-        #boost-container {
-            margin: 20px 0;
-            text-align: center;
-        }
-
-        #boost-button {
-            width: 100%;
-            background: linear-gradient(to bottom, #f0f0f0, #d0d0d0);
-            border: 3px solid var(--ink);
-            padding: 20px 15px;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            font-family: var(--font-mono);
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.2s;
-            min-height: 100px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #boost-button:hover:not(:disabled) {
-            background: linear-gradient(to bottom, #e8e8e8, #c8c8c8);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        #boost-button:active:not(:disabled) {
-            transform: translateY(1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        #boost-button:disabled {
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        #boost-progress-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #ff4444, #ff0000, #ff4444);
-            background-size: 200% 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            transition: width 0.3s;
-            z-index: 0;
-            animation: progressShimmer 2s infinite linear;
-        }
-
-        @keyframes progressShimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-
-        .boost-content {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .boost-percentage {
-            font-size: 2rem;
-            font-weight: bold;
-            color: var(--ink);
-            display: block;
-            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
-        }
-
-        .boost-label {
-            font-size: 1rem;
-            color: var(--ink-light);
-            display: block;
-            font-weight: bold;
-        }
-
-        .boost-timer {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--red-accent);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 4px 12px;
-            border-radius: 20px;
-            border: 2px solid var(--red-accent);
-            display: none;
-            animation: timerPulse 1s infinite alternate;
-        }
-
-        @keyframes timerPulse {
-            from { transform: scale(1); }
-            to { transform: scale(1.05); }
-        }
-
-        .boost-cooldown {
-            font-size: 0.9rem;
-            color: var(--red-accent);
-            font-weight: bold;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 3px 10px;
-            border-radius: 15px;
-            margin-top: 5px;
-        }
-
-        /* Falling Emojis */
-        .breaking-news-flash {
-            position: absolute;
-            font-size: 1.8rem;
-            animation: fallDown 2s linear forwards;
-            pointer-events: none;
-            z-index: 100;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            filter: drop-shadow(0 0 3px rgba(255, 204, 0, 0.8));
-        }
-
-        @keyframes fallDown {
-            0% {
-                transform: translateY(-50px) rotate(0deg) scale(1);
-                opacity: 1;
-            }
-            70% { opacity: 1; }
-            100% {
-                transform: translateY(300px) rotate(360deg) scale(0.5);
-                opacity: 0;
-            }
-        }
-
-        /* Active Boost Indicator */
-        .stat-block.active-boost {
-            animation: boostGlow 1.5s infinite alternate;
-            border-color: var(--red-accent);
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
-        }
-
-        @keyframes boostGlow {
-            from { 
-                box-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
-                transform: translateY(0);
-            }
-            to { 
-                box-shadow: 0 0 20px rgba(255, 0, 0, 0.8), 0 5px 15px rgba(255, 0, 0, 0.3);
-                transform: translateY(-3px);
-            }
-        }
-
-        #upgrades-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            flex: 1;
-        }
-
-        .upgrade-card {
-            border: 1px solid var(--ink);
-            background: #ffffff;
-            box-shadow: 4px 4px 0 rgba(0,0,0,0.15);
-            transition: all 0.2s ease;
-        }
-        .upgrade-card.disabled {
-            opacity: 0.5;
-            background: var(--bg-paper-dark);
-            box-shadow: none;
-            border: 1px dashed #777;
-        }
-        .upgrade-card.purchased {
-            background: #f0fff0;
-            border-color: var(--green-accent);
-            box-shadow: 4px 4px 0 rgba(0,100,0,0.2);
-        }
-        .upgrade-card.affordable {
-            animation: glow 1.5s infinite alternate;
-        }
-        @keyframes glow {
-            from { box-shadow: 4px 4px 0 rgba(0,100,0,0.2), 0 0 5px rgba(0,100,0,0.3); }
-            to { box-shadow: 4px 4px 0 rgba(0,100,0,0.4), 0 0 10px rgba(0,100,0,0.5); }
-        }
-        .upgrade-top {
-            padding: 12px;
-            border-bottom: 1px dotted #000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .upgrade-name { 
-            font-weight: bold; 
-            font-size: 1.1rem; 
-            font-family: var(--font-head);
-        }
-        .upgrade-count { 
-            font-family: var(--font-mono); 
-            font-size: 1.2rem; 
-            font-weight: bold;
-            color: var(--green-accent);
-        }
-        
-        .upgrade-info {
-            padding: 8px 12px;
-            font-size: 0.8rem;
-            color: var(--ink-light);
-            border-bottom: 1px dotted #ccc;
-        }
-        
-        .upgrade-btn {
-            width: 100%;
-            border: none;
-            background: transparent;
-            padding: 12px;
-            text-align: left;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background-color 0.2s;
-            border-top: 1px solid rgba(0,0,0,0.1);
-        }
-        .upgrade-btn:hover:not(:disabled) {
-            background: #f5f5f5;
-        }
-        .upgrade-btn:active:not(:disabled) {
-            background: #e0e0e0;
-        }
-        .upgrade-btn:disabled {
-            cursor: not-allowed;
-            color: #777;
-        }
-        .upgrade-btn.affordable {
-            font-weight: bold;
-            color: var(--green-accent);
-            background: #f0fff0;
-        }
-        .upgrade-cost {
-            font-weight: bold;
-        }
-        .upgrade-max {
-            font-weight: bold;
-        }
-
-        .prestige-box {
-            margin-top: auto;
-            border: 4px double var(--ink);
-            padding: 20px;
-            background: var(--bg-paper-dark);
-            text-align: center;
-        }
-        .prestige-btn {
-            background: var(--red-accent);
-            color: #fff;
-            border: none;
-            padding: 15px;
-            width: 100%;
-            font-family: var(--font-head);
-            font-weight: bold;
-            font-size: 1.1rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 15px;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        .prestige-btn:hover:not(:disabled) {
-            background: #b30000;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        .prestige-btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-        .prestige-btn:disabled { 
-            background: #555; 
-            cursor: not-allowed; 
-            opacity: 0.5;
-        }
-        .prestige-cost {
-            font-size: 0.9rem;
-            font-weight: normal;
-            margin-top: 5px;
-            color: #ffcccc;
-        }
-        .prestige-max {
-            font-size: 0.8rem;
-            font-weight: normal;
-            margin-top: 3px;
-            color: #aaffaa;
-        }
-
-        /* Reset Button Styles */
-        .reset-btn {
-            background: #8b0000;
-            color: white;
-            border: none;
-            padding: 20px 40px;
-            font-family: var(--font-head);
-            font-weight: bold;
-            font-size: 1.3rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-            width: 100%;
-            max-width: 400px;
-            border: 3px solid var(--ink);
-            box-shadow: 6px 6px 0px rgba(0,0,0,0.5);
-        }
-
-        .reset-btn:hover {
-            background: #660000;
-            transform: translateY(-3px);
-            box-shadow: 8px 8px 0px rgba(0,0,0,0.5);
-        }
-
-        .reset-btn:active {
-            transform: translate(4px, 4px);
-            box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
-        }
-
-        .reset-btn::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(
-                45deg,
-                transparent 30%,
-                rgba(255,255,255,0.1) 50%,
-                transparent 70%
-            );
-            transform: rotate(45deg);
-            animation: shine 3s infinite linear;
-        }
-
-        .floater {
-            position: fixed;
-            font-family: var(--font-mono), 'Segoe UI Emoji', 'Apple Color Emoji', monospace;
-            font-weight: bold;
-            color: var(--red-accent);
-            pointer-events: none;
-            animation: floatUp 1s ease-out forwards;
-            z-index: 10000;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            font-size: 1.4rem;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        }
-        @keyframes floatUp {
-            0% { 
-                transform: translateY(0) scale(1); 
-                opacity: 1; 
-            }
-            70% { opacity: 1; }
-            100% { 
-                transform: translateY(-100px) scale(1.4); 
-                opacity: 0; 
-            }
-        }
-
-        .headline-box {
-            margin-top: 20px;
-            padding: 15px;
-            border-top: 1px solid var(--ink);
-            border-bottom: 1px solid var(--ink);
-            background: rgba(255,255,255,0.5);
-        }
-        .headline-box strong {
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        #headline-spot {
-            font-style: italic;
-            font-family: Georgia, serif;
-            font-size: 1.1rem;
-            line-height: 1.4;
-            margin-top: 8px;
-            min-height: 60px;
-            transition: opacity 0.5s ease;
-        }
-
-        /* Leaderboard Styles */
-        #leaderboard-section {
-            border-top: 5px double var(--ink);
-            padding: 20px;
-            background: var(--bg-paper-dark);
-        }
-
-        .leaderboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        #leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-        }
-
-        #leaderboard-table th {
-            background: var(--ink);
-            color: white;
-            padding: 10px;
-            text-align: left;
-            font-weight: bold;
-            border-right: 1px solid #555;
-        }
-
-        #leaderboard-table th:last-child {
-            border-right: none;
-        }
-
-        #leaderboard-table td {
-            padding: 10px;
-            border-bottom: 1px solid #ccc;
-        }
-
-        #leaderboard-table tr:nth-child(even) {
-            background: rgba(0,0,0,0.05);
-        }
-
-        #leaderboard-table tr:hover {
-            background: rgba(0,0,0,0.1);
-        }
-
-        .player-rank {
-            font-weight: bold;
-            width: 50px;
-            text-align: center;
-        }
-
-        .rank-1 { color: gold; font-weight: bold; }
-        .rank-2 { color: silver; font-weight: bold; }
-        .rank-3 { color: #cd7f32; font-weight: bold; }
-
-        .player-name {
-            font-weight: bold;
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .player-bruh, .player-level {
-            text-align: center;
-            font-weight: bold;
-        }
-
-        /* Chat Styles */
-        #chat-section {
-            border-top: 5px double var(--ink);
-            padding: 20px;
-            background: var(--bg-paper);
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 768px) {
-            #chat-section {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: 300px;
-            border: 2px solid var(--ink);
-            background: white;
-        }
-
-        .chat-header {
-            background: var(--ink);
-            color: white;
-            padding: 10px;
-            font-family: var(--font-mono);
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        #chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .chat-message {
-            padding: 8px;
-            border-radius: 4px;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            line-height: 1.4;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .chat-message.self {
-            background: #e3f2fd;
-            border-left: 3px solid #2196f3;
-            margin-left: 20px;
-        }
-
-        .chat-message.other {
-            background: #f5f5f5;
-            border-left: 3px solid #757575;
-            margin-right: 20px;
-        }
-
-        .chat-message.ai-message {
-            opacity: 0.8;
-            border-left: 3px solid #999;
-        }
-
-        .chat-message.ai-message .message-sender {
-            color: #666;
-        }
-
-        .chat-message.tagged {
-            background: #fff8e1;
-            border-left: 3px solid #ff9800;
-            animation: pulseTag 1s ease;
-        }
-
-        @keyframes pulseTag {
-            0%, 100% { background: #fff8e1; }
-            50% { background: #ffecb3; }
-        }
-
-        .message-sender {
-            font-weight: bold;
-            color: var(--ink);
-            margin-bottom: 3px;
-        }
-
-        .message-timestamp {
-            font-size: 0.7rem;
-            color: var(--ink-light);
-            float: right;
-            margin-left: 10px;
-        }
-
-        .message-content {
-            word-break: break-word;
-        }
-
-        .tagged-player {
-            background: #ff9800;
-            color: white;
-            padding: 1px 4px;
-            border-radius: 3px;
-            font-weight: bold;
-            margin: 0 2px;
-        }
-
-        #chat-input-container {
-            display: flex;
-            border-top: 1px solid #ccc;
-        }
-
-        #chat-input {
-            flex: 1;
-            border: none;
-            padding: 12px;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            outline: none;
-        }
-
-        #chat-send {
-            background: var(--ink);
-            color: white;
-            border: none;
-            padding: 0 20px;
-            font-family: var(--font-mono);
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        #chat-send:hover {
-            background: #333;
-        }
-
-        #chat-send:disabled {
-            background: #999;
-            cursor: not-allowed;
-        }
-
-        .chat-users {
-            border: 2px solid var(--ink);
-            background: white;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .users-header {
-            background: var(--ink);
-            color: white;
-            padding: 10px;
-            font-family: var(--font-mono);
-            font-weight: bold;
-        }
-
-        #online-users {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-        }
-
-        .user-item {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .user-item:hover {
-            background: #f5f5f5;
-        }
-
-        .user-name {
-            font-weight: bold;
-            max-width: 120px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .user-bruh {
-            color: var(--green-accent);
-            font-weight: bold;
-        }
-
-        .user-online {
-            width: 8px;
-            height: 8px;
-            background: #4caf50;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
-        }
-
-        .chat-notification {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #ff9800;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            z-index: 10002;
-            animation: slideIn 0.3s ease, slideOut 0.3s ease 4.7s forwards;
-            max-width: 300px;
-            cursor: pointer;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-        }
-
-        .notification-sender {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .notification-message {
-            font-size: 0.85rem;
-            opacity: 0.9;
-        }
-
-        @media (max-width: 1024px) {
-            #main-content {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto auto auto;
-                height: auto;
-            }
-            
-            .column {
-                min-height: 300px;
-                max-height: 500px;
-                border-right: none;
-                border-bottom: 2px solid #aaa;
-            }
-            .column:last-child {
-                border-bottom: none;
-            }
-            
-            .header-name-display {
-                position: relative;
-                left: 0;
-                top: 0;
-                text-align: center;
-                margin-bottom: 10px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 5px;
-                overflow-x: hidden;
-            }
-            
-            #newspaper {
-                min-height: 100vh;
-                height: auto;
-            }
-            
-            .header-name-display {
-                position: relative;
-                left: 0;
-                top: 0;
-                text-align: center;
-                max-width: 100%;
-                margin-bottom: 10px;
-            }
-            
-            .player-name-text {
-                max-width: 100%;
-            }
-            
-            .column {
-                padding: 15px;
-                min-height: auto;
-                max-height: none;
-                overflow-y: visible;
-            }
-            
-            h1 {
-                font-size: 2.2rem;
-            }
-            
-            h2 {
-                font-size: 1.5rem;
-            }
-            
-            #breaking-news-banner {
-                font-size: 1rem;
-                padding: 10px 15px;
-            }
-            
-            .breaking-news-text {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .breaking-news-title {
-                font-size: 1.1rem;
-            }
-            
-            #print-btn {
-                padding: 30px 15px;
-            }
-            
-            .print-title {
-                font-size: 1.8rem;
-            }
-            
-            .meta-line {
-                font-size: 0.75rem;
-            }
-            
-            .player-counts {
-                font-size: 0.7rem;
-            }
-            
-            .stat-value {
-                font-size: 1.4rem;
-            }
-            
-            .prestige-box {
-                padding: 15px;
-            }
-
-            #leaderboard-section,
-            #chat-section {
-                padding: 15px;
-            }
-
-            .chat-container,
-            .chat-users {
-                height: 250px;
-            }
-
-            #chat-section {
-                grid-template-columns: 1fr;
-            }
-            
-            #boost-button {
-                padding: 15px 10px;
-                min-height: 80px;
-            }
-            
-            .boost-percentage {
-                font-size: 1.6rem;
-            }
-            
-            .boost-label {
-                font-size: 0.9rem;
-            }
-            
-            .reset-btn {
-                padding: 15px;
-                font-size: 1.1rem;
-                max-width: 100%;
-            }
-        }
-
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-            
-            #print-btn {
-                padding: 25px 10px;
-            }
-            
-            .print-title {
-                font-size: 1.5rem;
-            }
-            
-            .column {
-                padding: 10px;
-            }
-
-            #breaking-news-banner {
-                font-size: 0.9rem;
-                padding: 8px 10px;
-            }
-            
-            .breaking-news-title {
-                font-size: 1rem;
-            }
-            
-            #leaderboard-table th,
-            #leaderboard-table td {
-                padding: 8px 5px;
-                font-size: 0.8rem;
-            }
-
-            .player-name {
-                max-width: 80px;
-            }
-            
-            #boost-button {
-                padding: 12px 8px;
-                min-height: 70px;
-            }
-            
-            .boost-percentage {
-                font-size: 1.4rem;
-            }
-            
-            .boost-label {
-                font-size: 0.8rem;
-            }
-            
-            .reset-btn {
-                padding: 12px;
-                font-size: 1rem;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>The News Bruh | Tycoon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<style>
+:root{--bg-paper:#f9f7f1;--bg-paper-dark:#e6e4dc;--ink:#0a0a0a;--ink-light:#454545;--red-accent:#cc0000;--green-accent:#006400;--blue-accent:#0066cc;--font-head:'Playfair Display',serif;--font-mono:'Courier Prime',monospace;--font-old-english:'UnifrakturMaguntia',cursive}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+body{background-color:#2e2e2e;margin:0;padding:0;font-family:var(--font-head);color:var(--ink);min-height:100vh;display:flex;justify-content:center;align-items:center;overflow:auto;position:relative;padding:10px}
+#name-selection-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);display:flex;justify-content:center;align-items:center;z-index:10000;padding:20px}
+#name-selection-modal.hidden{display:none}
+.name-modal-content{background:var(--bg-paper);background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");padding:40px;max-width:600px;width:100%;border:6px solid var(--ink);box-shadow:0 20px 60px rgba(0,0,0,0.8);position:relative;text-align:center}
+.name-modal-content::before{content:'';position:absolute;top:10px;left:10px;right:10px;bottom:10px;border:2px solid var(--red-accent);pointer-events:none}
+.name-modal-title{font-family:var(--font-old-english);font-size:3.5rem;margin-bottom:10px;color:var(--ink)}
+.name-modal-subtitle{font-family:var(--font-head);font-size:1.2rem;margin-bottom:30px;color:var(--ink-light);font-style:italic}
+.name-input-container{margin:30px 0}
+#player-name-input{width:100%;padding:20px;font-family:var(--font-mono);font-size:1.2rem;border:3px solid var(--ink);background:white;text-align:center;outline:none;transition:all 0.3s}
+#player-name-input:focus{border-color:var(--red-accent);box-shadow:0 0 20px rgba(204,0,0,0.3)}
+.name-rules{font-family:var(--font-mono);font-size:0.8rem;color:var(--ink-light);margin-top:10px;text-align:left;padding:15px;background:var(--bg-paper-dark);border:1px solid var(--ink)}
+.name-rules ul{list-style:none;padding-left:10px}
+.name-rules li{margin-bottom:5px;position:relative;padding-left:20px}
+.name-rules li::before{content:'•';position:absolute;left:0;color:var(--red-accent)}
+.start-game-btn{background:var(--red-accent);color:white;border:none;padding:20px 40px;font-family:var(--font-head);font-size:1.3rem;font-weight:bold;cursor:pointer;text-transform:uppercase;letter-spacing:2px;margin-top:20px;width:100%;transition:all 0.3s;position:relative;overflow:hidden}
+.start-game-btn:hover{background:#b30000;transform:translateY(-3px);box-shadow:0 10px 20px rgba(0,0,0,0.3)}
+.start-game-btn:active{transform:translateY(1px);box-shadow:0 5px 10px rgba(0,0,0,0.2)}
+.start-game-btn::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 30%,rgba(255,255,255,0.1) 50%,transparent 70%);transform:rotate(45deg);animation:shine 3s infinite linear}
+@keyframes shine{0%{transform:rotate(45deg) translateX(-100%)}100%{transform:rotate(45deg) translateX(100%)}}
+#newspaper{background-color:var(--bg-paper);background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");width:100%;max-width:1400px;height:auto;min-height:100vh;display:flex;flex-direction:column;box-shadow:0 0 50px rgba(0,0,0,0.8);position:relative}
+#ticker-tape{background:var(--ink);color:#fff;font-family:var(--font-mono);font-size:0.9rem;padding:6px 0;overflow:hidden;white-space:nowrap;border-bottom:3px solid var(--ink);position:relative;width:100%}
+.ticker-content{display:inline-block;animation:marquee 25s linear infinite;padding-left:100%;white-space:nowrap}
+.ticker-content a{color:#4dabf7;text-decoration:underline;font-weight:bold;margin:0 20px}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+.header-container{position:relative;text-align:center;padding:15px 20px;border-bottom:5px double var(--ink)}
+.player-header-info{display:flex;flex-direction:column;align-items:center;margin-bottom:10px;gap:8px}
+.player-name-display{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+.player-name-text{font-family:var(--font-mono);font-size:1rem;font-weight:bold;color:var(--ink);background:var(--bg-paper-dark);padding:5px 15px;border:2px solid var(--ink);border-radius:4px}
+.change-name-link{font-family:var(--font-mono);font-size:0.8rem;color:var(--blue-accent);text-decoration:underline;cursor:pointer;transition:color 0.2s;white-space:nowrap}
+.change-name-link:hover{color:var(--red-accent)}
+h1{font-family:var(--font-old-english);font-size:clamp(2.5rem,5vw,3.5rem);margin:10px 0 15px 0;font-weight:normal;line-height:1}
+.player-counts{font-family:var(--font-mono);font-size:0.9rem;color:var(--ink-light);margin-bottom:10px;letter-spacing:-0.5px;display:flex;justify-content:center;flex-wrap:wrap;gap:15px}
+.player-counts span{font-weight:bold}
+.online-indicator{display:inline-block;width:8px;height:8px;background:#4CAF50;border-radius:50%;margin-right:5px;animation:pulse 2s infinite}
+@keyframes pulse{0%{opacity:0.7;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}100%{opacity:0.7;transform:scale(1)}}
+.meta-line{display:flex;justify-content:space-between;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:6px 0;font-family:var(--font-mono);font-size:0.85rem;font-weight:bold;text-transform:uppercase;flex-wrap:wrap}
+.meta-line span{margin:0 5px}
+#main-content{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:0;flex:1;min-height:500px}
+.column{padding:20px;overflow-y:auto;border-right:1px solid #aaa;display:flex;flex-direction:column;height:100%;min-height:400px}
+.column:last-child{border-right:none}
+.column::-webkit-scrollbar{width:8px}.column::-webkit-scrollbar-thumb{background:#888;border-radius:4px}.column::-webkit-scrollbar-track{background:transparent}
+h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0;font-size:1.8rem;margin-bottom:15px;font-weight:900;padding-bottom:5px}
+.level-container{margin-bottom:20px;border:2px solid var(--ink);background:white;padding:15px;box-shadow:3px 3px 0 rgba(0,0,0,0.1)}
+.level-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-family:var(--font-mono)}
+.level-title{font-weight:bold;font-size:1.1rem;color:var(--ink)}
+.level-number{font-weight:bold;font-size:1.3rem;color:var(--blue-accent);margin-left:5px}
+.level-xp-display{font-size:0.9rem;color:var(--ink-light)}
+.level-bar-container{height:20px;background:var(--bg-paper-dark);border:1px solid var(--ink);position:relative;overflow:hidden}
+.level-progress-bar{height:100%;background:linear-gradient(90deg,var(--blue-accent),#4dabf7);width:0%;transition:width 0.5s ease;position:relative;overflow:hidden}
+.level-progress-bar::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);animation:shimmer 2s infinite}
+@keyframes shimmer{0%{left:-100%}100%{left:100%}}
+.level-up-indicator{position:absolute;right:-30px;top:50%;transform:translateY(-50%);background:var(--red-accent);color:white;padding:3px 8px;font-size:0.7rem;font-weight:bold;border-radius:3px;animation:levelUpPulse 1s infinite}
+@keyframes levelUpPulse{0%{opacity:0.7;transform:translateY(-50%) scale(1)}50%{opacity:1;transform:translateY(-50%) scale(1.1)}100%{opacity:0.7;transform:translateY(-50%) scale(1)}}
+.stat-block{background:rgba(0,0,0,0.02);border:1px solid var(--ink);padding:12px;margin-bottom:15px;font-family:var(--font-mono);transition:transform 0.2s}
+.stat-block:hover{transform:translateY(-2px)}
+.stat-label{font-size:0.9rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}
+.stat-value{font-size:1.6rem;font-weight:bold;color:var(--ink)}
+#breaking-news-container{position:relative;margin-bottom:20px;min-height:80px}
+#breaking-news-banner{display:none;background:linear-gradient(45deg,#cc0000 0%,#ff0000 25%,#cc0000 50%,#ff0000 75%,#cc0000 100%);background-size:400% 400%;animation:breakingNewsGradient 3s ease infinite;color:#fff;padding:12px 20px;text-align:center;font-family:var(--font-mono);font-weight:bold;font-size:1.2rem;letter-spacing:2px;text-transform:uppercase;border:3px solid #ffcc00;border-radius:0;box-shadow:0 4px 20px rgba(255,0,0,0.4),inset 0 0 20px rgba(255,255,255,0.3);position:relative;overflow:hidden;text-shadow:1px 1px 2px rgba(0,0,0,0.8);transform:perspective(500px) rotateX(5deg);transition:all 0.3s ease}
+@keyframes breakingNewsGradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+#breaking-news-banner::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#ffcc00,transparent);animation:scanLine 2s linear infinite}
+@keyframes scanLine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+#breaking-news-banner::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.1) 2px,rgba(255,255,255,0.1) 4px);pointer-events:none}
+.breaking-news-text{display:flex;align-items:center;justify-content:center;gap:15px}
+.breaking-news-icon{font-size:1.5rem;animation:flash 1s infinite}
+@keyframes flash{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.7;transform:scale(1.1)}}
+.breaking-news-title{font-size:1.3rem;background:linear-gradient(to bottom,#fff,#ffcc00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:2px 2px 4px rgba(0,0,0,0.5)}
+#print-btn{background:#fff;border:4px solid var(--ink);padding:40px 20px;width:100%;cursor:pointer;transition:all 0.15s ease;position:relative;margin-bottom:20px;overflow:hidden;box-shadow:6px 6px 0 rgba(0,0,0,0.8);touch-action:manipulation;user-select:none}
+#print-btn:hover{transform:translateY(-2px);box-shadow:8px 8px 0 rgba(0,0,0,0.8)}
+#print-btn:active{transform:translate(4px,4px);box-shadow:2px 2px 0 rgba(0,0,0,0.8)}
+#print-btn.pulse{animation:pulse 0.3s ease}
+.print-title{font-family:var(--font-head);font-size:clamp(1.8rem,4vw,2.5rem);font-weight:900;display:block;text-transform:uppercase;line-height:1.2}
+.print-sub{font-family:var(--font-mono);font-size:0.9rem;display:block;margin-top:10px;color:var(--ink-light);font-weight:bold}
+#boost-container{margin:20px 0;text-align:center}
+#boost-button{width:100%;background:linear-gradient(to bottom,#f0f0f0,#d0d0d0);border:3px solid var(--ink);padding:20px 15px;cursor:pointer;position:relative;overflow:hidden;font-family:var(--font-mono);font-weight:bold;text-transform:uppercase;letter-spacing:1px;transition:all 0.2s;min-height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+#boost-button:hover:not(:disabled){background:linear-gradient(to bottom,#e8e8e8,#c8c8c8);transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,0.2)}
+#boost-button:active:not(:disabled){transform:translateY(1px);box-shadow:0 2px 4px rgba(0,0,0,0.2)}
+#boost-button:disabled{cursor:not-allowed;opacity:0.7}
+#boost-progress-bar{width:0%;height:100%;background:linear-gradient(90deg,#ff4444,#ff0000,#ff4444);background-size:200% 100%;position:absolute;top:0;left:0;transition:width 0.3s;z-index:0;animation:progressShimmer 2s infinite linear}
+@keyframes progressShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.boost-content{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px}
+.boost-percentage{font-size:2rem;font-weight:bold;color:var(--ink);display:block;text-shadow:1px 1px 2px rgba(255,255,255,0.8)}
+.boost-label{font-size:1rem;color:var(--ink-light);display:block;font-weight:bold}
+.boost-timer{font-size:1.2rem;font-weight:bold;color:var(--red-accent);background:rgba(255,255,255,0.9);padding:4px 12px;border-radius:20px;border:2px solid var(--red-accent);display:none;animation:timerPulse 1s infinite alternate}
+@keyframes timerPulse{from{transform:scale(1)}to{transform:scale(1.05)}}
+.boost-cooldown{font-size:0.9rem;color:var(--red-accent);font-weight:bold;background:rgba(255,255,255,0.8);padding:3px 10px;border-radius:15px;margin-top:5px}
+.breaking-news-flash{position:absolute;font-size:1.8rem;animation:fallDown 2s linear forwards;pointer-events:none;z-index:100;text-shadow:2px 2px 4px rgba(0,0,0,0.5);filter:drop-shadow(0 0 3px rgba(255,204,0,0.8))}
+@keyframes fallDown{0%{transform:translateY(-50px) rotate(0deg) scale(1);opacity:1}70%{opacity:1}100%{transform:translateY(300px) rotate(360deg) scale(0.5);opacity:0}}
+.stat-block.active-boost{animation:boostGlow 1.5s infinite alternate;border-color:var(--red-accent);box-shadow:0 0 15px rgba(255,0,0,0.4)}
+@keyframes boostGlow{from{box-shadow:0 0 10px rgba(255,0,0,0.4);transform:translateY(0)}to{box-shadow:0 0 20px rgba(255,0,0,0.8),0 5px 15px rgba(255,0,0,0.3);transform:translateY(-3px)}}
+#upgrades-list{display:flex;flex-direction:column;gap:12px;flex:1}
+.upgrade-card{border:1px solid var(--ink);background:#fff;box-shadow:4px 4px 0 rgba(0,0,0,0.15);transition:all 0.2s ease}
+.upgrade-card.disabled{opacity:0.5;background:var(--bg-paper-dark);box-shadow:none;border:1px dashed #777}
+.upgrade-card.purchased{background:#f0fff0;border-color:var(--green-accent);box-shadow:4px 4px 0 rgba(0,100,0,0.2)}
+.upgrade-card.affordable{animation:glow 1.5s infinite alternate}
+@keyframes glow{from{box-shadow:4px 4px 0 rgba(0,100,0,0.2),0 0 5px rgba(0,100,0,0.3)}to{box-shadow:4px 4px 0 rgba(0,100,0,0.4),0 0 10px rgba(0,100,0,0.5)}}
+.upgrade-top{padding:12px;border-bottom:1px dotted #000;display:flex;justify-content:space-between;align-items:center}
+.upgrade-name{font-weight:bold;font-size:1.1rem;font-family:var(--font-head)}
+.upgrade-count{font-family:var(--font-mono);font-size:1.2rem;font-weight:bold;color:var(--green-accent)}
+.upgrade-info{padding:8px 12px;font-size:0.8rem;color:var(--ink-light);border-bottom:1px dotted #ccc}
+.upgrade-btn{width:100%;border:none;background:transparent;padding:12px;text-align:left;font-family:var(--font-mono);font-size:0.9rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background-color 0.2s;border-top:1px solid rgba(0,0,0,0.1)}
+.upgrade-btn:hover:not(:disabled){background:#f5f5f5}
+.upgrade-btn:active:not(:disabled){background:#e0e0e0}
+.upgrade-btn:disabled{cursor:not-allowed;color:#777}
+.upgrade-btn.affordable{font-weight:bold;color:var(--green-accent);background:#f0fff0}
+.upgrade-cost,.upgrade-max{font-weight:bold}
+.prestige-box{margin-top:auto;border:4px double var(--ink);padding:20px;background:var(--bg-paper-dark);text-align:center}
+.prestige-btn{background:var(--red-accent);color:#fff;border:none;padding:15px;width:100%;font-family:var(--font-head);font-weight:bold;font-size:1.1rem;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-top:15px;transition:all 0.2s;position:relative;overflow:hidden}
+.prestige-btn:hover:not(:disabled){background:#b30000;transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,0.2)}
+.prestige-btn:active:not(:disabled){transform:translateY(0)}
+.prestige-btn:disabled{background:#555;cursor:not-allowed;opacity:0.5}
+.prestige-cost{font-size:0.9rem;font-weight:normal;margin-top:5px;color:#ffcccc}
+.prestige-max{font-size:0.8rem;font-weight:normal;margin-top:3px;color:#aaffaa}
+.reset-btn{background:#8b0000;color:white;border:none;padding:20px 40px;font-family:var(--font-head);font-weight:bold;font-size:1.3rem;cursor:pointer;text-transform:uppercase;letter-spacing:2px;transition:all 0.3s;position:relative;overflow:hidden;width:100%;max-width:400px;border:3px solid var(--ink);box-shadow:6px 6px 0 rgba(0,0,0,0.5)}
+.reset-btn:hover{background:#660000;transform:translateY(-3px);box-shadow:8px 8px 0 rgba(0,0,0,0.5)}
+.reset-btn:active{transform:translate(4px,4px);box-shadow:2px 2px 0 rgba(0,0,0,0.5)}
+.floater{position:fixed;font-family:var(--font-mono),'Segoe UI Emoji','Apple Color Emoji',monospace;font-weight:bold;color:var(--red-accent);pointer-events:none;animation:floatUp 1s ease-out forwards;z-index:10000;text-shadow:1px 1px 2px rgba(0,0,0,0.5);font-size:1.4rem;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))}
+@keyframes floatUp{0%{transform:translateY(0) scale(1);opacity:1}70%{opacity:1}100%{transform:translateY(-100px) scale(1.4);opacity:0}}
+.headline-box{margin-top:20px;padding:15px;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);background:rgba(255,255,255,0.5)}
+.headline-box strong{font-family:var(--font-mono);font-size:0.9rem;text-transform:uppercase;letter-spacing:1px}
+#headline-spot{font-style:italic;font-family:Georgia,serif;font-size:1.1rem;line-height:1.4;margin-top:8px;min-height:60px;transition:opacity 0.5s ease}
+#leaderboard-section{border-top:5px double var(--ink);padding:20px;background:var(--bg-paper-dark)}
+.leaderboard-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+#leaderboard-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:0.9rem}
+#leaderboard-table th{background:var(--ink);color:white;padding:10px;text-align:left;font-weight:bold;border-right:1px solid #555}
+#leaderboard-table th:last-child{border-right:none}
+#leaderboard-table td{padding:10px;border-bottom:1px solid #ccc}
+#leaderboard-table tr:nth-child(even){background:rgba(0,0,0,0.05)}
+#leaderboard-table tr:hover{background:rgba(0,0,0,0.1)}
+.player-rank{font-weight:bold;width:50px;text-align:center}
+.rank-1{color:gold;font-weight:bold}.rank-2{color:silver;font-weight:bold}.rank-3{color:#cd7f32;font-weight:bold}
+.player-name{font-weight:bold;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player-bruh,.player-level{text-align:center;font-weight:bold}
+#chat-section{border-top:5px double var(--ink);padding:20px;background:var(--bg-paper);display:grid;grid-template-columns:2fr 1fr;gap:20px}
+@media (max-width:768px){#chat-section{grid-template-columns:1fr}}
+.chat-container{display:flex;flex-direction:column;height:300px;border:2px solid var(--ink);background:white}
+.chat-header{background:var(--ink);color:white;padding:10px;font-family:var(--font-mono);font-weight:bold;display:flex;justify-content:space-between;align-items:center}
+#chat-messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.chat-message{padding:8px;border-radius:4px;font-family:var(--font-mono);font-size:0.85rem;line-height:1.4;animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.chat-message.self{background:#e3f2fd;border-left:3px solid #2196f3;margin-left:20px}
+.chat-message.other{background:#f5f5f5;border-left:3px solid #757575;margin-right:20px}
+.chat-message.ai-message{opacity:0.8;border-left:3px solid #999}
+.chat-message.ai-message .message-sender{color:#666}
+.chat-message.tagged{background:#fff8e1;border-left:3px solid #ff9800;animation:pulseTag 1s ease}
+@keyframes pulseTag{0%,100%{background:#fff8e1}50%{background:#ffecb3}}
+.message-sender{font-weight:bold;color:var(--ink);margin-bottom:3px}
+.message-timestamp{font-size:0.7rem;color:var(--ink-light);float:right;margin-left:10px}
+.message-content{word-break:break-word}
+.tagged-player{background:#ff9800;color:white;padding:1px 4px;border-radius:3px;font-weight:bold;margin:0 2px}
+#chat-input-container{display:flex;border-top:1px solid #ccc}
+#chat-input{flex:1;border:none;padding:12px;font-family:var(--font-mono);font-size:0.9rem;outline:none}
+#chat-send{background:var(--ink);color:white;border:none;padding:0 20px;font-family:var(--font-mono);font-weight:bold;cursor:pointer;transition:background 0.2s}
+#chat-send:hover{background:#333}
+#chat-send:disabled{background:#999;cursor:not-allowed}
+.chat-users{border:2px solid var(--ink);background:white;display:flex;flex-direction:column}
+.users-header{background:var(--ink);color:white;padding:10px;font-family:var(--font-mono);font-weight:bold}
+#online-users{flex:1;overflow-y:auto;padding:10px}
+.user-item{padding:8px;border-bottom:1px solid #eee;font-family:var(--font-mono);font-size:0.85rem;display:flex;justify-content:space-between;align-items:center}
+.user-item:hover{background:#f5f5f5}
+.user-name{font-weight:bold;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.user-bruh{color:var(--green-accent);font-weight:bold}
+.user-online{width:8px;height:8px;background:#4caf50;border-radius:50%;display:inline-block;margin-right:5px}
+.chat-notification{position:fixed;bottom:20px;right:20px;background:#ff9800;color:white;padding:15px;border-radius:5px;font-family:var(--font-mono);font-size:0.9rem;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:10002;animation:slideIn 0.3s ease,slideOut 0.3s ease 4.7s forwards;max-width:300px;cursor:pointer}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
+.notification-sender{font-weight:bold;margin-bottom:5px}
+.notification-message{font-size:0.85rem;opacity:0.9}
+@media (max-width:1024px){#main-content{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto}.column{min-height:300px;max-height:500px;border-right:none;border-bottom:2px solid #aaa}.column:last-child{border-bottom:none}}
+@media (max-width:768px){body{padding:5px;overflow-x:hidden}#newspaper{min-height:100vh;height:auto}.player-header-info{flex-direction:column;gap:5px}.player-name-display{flex-direction:column;gap:5px}.player-name-text{font-size:0.9rem;padding:4px 10px}.column{padding:15px;min-height:auto;max-height:none;overflow-y:visible}h1{font-size:2.2rem}h2{font-size:1.5rem}#breaking-news-banner{font-size:1rem;padding:10px 15px}.breaking-news-text{flex-direction:column;gap:10px}.breaking-news-title{font-size:1.1rem}#print-btn{padding:30px 15px}.print-title{font-size:1.8rem}.meta-line{font-size:0.75rem}.player-counts{font-size:0.8rem;gap:10px}.stat-value{font-size:1.4rem}.prestige-box{padding:15px}#leaderboard-section,#chat-section{padding:15px}.chat-container,.chat-users{height:250px}#chat-section{grid-template-columns:1fr}#boost-button{padding:15px 10px;min-height:80px}.boost-percentage{font-size:1.6rem}.boost-label{font-size:0.9rem}.reset-btn{padding:15px;font-size:1.1rem;max-width:100%}}
+@media (max-width:480px){h1{font-size:1.8rem}#print-btn{padding:25px 10px}.print-title{font-size:1.5rem}.column{padding:10px}#breaking-news-banner{font-size:0.9rem;padding:8px 10px}.breaking-news-title{font-size:1rem}#leaderboard-table th,#leaderboard-table td{padding:8px 5px;font-size:0.8rem}.player-name{max-width:80px}#boost-button{padding:12px 8px;min-height:70px}.boost-percentage{font-size:1.4rem}.boost-label{font-size:0.8rem}.reset-btn{padding:12px;font-size:1rem}}
+</style>
 </head>
 <body>
-
-<!-- Name Selection Modal -->
 <div id="name-selection-modal">
-    <div class="name-modal-content">
-        <div class="name-modal-title">The News Bruh</div>
-        <div class="name-modal-subtitle">Enter the Press Room</div>
-        
-        <div class="name-input-container">
-            <input type="text" id="player-name-input" placeholder="Type your newsroom name..." maxlength="20" autofocus>
-            <div class="name-rules">
-                <strong>Name Rules:</strong>
-                <ul>
-                    <li>Maximum 20 characters</li>
-                    <li>Almost any character allowed (letters, numbers, spaces, symbols)</li>
-                    <li>Your name will appear on the leaderboard</li>
-                    <li>Other players can tag you in chat using @name</li>
-                    <li>Note: @ symbol is reserved for tagging system</li>
-                </ul>
-            </div>
-        </div>
-        
-        <button class="start-game-btn" onclick="startGameWithName()">
-            START PRINTING
-        </button>
-    </div>
+<div class="name-modal-content">
+<div class="name-modal-title">The News Bruh</div>
+<div class="name-modal-subtitle">Enter the Press Room</div>
+<div class="name-input-container">
+<input type="text" id="player-name-input" placeholder="Type your newsroom name..." maxlength="20" autofocus>
+<div class="name-rules">
+<strong>Name Rules:</strong>
+<ul>
+<li>Maximum 20 characters</li>
+<li>Almost any character allowed (letters, numbers, spaces, symbols)</li>
+<li>Your name will appear on the leaderboard</li>
+<li>Other players can tag you in chat using @name</li>
+<li>Note: @ symbol is reserved for tagging system</li>
+</ul>
 </div>
-
-<div id="newspaper" style="display: none;">
-    <div id="ticker-tape">
-        <div class="ticker-content" id="ticker-text">
-            Join <a href="https://www.reddit.com/r/thenewsbruh/s/HPIdtW6H3X" target="_blank">r/TheNewsBruh</a> on Reddit & Reach The Top 3 on The Leaderboard to Earn Real New Token &nbsp;&bull;&nbsp; EXTRA! EXTRA!
-        </div>
-    </div>
-
-    <header>
-        <!-- Player Name Display in Top Left -->
-        <div class="header-name-display">
-            <div class="player-name-text" id="display-player-name">Player Name</div>
-            <div class="change-name-link" id="change-name-link">Change Name</div>
-        </div>
-
-        <h1>The News Bruh</h1>
-        
-        <div class="player-counts">
-            <span><span class="online-indicator"></span>Players Online: <span id="online-count">0</span></span>
-            <span>Total Players: <span id="total-count">0</span></span>
-        </div>
-
-        <div class="meta-line">
-            <span>Vol. 1</span>
-            <span>Est. 2026</span>
-            <span id="currentDateTime">Loading...</span>
-        </div>
-    </header>
-
-    <div id="main-content">
-        
-        <div class="column" id="col-left">
-            <!-- Level System Display -->
-            <div class="level-container">
-                <div class="level-header">
-                    <div class="level-title">
-                        Level <span class="level-number" id="current-level">1</span>
-                    </div>
-                    <div class="level-xp-display" id="xp-display">0/100 XP</div>
-                </div>
-                <div class="level-bar-container">
-                    <div class="level-progress-bar" id="level-progress-bar"></div>
-                    <div class="level-up-indicator" id="level-up-indicator" style="display: none;">LEVEL UP!</div>
-                </div>
-            </div>
-
-            <h2>Statistics</h2>
-            
-            <div class="stat-block">
-                <div class="stat-label">Treasury</div>
-                <div class="stat-value"><span id="currency">0</span> New</div>
-            </div>
-
-            <div class="stat-block">
-                <div class="stat-label">Production</div>
-                <div class="stat-value"><span id="cps">0.0</span> / sec</div>
-            </div>
-
-            <div class="stat-block">
-                <div class="stat-label">Market Multiplier</div>
-                <div class="stat-value" style="color: var(--red-accent);">x<span id="multiplier">1</span></div>
-            </div>
-
-            <div class="prestige-box">
-                <h3 style="margin:0 0 10px 0; border-bottom: 1px solid var(--ink);">THE CLASSIFIEDS</h3>
-                <p style="font-size: 0.85rem; margin-bottom: 10px; line-height: 1.4;">
-                    Hire a <strong>Bruh</strong> Consultant. Each Bruh owned adds a <strong>+100% (x1)</strong> permanent bonus to all production.
-                </p>
-                <div style="font-weight: bold; margin-bottom: 5px; font-size: 1.1rem;">Bruh Owned: <span id="bruh-owned">0</span></div>
-                <button id="prestige-btn" class="prestige-btn" onclick="prestige()">
-                    Buy Bruh
-                    <div id="prestige-cost" class="prestige-cost">Costs: 1k New</div>
-                    <div id="prestige-max" class="prestige-max">Max: 0</div>
-                </button>
-            </div>
-        </div>
-
-        <div class="column" id="col-center">
-            <h2>Front Page</h2>
-            
-            <!-- Enhanced: Breaking News Banner (now without timer) -->
-            <div id="breaking-news-container">
-                <div id="breaking-news-banner">
-                    <div class="breaking-news-text">
-                        <span class="breaking-news-icon">📰</span>
-                        <span class="breaking-news-title">BREAKING NEWS: 5X MULTIPLIER ACTIVE!</span>
-                    </div>
-                </div>
-            </div>
-            
-            <button id="print-btn">
-                <span class="print-title">PRINT EDITION</span>
-                <span class="print-sub" id="tap-value-display">📰 +1 New per Tap</span>
-            </button>
-
-            <!-- Enhanced: Boost Button -->
-            <div id="boost-container">
-                <button id="boost-button">
-                    <div id="boost-progress-bar"></div>
-                    <div class="boost-content">
-                        <span class="boost-percentage" id="boost-percentage">0%</span>
-                        <span class="boost-label">BREAKING NEWS BOOST</span>
-                        <span class="boost-timer" id="boost-timer">15s</span>
-                        <span class="boost-cooldown" id="boost-cooldown"></span>
-                    </div>
-                </button>
-            </div>
-
-            <div class="headline-box">
-                <strong>Latest Headline:</strong>
-                <p id="headline-spot">
-                    "Local entrepreneur starts printing press in garage, neighbors concerned about noise."
-                </p>
-            </div>
-
-            <div style="text-align: center; margin-top: 20px; opacity: 0.6;">
-                <div style="font-family: var(--font-mono); font-size: 0.8rem; margin-bottom: 10px;">ADVERTISEMENT</div>
-                <div style="width: 100px; height: 100px; background: var(--bg-paper-dark); border: 2px solid var(--ink); margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-family: var(--font-mono);">
-                    PRESS<br>HERE
-                </div>
-            </div>
-        </div>
-
-        <div class="column" id="col-right">
-            <h2>Assets</h2>
-            <div id="upgrades-list">
-                <!-- Upgrades will be dynamically inserted here -->
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Leaderboard Section -->
-    <div id="leaderboard-section">
-        <div class="leaderboard-header">
-            <h2 style="border-bottom: none; margin: 0;">🏆 Leaderboard 🏆</h2>
-            <div id="leaderboard-update-time" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-light);">
-                Updated: Just now
-            </div>
-        </div>
-        <table id="leaderboard-table">
-            <thead>
-                <tr>
-                    <th style="width: 60px;">RANK</th>
-                    <th>PLAYER</th>
-                    <th style="width: 120px;">BRUH COUNT</th>
-                    <th style="width: 100px;">LEVEL</th>
-                </tr>
-            </thead>
-            <tbody id="leaderboard-body">
-                <!-- Leaderboard rows will be inserted here -->
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Chat Section -->
-    <div id="chat-section">
-        <div class="chat-container">
-            <div class="chat-header">
-                <span>📰 PRESS ROOM CHAT</span>
-                <span id="chat-status">Connected</span>
-            </div>
-            <div id="chat-messages">
-                <!-- Chat messages will be inserted here -->
-                <div class="chat-message other">
-                    <div class="message-sender">System <span class="message-timestamp">Just now</span></div>
-                    <div class="message-content">Welcome to The News Bruh Press Room! Chat with other players here.</div>
-                </div>
-            </div>
-            <div id="chat-input-container">
-                <input type="text" id="chat-input" placeholder="Type your message... (Use @name to tag players)" maxlength="200">
-                <button id="chat-send" onclick="sendChatMessage()">SEND</button>
-            </div>
-        </div>
-        
-        <div class="chat-users">
-            <div class="users-header">
-                <span>🟢 ONLINE PLAYERS (<span id="online-users-count">1</span>)</span>
-            </div>
-            <div id="online-users">
-                <!-- Online users will be inserted here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Reset Section -->
-    <div id="reset-section" style="padding: 20px; text-align: center; border-top: 5px double var(--ink); background: var(--bg-paper-dark);">
-        <button id="reset-button" class="reset-btn">RESET ALL PROGRESS</button>
-    </div>
 </div>
-
-<!-- Chat Notification -->
-<div id="chat-notification" class="chat-notification" style="display: none;">
-    <div class="notification-sender" id="notification-sender"></div>
-    <div class="notification-message" id="notification-message"></div>
+<button class="start-game-btn" onclick="startGameWithName()">START PRINTING</button>
 </div>
-
+</div>
+<div id="newspaper" style="display:none">
+<div id="ticker-tape">
+<div class="ticker-content" id="ticker-text">Join <a href="https://www.reddit.com/r/thenewsbruh/s/HPIdtW6H3X" target="_blank">r/TheNewsBruh</a> on Reddit & Reach The Top 3 on The Leaderboard to Earn Real New Token</div>
+</div>
+<div class="header-container">
+<div class="player-header-info">
+<div class="player-name-display">
+<div class="player-name-text" id="display-player-name">Player Name</div>
+<div class="change-name-link" id="change-name-link">Change Name</div>
+</div>
+<div class="player-counts">
+<span><span class="online-indicator"></span>Players Online: <span id="online-count">0</span></span>
+<span>Total Players: <span id="total-count">0</span></span>
+</div>
+</div>
+<h1>The News Bruh</h1>
+<div class="meta-line">
+<span>Vol. 1</span>
+<span>Est. 2026</span>
+<span id="currentDateTime">Loading...</span>
+</div>
+</div>
+<div id="main-content">
+<div class="column" id="col-left">
+<div class="level-container">
+<div class="level-header">
+<div class="level-title">Level <span class="level-number" id="current-level">1</span></div>
+<div class="level-xp-display" id="xp-display">0/100 XP</div>
+</div>
+<div class="level-bar-container">
+<div class="level-progress-bar" id="level-progress-bar"></div>
+<div class="level-up-indicator" id="level-up-indicator" style="display:none">LEVEL UP!</div>
+</div>
+</div>
+<h2>Statistics</h2>
+<div class="stat-block">
+<div class="stat-label">Treasury</div>
+<div class="stat-value"><span id="currency">0</span> New</div>
+</div>
+<div class="stat-block">
+<div class="stat-label">Production</div>
+<div class="stat-value"><span id="cps">0.0</span> / sec</div>
+</div>
+<div class="stat-block">
+<div class="stat-label">Market Multiplier</div>
+<div class="stat-value" style="color:var(--red-accent)">x<span id="multiplier">1</span></div>
+</div>
+<div class="prestige-box">
+<h3 style="margin:0 0 10px 0;border-bottom:1px solid var(--ink)">THE CLASSIFIEDS</h3>
+<p style="font-size:0.85rem;margin-bottom:10px;line-height:1.4">Hire a <strong>Bruh</strong> Consultant. Each Bruh owned adds a <strong>+100% (x1)</strong> permanent bonus to all production.</p>
+<div style="font-weight:bold;margin-bottom:5px;font-size:1.1rem">Bruh Owned: <span id="bruh-owned">0</span></div>
+<button id="prestige-btn" class="prestige-btn" onclick="prestige()">Buy Bruh
+<div id="prestige-cost" class="prestige-cost">Costs: 1k New</div>
+<div id="prestige-max" class="prestige-max">Max: 0</div>
+</button>
+</div>
+</div>
+<div class="column" id="col-center">
+<h2>Front Page</h2>
+<div id="breaking-news-container">
+<div id="breaking-news-banner">
+<div class="breaking-news-text">
+<span class="breaking-news-icon">📰</span>
+<span class="breaking-news-title">BREAKING NEWS: 5X MULTIPLIER ACTIVE!</span>
+</div>
+</div>
+</div>
+<button id="print-btn">
+<span class="print-title">PRINT EDITION</span>
+<span class="print-sub" id="tap-value-display">📰 +1 New per Tap</span>
+</button>
+<div id="boost-container">
+<button id="boost-button">
+<div id="boost-progress-bar"></div>
+<div class="boost-content">
+<span class="boost-percentage" id="boost-percentage">0%</span>
+<span class="boost-label">BREAKING NEWS BOOST</span>
+<span class="boost-timer" id="boost-timer">15s</span>
+<span class="boost-cooldown" id="boost-cooldown"></span>
+</div>
+</button>
+</div>
+<div class="headline-box">
+<strong>Latest Headline:</strong>
+<p id="headline-spot">"Local entrepreneur starts printing press in garage, neighbors concerned about noise."</p>
+</div>
+</div>
+<div class="column" id="col-right">
+<h2>Assets</h2>
+<div id="upgrades-list"></div>
+</div>
+</div>
+<div id="leaderboard-section">
+<div class="leaderboard-header">
+<h2 style="border-bottom:none;margin:0">🏆 Leaderboard 🏆</h2>
+<div id="leaderboard-update-time" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--ink-light)">Updated: Just now</div>
+</div>
+<table id="leaderboard-table">
+<thead>
+<tr>
+<th style="width:60px">RANK</th>
+<th>PLAYER</th>
+<th style="width:120px">BRUH COUNT</th>
+<th style="width:100px">LEVEL</th>
+</tr>
+</thead>
+<tbody id="leaderboard-body"></tbody>
+</table>
+</div>
+<div id="chat-section">
+<div class="chat-container">
+<div class="chat-header">
+<span>📰 PRESS ROOM CHAT</span>
+<span id="chat-status">Connected</span>
+</div>
+<div id="chat-messages">
+<div class="chat-message other">
+<div class="message-sender">System <span class="message-timestamp">Just now</span></div>
+<div class="message-content">Welcome to The News Bruh Press Room! Chat with other players here.</div>
+</div>
+</div>
+<div id="chat-input-container">
+<input type="text" id="chat-input" placeholder="Type your message... (Use @name to tag players)" maxlength="200">
+<button id="chat-send" onclick="sendChatMessage()">SEND</button>
+</div>
+</div>
+<div class="chat-users">
+<div class="users-header">
+<span>🟢 ONLINE PLAYERS (<span id="online-users-count">1</span>)</span>
+</div>
+<div id="online-users"></div>
+</div>
+</div>
+<div id="reset-section" style="padding:20px;text-align:center;border-top:5px double var(--ink);background:var(--bg-paper-dark)">
+<button id="reset-button" class="reset-btn">RESET ALL PROGRESS</button>
+</div>
+</div>
+<div id="chat-notification" class="chat-notification" style="display:none">
+<div class="notification-sender" id="notification-sender"></div>
+<div class="notification-message" id="notification-message"></div>
+</div>
 <script type="module">
-    // Import Supabase client
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-    
-    // Supabase configuration
-    const SUPABASE_URL = 'https://qlwtovkrmfoqfgrtynrv.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsd3RvdmtybWZvcWZncnR5bnJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzE4NTksImV4cCI6MjA4Mzg0Nzg1OX0.XMPhSftpLtTeM3gTS0Acf6DrFuI_H0U-iAfxAas9n8Y';
-    
-    // Create Supabase client
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        realtime: {
-            params: {
-                eventsPerSecond: 5
-            }
-        }
-    });
-    
-    console.log('Supabase initialized successfully');
-    
-    // Make supabase available globally
-    window.supabaseClient = supabase;
-    
-    // Now run the rest of your game code
-    window.addEventListener('DOMContentLoaded', function() {
-        // Initialize your game systems after Supabase is loaded
-        if (window.gameSystemsReady) {
-            window.gameSystemsReady();
-        }
-    });
+import{createClient}from'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL='https://qlwtovkrmfoqfgrtynrv.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsd3RvdmtybWZvcWZncnR5bnJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzE4NTksImV4cCI6MjA4Mzg0Nzg1OX0.XMPhSftpLtTeM3gTS0Acf6DrFuI_H0U-iAfxAas9n8Y';
+const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{realtime:{params:{eventsPerSecond:5}}});
+window.supabaseClient=supabase;
+window.addEventListener('DOMContentLoaded',function(){if(window.gameSystemsReady)window.gameSystemsReady();});
 </script>
-
 <script>
-    // ============================================
-    // SUPABASE SETUP (Now loaded via ES module)
-    // ============================================
-    
-    // Supabase client is now available as window.supabaseClient
-    // from the ES module above
-    
-    // ============================================
-    // REAL PLAYER TRACKING SYSTEM
-    // ============================================
-    
-    const PlayerTracker = {
-        onlinePlayers: 1,
-        totalPlayers: 1,
-        sessionId: null,
-        updateInterval: null,
+const PlayerTracker={
+    onlinePlayers:0,
+    totalPlayers:0,
+    sessionId:null,
+    updateInterval:null,
+    async init(){
+        this.sessionId='player_'+Date.now()+'_'+Math.random().toString(36).substr(2,9);
+        localStorage.setItem('player_session_id',this.sessionId);
+        await this.registerSession();
+        this.startTracking();
+        await this.updatePlayerCounts();
+        this.setupRealtime();
+    },
+    async registerSession(){
+        if(!window.supabaseClient||!gameState.playerName)return;
+        try{
+            const now=new Date().toISOString();
+            const{error}=await window.supabaseClient.from('player_sessions').upsert({
+                session_id:this.sessionId,
+                player_name:gameState.playerName,
+                last_active:now,
+                created_at:now
+            },{onConflict:'session_id'});
+            if(error)throw error;
+        }catch(error){
+            console.warn('Error registering session:',error);
+        }
+    },
+    async updateSessionActivity(){
+        if(!window.supabaseClient||!gameState.playerName)return;
+        try{
+            await window.supabaseClient.from('player_sessions').update({
+                last_active:new Date().toISOString()
+            }).eq('session_id',this.sessionId);
+        }catch(error){
+            console.warn('Error updating session activity:',error);
+        }
+    },
+    async updatePlayerCounts(){
+        if(!window.supabaseClient){
+            this.updateDisplay();
+            return;
+        }
+        try{
+            const fiveMinutesAgo=new Date(Date.now()-5*60*1000).toISOString();
+            
+            const{data:onlineData,error:onlineError}=await window.supabaseClient
+                .from('player_sessions')
+                .select('player_name')
+                .gt('last_active',fiveMinutesAgo);
+            
+            if(!onlineError&&onlineData!==null){
+                const uniqueOnlinePlayers=new Set(onlineData.map(p=>p.player_name));
+                this.onlinePlayers=Math.max(1,uniqueOnlinePlayers.size);
+            }else{
+                this.onlinePlayers=Math.max(1,this.onlinePlayers);
+            }
+            
+            const{data:totalData,error:totalError}=await window.supabaseClient
+                .from('leaderboard')
+                .select('player_name')
+                .order('bruh_count',{ascending:false});
+            
+            if(!totalError&&totalData!==null){
+                const uniqueTotalPlayers=new Set(totalData.map(p=>p.player_name));
+                this.totalPlayers=Math.max(this.onlinePlayers,uniqueTotalPlayers.size);
+            }else{
+                this.totalPlayers=Math.max(this.onlinePlayers,this.totalPlayers);
+            }
+            
+            this.updateDisplay();
+        }catch(error){
+            console.warn('Error updating player counts:',error);
+            this.updateDisplay();
+        }
+    },
+    updateDisplay(){
+        const onlineElement=document.getElementById('online-count');
+        const totalElement=document.getElementById('total-count');
+        const onlineUsersCount=document.getElementById('online-users-count');
         
-        async init() {
-            console.log('PlayerTracker.init() called');
-            
-            // Generate a unique session ID
-            this.sessionId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('player_session_id', this.sessionId);
-            
-            // Register this player session
-            await this.registerSession();
-            
-            // Start tracking
-            this.startTracking();
-            
-            // Update player counts
+        if(onlineElement){
+            this.animateNumber(onlineElement,this.onlinePlayers);
+        }
+        if(totalElement){
+            this.animateNumber(totalElement,this.totalPlayers);
+        }
+        if(onlineUsersCount){
+            onlineUsersCount.textContent=this.onlinePlayers;
+        }
+    },
+    animateNumber(element,newValue){
+        const currentValue=parseInt(element.textContent.replace(/,/g,''))||0;
+        if(currentValue===newValue){
+            element.textContent=this.formatNumber(newValue);
+            return;
+        }
+        const duration=1000;
+        const startTime=Date.now();
+        const difference=newValue-currentValue;
+        const animate=()=>{
+            const elapsed=Date.now()-startTime;
+            const progress=Math.min(elapsed/duration,1);
+            const easeOut=1-Math.pow(1-progress,3);
+            const current=currentValue+(difference*easeOut);
+            element.textContent=this.formatNumber(Math.floor(current));
+            if(progress<1){
+                requestAnimationFrame(animate);
+            }else{
+                element.textContent=this.formatNumber(newValue);
+            }
+        };
+        requestAnimationFrame(animate);
+    },
+    formatNumber(num){
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
+    },
+    startTracking(){
+        setInterval(()=>{
+            this.updateSessionActivity();
+        },30000);
+        setInterval(async()=>{
             await this.updatePlayerCounts();
-            
-            // Set up real-time updates
-            this.setupRealtime();
-        },
-        
-        async registerSession() {
-            if (!window.supabaseClient || !gameState.playerName) return;
-            
-            try {
-                const now = new Date().toISOString();
-                
-                // Insert or update player session
-                const { error } = await window.supabaseClient
-                    .from('player_sessions')
-                    .upsert({
-                        session_id: this.sessionId,
-                        player_name: gameState.playerName,
-                        last_active: now,
-                        created_at: now
-                    }, {
-                        onConflict: 'session_id'
-                    });
-                
-                if (error) throw error;
-                
-                console.log('Session registered:', this.sessionId);
-            } catch (error) {
-                console.warn('Error registering session:', error);
-            }
-        },
-        
-        async updateSessionActivity() {
-            if (!window.supabaseClient || !gameState.playerName) return;
-            
-            try {
-                await window.supabaseClient
-                    .from('player_sessions')
-                    .update({ last_active: new Date().toISOString() })
-                    .eq('session_id', this.sessionId);
-            } catch (error) {
-                console.warn('Error updating session activity:', error);
-            }
-        },
-        
-        async updatePlayerCounts() {
-            if (!window.supabaseClient) {
-                // Simulate player counts
-                this.onlinePlayers = Math.max(1, Math.floor(Math.random() * 100) + 20);
-                this.totalPlayers = Math.max(this.onlinePlayers, Math.floor(Math.random() * 1000) + 100);
-                this.updateDisplay();
-                return;
-            }
-            
-            try {
-                // Get online players (active in last 5 minutes)
-                const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-                
-                const { data: onlineData, error: onlineError } = await window.supabaseClient
-                    .from('player_sessions')
-                    .select('player_name', { count: 'exact' })
-                    .gt('last_active', fiveMinutesAgo);
-                
-                if (!onlineError && onlineData !== null) {
-                    this.onlinePlayers = Math.max(1, onlineData.length);
-                } else {
-                    this.onlinePlayers = Math.max(1, Math.floor(Math.random() * 100) + 20);
-                }
-                
-                // Get total players from leaderboard
-                const { data: totalData, error: totalError } = await window.supabaseClient
-                    .from('leaderboard')
-                    .select('player_name', { count: 'exact' });
-                
-                if (!totalError && totalData !== null) {
-                    this.totalPlayers = Math.max(this.onlinePlayers, totalData.length);
-                } else {
-                    this.totalPlayers = Math.max(this.onlinePlayers, Math.floor(Math.random() * 1000) + 100);
-                }
-                
-                this.updateDisplay();
-                
-            } catch (error) {
-                console.warn('Error updating player counts:', error);
-                // Fallback to simulated counts
-                this.onlinePlayers = Math.max(1, Math.floor(Math.random() * 100) + 20);
-                this.totalPlayers = Math.max(this.onlinePlayers, Math.floor(Math.random() * 1000) + 100);
-                this.updateDisplay();
-            }
-        },
-        
-        updateDisplay() {
-            const onlineElement = document.getElementById('online-count');
-            const totalElement = document.getElementById('total-count');
-            const onlineUsersCount = document.getElementById('online-users-count');
-            
-            if (onlineElement) {
-                this.animateNumber(onlineElement, this.onlinePlayers);
-            }
-            
-            if (totalElement) {
-                this.animateNumber(totalElement, this.totalPlayers);
-            }
-            
-            if (onlineUsersCount) {
-                onlineUsersCount.textContent = this.onlinePlayers;
-            }
-        },
-        
-        animateNumber(element, newValue) {
-            const currentValue = parseInt(element.textContent.replace(/,/g, '')) || 0;
-            
-            if (currentValue === newValue) {
-                element.textContent = this.formatNumber(newValue);
-                return;
-            }
-            
-            const duration = 1000;
-            const startTime = Date.now();
-            const difference = newValue - currentValue;
-            
-            const animate = () => {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const easeOut = 1 - Math.pow(1 - progress, 3);
-                const current = currentValue + (difference * easeOut);
-                
-                element.textContent = this.formatNumber(Math.floor(current));
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    element.textContent = this.formatNumber(newValue);
-                }
-            };
-            
-            requestAnimationFrame(animate);
-        },
-        
-        formatNumber(num) {
-            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        },
-        
-        startTracking() {
-            // Update session activity every 30 seconds
-            setInterval(() => {
+        },10000);
+        document.addEventListener('visibilitychange',()=>{
+            if(!document.hidden){
                 this.updateSessionActivity();
-            }, 30000);
-            
-            // Update player counts every 10 seconds
-            setInterval(async () => {
-                await this.updatePlayerCounts();
-            }, 10000);
-            
-            // Update player counts on visibility change
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) {
-                    this.updateSessionActivity();
-                    this.updatePlayerCounts();
-                }
-            });
-        },
-        
-        setupRealtime() {
-            if (!window.supabaseClient) return;
-            
-            // Subscribe to player_sessions changes
-            window.supabaseClient
-                .channel('player-sessions-channel')
-                .on('postgres_changes', 
-                    { 
-                        event: '*', 
-                        schema: 'public', 
-                        table: 'player_sessions' 
-                    },
-                    () => {
-                        // Update player counts when sessions change
-                        this.updatePlayerCounts();
-                    }
-                )
-                .subscribe();
-        }
-    };
-    
-    // ============================================
-    // SIMPLE CHAT SYSTEM
-    // ============================================
-    
-    const ChatSystem = {
-        messages: [],
-        
-        async init() {
-            console.log('ChatSystem.init() called');
-            await this.loadMessages();
-            this.startAIChatSimulation();
-        },
-        
-        async loadMessages() {
-            // Start with default messages
-            this.messages = [
-                {
-                    id: 'system_1',
-                    sender: 'System',
-                    message: 'Welcome to The News Bruh Press Room! Chat with other players here.',
-                    created_at: new Date().toISOString(),
-                    isAI: true
-                },
-                {
-                    id: 'ai_1',
-                    sender: 'Inky',
-                    message: 'Just started playing! The newspaper theme is awesome!',
-                    created_at: new Date(Date.now() - 300000).toISOString(),
-                    isAI: true
-                },
-                {
-                    id: 'ai_2',
-                    sender: 'PressBot',
-                    message: 'Working my way up the leaderboard!',
-                    created_at: new Date(Date.now() - 600000).toISOString(),
-                    isAI: true
-                }
-            ];
-            
-            // Try to load from Supabase
-            if (window.supabaseClient) {
-                try {
-                    const { data, error } = await window.supabaseClient
-                        .from('chat_messages')
-                        .select('*')
-                        .order('created_at', { ascending: false })
-                        .limit(50);
-                    
-                    if (!error && data) {
-                        // Add real messages
-                        data.reverse().forEach(msg => {
-                            this.messages.push({
-                                ...msg,
-                                isAI: false
-                            });
-                        });
-                    }
-                } catch (error) {
-                    console.warn('Error loading chat messages:', error);
-                }
+                this.updatePlayerCounts();
             }
-            
-            this.updateChatDisplay();
-        },
-        
-        async sendMessage(message) {
-            if (!message || message.trim() === '') return false;
-            
-            const playerName = gameState.playerName || 'Anonymous';
-            const trimmedMessage = message.trim();
-            
-            // Add to local messages immediately
-            this.addLocalMessage({
-                sender: playerName,
-                message: trimmedMessage,
-                created_at: new Date().toISOString()
-            }, true);
-            
-            // Send to Supabase if connected
-            if (window.supabaseClient) {
-                try {
-                    const { error } = await window.supabaseClient
-                        .from('chat_messages')
-                        .insert({
-                            sender: playerName,
-                            message: trimmedMessage
-                        });
-                    
-                    if (error) throw error;
-                } catch (error) {
-                    console.warn('Error sending message to Supabase:', error);
-                }
-            }
-            
-            return true;
-        },
-        
-        addLocalMessage(message, isReal = false) {
-            const chatMessage = {
-                ...message,
-                id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-                isAI: !isReal
-            };
-            
-            this.messages.push(chatMessage);
-            
-            // Keep only last 100 messages
-            if (this.messages.length > 100) {
-                this.messages = this.messages.slice(-100);
-            }
-            
-            this.updateChatDisplay();
-            
-            return chatMessage;
-        },
-        
-        startAIChatSimulation() {
-            // AI responds occasionally
-            setInterval(() => {
-                if (Math.random() < 0.3 && this.messages.length > 0) {
-                    this.simulateAIResponse();
-                }
-            }, 30000);
-        },
-        
-        simulateAIResponse() {
-            const aiNames = ['Inky', 'PressBot', 'NewsHound'];
-            const aiMessages = [
-                "Just started playing!",
-                "Working on getting more Bruhs",
-                "The leaderboard is interesting",
-                "Nice progress everyone!",
-                "What's your production rate?",
-                "Making good progress",
-                "Bruhs are really helpful for multipliers",
-                "Good luck to all players!"
-            ];
-            
-            const randomName = aiNames[Math.floor(Math.random() * aiNames.length)];
-            let randomMessage = aiMessages[Math.floor(Math.random() * aiMessages.length)];
-            
-            // Occasionally tag the player
-            if (Math.random() < 0.2 && gameState.playerName) {
-                randomMessage = `Hey @${gameState.playerName}, ${randomMessage.toLowerCase()}`;
-            }
-            
-            this.addLocalMessage({
-                sender: randomName,
-                message: randomMessage,
-                created_at: new Date().toISOString()
-            }, false);
-        },
-        
-        updateChatDisplay() {
-            const chatContainer = document.getElementById('chat-messages');
-            if (!chatContainer) return;
-            
-            chatContainer.innerHTML = '';
-            
-            // Show last 50 messages
-            const messagesToShow = this.messages.slice(-50);
-            
-            messagesToShow.forEach(msg => {
-                const messageDiv = document.createElement('div');
-                
-                if (msg.sender === gameState.playerName) {
-                    messageDiv.className = 'chat-message self';
-                } else if (msg.isAI) {
-                    messageDiv.className = 'chat-message other ai-message';
-                } else {
-                    messageDiv.className = 'chat-message other';
-                }
-                
-                // Format timestamp
-                const timestamp = new Date(msg.created_at);
-                const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                // Process message content (highlight tags)
-                let content = msg.message;
-                content = content.replace(/@(\w+)/gi, '<span class="tagged-player">@$1</span>');
-                
-                // Add AI indicator if it's an AI message
-                const senderName = msg.isAI ? `${msg.sender} 🤖` : msg.sender;
-                
-                messageDiv.innerHTML = `
-                    <div class="message-sender">${senderName} <span class="message-timestamp">${timeStr}</span></div>
-                    <div class="message-content">${content}</div>
-                `;
-                
-                chatContainer.appendChild(messageDiv);
-            });
-            
-            // Scroll to bottom
-            setTimeout(() => {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }, 100);
-        }
-    };
-    
-    // ============================================
-    // SIMPLE LEADERBOARD SYSTEM
-    // ============================================
-    
-    const LeaderboardSystem = {
-        players: [],
-        
-        async init() {
-            console.log('LeaderboardSystem.init() called');
-            await this.loadLeaderboard();
-        },
-        
-        async loadLeaderboard() {
-            // Start with default players
-            this.players = [
-                { player_name: 'Inky', bruh_count: 15, news_count: 15000, level: 5 },
-                { player_name: 'PressBot', bruh_count: 12, news_count: 12000, level: 4 },
-                { player_name: 'NewsHound', bruh_count: 8, news_count: 8000, level: 3 }
-            ];
-            
-            // Try to load from Supabase
-            if (window.supabaseClient) {
-                try {
-                    const { data, error } = await window.supabaseClient
-                        .from('leaderboard')
-                        .select('*')
-                        .order('bruh_count', { ascending: false })
-                        .limit(100);
-                    
-                    if (!error && data) {
-                        this.players = data;
-                    }
-                } catch (error) {
-                    console.warn('Error loading leaderboard:', error);
-                }
-            }
-            
-            this.updateLeaderboardDisplay();
-        },
-        
-        async updatePlayerScore() {
-            if (!gameState.playerName) return;
-            
-            const playerData = {
-                player_name: gameState.playerName,
-                bruh_count: gameState.bruh,
-                news_count: gameState.news,
-                level: gameState.level,
-                last_active: new Date().toISOString()
-            };
-            
-            // Update local leaderboard
-            const existingIndex = this.players.findIndex(p => p.player_name === gameState.playerName);
-            if (existingIndex >= 0) {
-                this.players[existingIndex] = playerData;
-            } else {
-                this.players.push(playerData);
-            }
-            
-            // Sort by bruh count
-            this.players.sort((a, b) => b.bruh_count - a.bruh_count);
-            
-            // Keep only top 100
-            if (this.players.length > 100) {
-                this.players = this.players.slice(0, 100);
-            }
-            
-            this.updateLeaderboardDisplay();
-            
-            // Send to Supabase if connected
-            if (window.supabaseClient) {
-                try {
-                    const { error } = await window.supabaseClient
-                        .from('leaderboard')
-                        .upsert(playerData, {
-                            onConflict: 'player_name'
-                        });
-                    
-                    if (error) throw error;
-                } catch (error) {
-                    console.warn('Error updating leaderboard on Supabase:', error);
-                }
-            }
-        },
-        
-        updateLeaderboardDisplay() {
-            const tbody = document.getElementById('leaderboard-body');
-            if (!tbody) return;
-            
-            tbody.innerHTML = '';
-            
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const updateTimeElement = document.getElementById('leaderboard-update-time');
-            if (updateTimeElement) {
-                updateTimeElement.textContent = `Updated: ${timeStr}`;
-            }
-            
-            const displayCount = Math.min(20, this.players.length);
-            
-            for (let i = 0; i < displayCount; i++) {
-                const player = this.players[i];
-                const row = document.createElement('tr');
-                
-                if (player.player_name === gameState.playerName) {
-                    row.style.backgroundColor = '#e8f5e8';
-                    row.style.fontWeight = 'bold';
-                }
-                
-                let rankClass = '';
-                if (i === 0) rankClass = 'rank-1';
-                else if (i === 1) rankClass = 'rank-2';
-                else if (i === 2) rankClass = 'rank-3';
-                
-                row.innerHTML = `
-                    <td class="player-rank ${rankClass}">${i + 1}</td>
-                    <td class="player-name">${player.player_name} ${player.player_name === gameState.playerName ? ' (You)' : ''}</td>
-                    <td class="player-bruh">${formatNumber(player.bruh_count || 0)}</td>
-                    <td class="player-level">${formatNumber(player.level || 1)}</td>
-                `;
-                
-                tbody.appendChild(row);
-            }
-        }
-    };
-    
-    // ============================================
-    // ORIGINAL GAME CODE
-    // ============================================
-    
-    // Player Name Display Functions
-    function updatePlayerNameDisplay() {
-        const nameDisplay = document.getElementById('display-player-name');
-        const playerName = gameState.playerName || 'Anonymous';
-        nameDisplay.textContent = playerName;
-        
-        LeaderboardSystem.updatePlayerScore();
+        });
+    },
+    setupRealtime(){
+        if(!window.supabaseClient)return;
+        window.supabaseClient.channel('player-sessions-channel')
+            .on('postgres_changes',{event:'*',schema:'public',table:'player_sessions'},()=>{
+                this.updatePlayerCounts();
+            })
+            .subscribe();
     }
+};
 
-    function openChangeNameModal() {
-        const modal = document.getElementById('name-selection-modal');
-        const nameInput = document.getElementById('player-name-input');
-        const title = document.querySelector('.name-modal-title');
-        const subtitle = document.querySelector('.name-modal-subtitle');
-        const startBtn = document.querySelector('.start-game-btn');
-        
-        title.textContent = 'Change Your Name';
-        subtitle.textContent = 'Enter a new newsroom name';
-        nameInput.value = gameState.playerName || '';
-        startBtn.textContent = 'UPDATE NAME';
-        startBtn.onclick = updatePlayerName;
-        
-        modal.classList.remove('hidden');
-        nameInput.focus();
-        nameInput.select();
-    }
-
-    function updatePlayerName() {
-        const nameInput = document.getElementById('player-name-input');
-        const playerName = nameInput.value.trim();
-        
-        if (!validatePlayerName(playerName)) {
-            return;
+const ChatSystem={
+    messages:[],
+    async init(){
+        await this.loadMessages();
+    },
+    async loadMessages(){
+        this.messages=[
+            {id:'system_1',sender:'System',message:'Welcome to The News Bruh Press Room! Chat with other players here.',created_at:new Date().toISOString(),isAI:false}
+        ];
+        if(window.supabaseClient){
+            try{
+                const{data,error}=await window.supabaseClient
+                    .from('chat_messages')
+                    .select('*')
+                    .order('created_at',{ascending:false})
+                    .limit(50);
+                if(!error&&data){
+                    data.reverse().forEach(msg=>{
+                        if(!this.isBotName(msg.sender)){
+                            this.messages.push({...msg,isAI:false});
+                        }
+                    });
+                }
+            }catch(error){
+                console.warn('Error loading chat messages:',error);
+            }
         }
+        this.updateChatDisplay();
+    },
+    isBotName(name){
+        const botNames=['Inky','PressBot','NewsHound','AI','Bot','System'];
+        return botNames.some(botName=>name.toLowerCase().includes(botName.toLowerCase()));
+    },
+    async sendMessage(message){
+        if(!message||message.trim()==='')return false;
+        const playerName=gameState.playerName||'Anonymous';
+        const trimmedMessage=message.trim();
         
-        localStorage.setItem('newsBruhPlayerName', playerName);
-        gameState.playerName = playerName;
+        this.addLocalMessage({
+            sender:playerName,
+            message:trimmedMessage,
+            created_at:new Date().toISOString()
+        },true);
         
-        updatePlayerNameDisplay();
-        
-        document.getElementById('name-selection-modal').classList.add('hidden');
-        
-        const title = document.querySelector('.name-modal-title');
-        const subtitle = document.querySelector('.name-modal-subtitle');
-        const startBtn = document.querySelector('.start-game-btn');
-        
-        title.textContent = 'The News Bruh';
-        subtitle.textContent = 'Enter the Press Room';
-        startBtn.textContent = 'START PRINTING';
-        startBtn.onclick = startGameWithName;
-        
-        LeaderboardSystem.updatePlayerScore();
-    }
-
-    // Name Selection Functions
-    function validatePlayerName(name) {
-        if (!name || name.trim() === '') {
-            alert('Please enter a name!');
-            return false;
+        if(window.supabaseClient){
+            try{
+                const{error}=await window.supabaseClient
+                    .from('chat_messages')
+                    .insert({
+                        sender:playerName,
+                        message:trimmedMessage
+                    });
+                if(error)throw error;
+            }catch(error){
+                console.warn('Error sending message to Supabase:',error);
+            }
         }
-        
-        if (name.length > 20) {
-            alert('Name must be 20 characters or less!');
-            return false;
-        }
-        
         return true;
-    }
-
-    function startGameWithName() {
-        const nameInput = document.getElementById('player-name-input');
-        const playerName = nameInput.value.trim();
+    },
+    addLocalMessage(message,isReal=false){
+        const chatMessage={
+            ...message,
+            id:'msg_'+Date.now()+'_'+Math.random().toString(36).substr(2,9),
+            isAI:!isReal&&this.isBotName(message.sender)
+        };
         
-        if (!validatePlayerName(playerName)) {
-            return;
+        if(!chatMessage.isAI){
+            this.messages.push(chatMessage);
+            if(this.messages.length>100){
+                this.messages=this.messages.slice(-100);
+            }
+            this.updateChatDisplay();
         }
+        return chatMessage;
+    },
+    updateChatDisplay(){
+        const chatContainer=document.getElementById('chat-messages');
+        if(!chatContainer)return;
         
-        localStorage.setItem('newsBruhPlayerName', playerName);
-        gameState.playerName = playerName;
+        chatContainer.innerHTML='';
+        const messagesToShow=this.messages.filter(msg=>!msg.isAI).slice(-50);
         
-        updatePlayerNameDisplay();
-        
+        messagesToShow.forEach(msg=>{
+            const messageDiv=document.createElement('div');
+            if(msg.sender===gameState.playerName){
+                messageDiv.className='chat-message self';
+            }else{
+                messageDiv.className='chat-message other';
+            }
+            const timestamp=new Date(msg.created_at);
+            const timeStr=timestamp.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+            let content=msg.message;
+            content=content.replace(/@(\w+)/gi,'<span class="tagged-player">@$1</span>');
+            messageDiv.innerHTML=`
+                <div class="message-sender">${msg.sender} <span class="message-timestamp">${timeStr}</span></div>
+                <div class="message-content">${content}</div>
+            `;
+            chatContainer.appendChild(messageDiv);
+        });
+        setTimeout(()=>{
+            chatContainer.scrollTop=chatContainer.scrollHeight;
+        },100);
+    }
+};
+
+const LeaderboardSystem={
+    players:[],
+    async init(){
+        await this.loadLeaderboard();
+    },
+    async loadLeaderboard(){
+        this.players=[];
+        if(window.supabaseClient){
+            try{
+                const{data,error}=await window.supabaseClient
+                    .from('leaderboard')
+                    .select('*')
+                    .order('bruh_count',{ascending:false})
+                    .limit(100);
+                if(!error&&data){
+                    this.players=data.filter(p=>!ChatSystem.isBotName(p.player_name));
+                }
+            }catch(error){
+                console.warn('Error loading leaderboard:',error);
+            }
+        }
+        this.updateLeaderboardDisplay();
+    },
+    async updatePlayerScore(){
+        if(!gameState.playerName)return;
+        const playerData={
+            player_name:gameState.playerName,
+            bruh_count:gameState.bruh,
+            news_count:gameState.news,
+            level:gameState.level,
+            last_active:new Date().toISOString()
+        };
+        const existingIndex=this.players.findIndex(p=>p.player_name===gameState.playerName);
+        if(existingIndex>=0){
+            this.players[existingIndex]=playerData;
+        }else{
+            this.players.push(playerData);
+        }
+        this.players.sort((a,b)=>b.bruh_count-a.bruh_count);
+        if(this.players.length>100){
+            this.players=this.players.slice(0,100);
+        }
+        this.updateLeaderboardDisplay();
+        if(window.supabaseClient){
+            try{
+                const{error}=await window.supabaseClient
+                    .from('leaderboard')
+                    .upsert(playerData,{onConflict:'player_name'});
+                if(error)throw error;
+            }catch(error){
+                console.warn('Error updating leaderboard on Supabase:',error);
+            }
+        }
+    },
+    updateLeaderboardDisplay(){
+        const tbody=document.getElementById('leaderboard-body');
+        if(!tbody)return;
+        tbody.innerHTML='';
+        const now=new Date();
+        const timeStr=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+        const updateTimeElement=document.getElementById('leaderboard-update-time');
+        if(updateTimeElement){
+            updateTimeElement.textContent=`Updated: ${timeStr}`;
+        }
+        const displayCount=Math.min(20,this.players.length);
+        for(let i=0;i<displayCount;i++){
+            const player=this.players[i];
+            const row=document.createElement('tr');
+            if(player.player_name===gameState.playerName){
+                row.style.backgroundColor='#e8f5e8';
+                row.style.fontWeight='bold';
+            }
+            let rankClass='';
+            if(i===0)rankClass='rank-1';
+            else if(i===1)rankClass='rank-2';
+            else if(i===2)rankClass='rank-3';
+            row.innerHTML=`
+                <td class="player-rank ${rankClass}">${i+1}</td>
+                <td class="player-name">${player.player_name} ${player.player_name===gameState.playerName?' (You)':''}</td>
+                <td class="player-bruh">${formatNumber(player.bruh_count||0)}</td>
+                <td class="player-level">${formatNumber(player.level||1)}</td>
+            `;
+            tbody.appendChild(row);
+        }
+    }
+};
+
+function updatePlayerNameDisplay(){
+    const nameDisplay=document.getElementById('display-player-name');
+    const playerName=gameState.playerName||'Anonymous';
+    nameDisplay.textContent=playerName;
+    LeaderboardSystem.updatePlayerScore();
+}
+
+function openChangeNameModal(){
+    const modal=document.getElementById('name-selection-modal');
+    const nameInput=document.getElementById('player-name-input');
+    const title=document.querySelector('.name-modal-title');
+    const subtitle=document.querySelector('.name-modal-subtitle');
+    const startBtn=document.querySelector('.start-game-btn');
+    title.textContent='Change Your Name';
+    subtitle.textContent='Enter a new newsroom name';
+    nameInput.value=gameState.playerName||'';
+    startBtn.textContent='UPDATE NAME';
+    startBtn.onclick=updatePlayerName;
+    modal.classList.remove('hidden');
+    nameInput.focus();
+    nameInput.select();
+}
+
+function updatePlayerName(){
+    const nameInput=document.getElementById('player-name-input');
+    const playerName=nameInput.value.trim();
+    if(!validatePlayerName(playerName)){
+        return;
+    }
+    localStorage.setItem('newsBruhPlayerName',playerName);
+    gameState.playerName=playerName;
+    updatePlayerNameDisplay();
+    document.getElementById('name-selection-modal').classList.add('hidden');
+    const title=document.querySelector('.name-modal-title');
+    const subtitle=document.querySelector('.name-modal-subtitle');
+    const startBtn=document.querySelector('.start-game-btn');
+    title.textContent='The News Bruh';
+    subtitle.textContent='Enter the Press Room';
+    startBtn.textContent='START PRINTING';
+    startBtn.onclick=startGameWithName;
+    LeaderboardSystem.updatePlayerScore();
+}
+
+function validatePlayerName(name){
+    if(!name||name.trim()===''){
+        alert('Please enter a name!');
+        return false;
+    }
+    if(name.length>20){
+        alert('Name must be 20 characters or less!');
+        return false;
+    }
+    return true;
+}
+
+function startGameWithName(){
+    const nameInput=document.getElementById('player-name-input');
+    const playerName=nameInput.value.trim();
+    if(!validatePlayerName(playerName)){
+        return;
+    }
+    localStorage.setItem('newsBruhPlayerName',playerName);
+    gameState.playerName=playerName;
+    updatePlayerNameDisplay();
+    document.getElementById('name-selection-modal').classList.add('hidden');
+    document.getElementById('newspaper').style.display='flex';
+    init();
+    PlayerTracker.init();
+    ChatSystem.init();
+    LeaderboardSystem.init();
+}
+
+function updateDateTime(){
+    const now=new Date();
+    const day=String(now.getDate()).padStart(2,'0');
+    const month=String(now.getMonth()+1).padStart(2,'0');
+    const year=now.getFullYear();
+    const hours=String(now.getHours()).padStart(2,'0');
+    const minutes=String(now.getMinutes()).padStart(2,'0');
+    const seconds=String(now.getSeconds()).padStart(2,'0');
+    const dateTimeString=`${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    const dateTimeElement=document.getElementById('currentDateTime');
+    if(dateTimeElement){
+        dateTimeElement.textContent=dateTimeString;
+    }
+}
+
+function startDateTimeUpdate(){
+    updateDateTime();
+    setInterval(updateDateTime,1000);
+}
+
+const defaultGameState={
+    news:0,
+    bruh:0,
+    buildings:[
+        {id:0,name:"Paperboy",baseCost:15,baseCPS:0.5,count:0},
+        {id:1,name:"Editor",baseCost:100,baseCPS:4,count:0},
+        {id:2,name:"Printing Press",baseCost:1100,baseCPS:12,count:0},
+        {id:3,name:"Distribution Van",baseCost:12000,baseCPS:45,count:0},
+        {id:4,name:"News Tower",baseCost:130000,baseCPS:160,count:0},
+        {id:5,name:"Media Empire",baseCost:1400000,baseCPS:850,count:0}
+    ],
+    lastUpdate:Date.now(),
+    version:"1.0.8",
+    playerName:"",
+    chatNotifications:true,
+    boostProgress:0,
+    isBoostActive:false,
+    boostTimeLeft:0,
+    boostCooldown:0,
+    boostMultiplier:1,
+    lastDepletionTime:Date.now(),
+    level:1,
+    xp:0,
+    totalXpEarned:0
+};
+
+let gameState=JSON.parse(JSON.stringify(defaultGameState));
+let isInitialized=false;
+let breakingNewsEmojis=[];
+let boostEmojiInterval=null;
+let boostTimerInterval=null;
+
+function calculateXPForLevel(level){
+    return Math.floor(100*Math.pow(1.15,level-1));
+}
+
+function calculateLevelFromTotalXP(totalXP){
+    let level=1;
+    let xpNeeded=calculateXPForLevel(level);
+    let xpRemaining=totalXP;
+    while(xpRemaining>=xpNeeded){
+        xpRemaining-=xpNeeded;
+        level++;
+        xpNeeded=calculateXPForLevel(level);
+    }
+    return{
+        level:level,
+        currentXP:xpRemaining,
+        nextLevelXP:xpNeeded,
+        progress:(xpRemaining/xpNeeded)*100
+    };
+}
+
+function addXP(amount){
+    const oldLevelInfo=calculateLevelFromTotalXP(gameState.totalXpEarned);
+    const oldLevel=oldLevelInfo.level;
+    gameState.totalXpEarned+=amount;
+    gameState.xp+=amount;
+    const newLevelInfo=calculateLevelFromTotalXP(gameState.totalXpEarned);
+    const newLevel=newLevelInfo.level;
+    gameState.level=newLevel;
+    gameState.xp=newLevelInfo.currentXP;
+    if(newLevel>oldLevel){
+        const levelContainer=document.querySelector('.level-container');
+        levelContainer.style.animation='none';
+        setTimeout(()=>{
+            levelContainer.style.animation='levelUpPulse 0.5s 3';
+        },10);
+    }
+    updateLevelDisplay();
+    return newLevel>oldLevel;
+}
+
+function updateLevelDisplay(){
+    const levelInfo=calculateLevelFromTotalXP(gameState.totalXpEarned);
+    document.getElementById('current-level').textContent=formatNumber(levelInfo.level);
+    const xpDisplay=document.getElementById('xp-display');
+    xpDisplay.textContent=`${formatNumber(levelInfo.currentXP)}/${formatNumber(levelInfo.nextLevelXP)} XP`;
+    const progressBar=document.getElementById('level-progress-bar');
+    const progressPercent=levelInfo.progress;
+    progressBar.style.width=`${progressPercent}%`;
+    const levelUpIndicator=document.getElementById('level-up-indicator');
+    if(progressPercent>=95){
+        levelUpIndicator.style.display='block';
+    }else{
+        levelUpIndicator.style.display='none';
+    }
+    LeaderboardSystem.updatePlayerScore();
+}
+
+function formatNumber(num){
+    if(typeof num!=='number'||!isFinite(num))return'0';
+    if(num<0)return'-'+formatNumber(-num);
+    if(num<1000)return Math.floor(num).toLocaleString();
+    return toAlphabetical(num);
+}
+
+function toAlphabetical(num){
+    if(num>=1e6){
+        const log=Math.log10(num);
+        const magnitude=Math.floor(log/3);
+        if(magnitude<1)return Math.floor(num).toLocaleString();
+        const baseValue=Math.pow(1000,magnitude);
+        const scaled=num/baseValue;
+        const suffix=getAlphabeticalSuffix(magnitude-1);
+        if(scaled>=100){
+            return Math.floor(scaled)+suffix;
+        }else if(scaled>=10){
+            return scaled.toFixed(1)+suffix;
+        }else{
+            return scaled.toFixed(2)+suffix;
+        }
+    }
+    if(num>=1e15)return(num/1e15).toFixed(2)+"Qa";
+    if(num>=1e12)return(num/1e12).toFixed(2)+"T";
+    if(num>=1e9)return(num/1e9).toFixed(2)+"B";
+    if(num>=1e6)return(num/1e6).toFixed(2)+"M";
+    if(num>=1e3)return(num/1e3).toFixed(1)+"k";
+    return Math.floor(num).toLocaleString();
+}
+
+function getAlphabeticalSuffix(index){
+    if(index<0)return"";
+    if(index<26){
+        return String.fromCharCode(97+index);
+    }
+    let result="";
+    let remaining=index;
+    while(remaining>=0){
+        const charIndex=remaining%26;
+        result=String.fromCharCode(97+charIndex)+result;
+        remaining=Math.floor(remaining/26)-1;
+        if(remaining<0)break;
+    }
+    return result;
+}
+
+function resetGame(){
+    if(!confirm("⚠️ WARNING: This will PERMANENTLY delete ALL your progress!\n\nThis includes:\n• All your New currency\n• All buildings purchased\n• All Bruhs owned\n• Your current level and XP\n• Boost progress\n• Leaderboard ranking\n\nYour player name will be kept.\n\nAre you absolutely sure you want to reset everything?")){
+        return;
+    }
+    if(!confirm("FINAL WARNING: This action cannot be undone!\n\nAll your progress will be lost forever.\n\nType 'RESET' to confirm:")){
+        return;
+    }
+    const userInput=prompt("Please type 'RESET' (in uppercase) to confirm:");
+    if(userInput!=='RESET'){
+        alert("Reset cancelled. Your progress is safe.");
+        return;
+    }
+    const playerName=gameState.playerName;
+    localStorage.removeItem('newsBruhGameState');
+    gameState=JSON.parse(JSON.stringify(defaultGameState));
+    gameState.playerName=playerName;
+    gameState.news=0;
+    gameState.bruh=0;
+    gameState.level=1;
+    gameState.xp=0;
+    gameState.totalXpEarned=0;
+    gameState.boostProgress=0;
+    gameState.isBoostActive=false;
+    gameState.boostTimeLeft=0;
+    gameState.boostCooldown=0;
+    gameState.boostMultiplier=1;
+    gameState.lastDepletionTime=Date.now();
+    gameState.buildings.forEach(building=>{
+        building.count=0;
+    });
+    const banner=document.getElementById('breaking-news-banner');
+    if(banner)banner.style.display='none';
+    stopEmojiRain();
+    if(boostTimerInterval){
+        clearInterval(boostTimerInterval);
+        boostTimerInterval=null;
+    }
+    updateUI();
+    updateLevelDisplay();
+    updateBoostProgress();
+    LeaderboardSystem.updatePlayerScore();
+    saveGame();
+    alert("✅ Game has been reset successfully!\n\nYou're starting fresh with:\n• 0 New currency\n• 0 Buildings\n• 0 Bruhs\n• Level 1\n\nYour player name has been kept.");
+    const resetButton=document.getElementById('reset-button');
+    if(resetButton){
+        resetButton.style.backgroundColor='#4CAF50';
+        resetButton.textContent='✅ RESET COMPLETE!';
+        setTimeout(()=>{
+            resetButton.style.backgroundColor='';
+            resetButton.textContent='RESET ALL PROGRESS';
+        },2000);
+    }
+}
+
+function updateBoostProgress(){
+    const boostButton=document.getElementById('boost-button');
+    const progressBar=document.getElementById('boost-progress-bar');
+    const percentageElement=document.getElementById('boost-percentage');
+    const cooldownElement=document.getElementById('boost-cooldown');
+    const timerElement=document.getElementById('boost-timer');
+    if(gameState.boostCooldown>0){
+        boostButton.disabled=true;
+        const minutes=Math.floor(gameState.boostCooldown/60);
+        const seconds=Math.floor(gameState.boostCooldown%60);
+        cooldownElement.textContent=`Cooldown: ${minutes}:${seconds.toString().padStart(2,'0')}`;
+        cooldownElement.style.display='block';
+        timerElement.style.display='none';
+        percentageElement.textContent='0%';
+        progressBar.style.width='0%';
+        progressBar.style.background='linear-gradient(90deg,#cccccc,#999999)';
+    }else if(gameState.isBoostActive){
+        boostButton.disabled=false;
+        percentageElement.textContent='ACTIVE!';
+        percentageElement.style.color='#ff0000';
+        progressBar.style.width='100%';
+        progressBar.style.background='linear-gradient(90deg,#ff0000,#ff8800,#ff0000)';
+        progressBar.style.animation='progressShimmer 1s infinite linear';
+        cooldownElement.style.display='none';
+        timerElement.style.display='block';
+        timerElement.textContent=`${gameState.boostTimeLeft}s`;
+    }else{
+        boostButton.disabled=false;
+        percentageElement.style.color='';
+        percentageElement.textContent=`${Math.floor(gameState.boostProgress)}%`;
+        progressBar.style.width=`${gameState.boostProgress}%`;
+        progressBar.style.background='linear-gradient(90deg,#ff4444,#ff0000,#ff4444)';
+        progressBar.style.animation='progressShimmer 2s infinite linear';
+        cooldownElement.style.display='none';
+        timerElement.style.display='none';
+        if(gameState.boostProgress>=100){
+            cooldownElement.textContent='READY!';
+            cooldownElement.style.display='block';
+            cooldownElement.style.color='#ff0000';
+        }else{
+            cooldownElement.style.display='none';
+        }
+    }
+}
+
+function depleteBoostProgress(){
+    if(gameState.isBoostActive||gameState.boostCooldown>0||gameState.boostProgress<=0){
+        return;
+    }
+    const now=Date.now();
+    const timeSinceLastDepletion=(now-gameState.lastDepletionTime)/1000;
+    if(timeSinceLastDepletion>=1){
+        gameState.boostProgress=Math.max(0,gameState.boostProgress-2);
+        gameState.lastDepletionTime=now;
+        if(gameState.boostProgress%10===0||gameState.boostProgress<=1){
+            updateBoostProgress();
+        }
+    }
+}
+
+function incrementBoostProgress(){
+    if(gameState.isBoostActive||gameState.boostCooldown>0){
+        return;
+    }
+    gameState.boostProgress+=5;
+    gameState.lastDepletionTime=Date.now();
+    if(gameState.boostProgress>=100){
+        gameState.boostProgress=100;
+        activateBoost();
+    }
+    updateBoostProgress();
+    saveGame();
+}
+
+function activateBoost(){
+    if(gameState.isBoostActive||gameState.boostProgress<100)return;
+    gameState.isBoostActive=true;
+    gameState.boostTimeLeft=15;
+    gameState.boostMultiplier=5;
+    gameState.boostProgress=0;
+    const banner=document.getElementById('breaking-news-banner');
+    banner.style.display='block';
+    startEmojiRain();
+    updateBoostTimer();
+    if(boostTimerInterval)clearInterval(boostTimerInterval);
+    boostTimerInterval=setInterval(updateBoostTimer,1000);
+    const statBlocks=document.querySelectorAll('.stat-block');
+    statBlocks.forEach(block=>{
+        block.classList.add('active-boost');
+    });
+    updateUI();
+    updateBoostProgress();
+}
+
+function updateBoostTimer(){
+    if(!gameState.isBoostActive)return;
+    gameState.boostTimeLeft--;
+    const timerElement=document.getElementById('boost-timer');
+    if(timerElement){
+        timerElement.textContent=`${gameState.boostTimeLeft}s`;
+        if(gameState.boostTimeLeft<=5){
+            timerElement.style.color='#ff0000';
+        }
+    }
+    if(gameState.boostTimeLeft<=0){
+        endBoost();
+    }
+}
+
+function endBoost(){
+    gameState.isBoostActive=false;
+    gameState.boostMultiplier=1;
+    gameState.boostCooldown=600;
+    const banner=document.getElementById('breaking-news-banner');
+    banner.style.display='none';
+    stopEmojiRain();
+    if(boostTimerInterval){
+        clearInterval(boostTimerInterval);
+        boostTimerInterval=null;
+    }
+    const statBlocks=document.querySelectorAll('.stat-block');
+    statBlocks.forEach(block=>{
+        block.classList.remove('active-boost');
+    });
+    const cooldownInterval=setInterval(()=>{
+        gameState.boostCooldown--;
+        updateBoostProgress();
+        if(gameState.boostCooldown<=0){
+            clearInterval(cooldownInterval);
+            gameState.boostCooldown=0;
+            updateBoostProgress();
+        }
+    },1000);
+    updateUI();
+    updateBoostProgress();
+}
+
+function startEmojiRain(){
+    if(boostEmojiInterval)clearInterval(boostEmojiInterval);
+    boostEmojiInterval=setInterval(()=>{
+        createFallingEmoji();
+    },300);
+}
+
+function stopEmojiRain(){
+    if(boostEmojiInterval){
+        clearInterval(boostEmojiInterval);
+        boostEmojiInterval=null;
+    }
+    breakingNewsEmojis.forEach(emoji=>{
+        if(emoji.parentNode){
+            emoji.parentNode.removeChild(emoji);
+        }
+    });
+    breakingNewsEmojis=[];
+}
+
+function createFallingEmoji(){
+    const banner=document.getElementById('breaking-news-container');
+    if(!banner)return;
+    const emoji=document.createElement('div');
+    emoji.className='breaking-news-flash';
+    emoji.textContent='📰';
+    const newspaper=document.getElementById('newspaper');
+    const newspaperRect=newspaper.getBoundingClientRect();
+    const bannerRect=banner.getBoundingClientRect();
+    const startX=Math.random()*newspaperRect.width;
+    const startY=bannerRect.top-newspaperRect.top;
+    emoji.style.left=`${startX}px`;
+    emoji.style.top=`${startY}px`;
+    emoji.style.fontSize=`${Math.random()*20+20}px`;
+    emoji.style.animationDuration=`${Math.random()*1+1.5}s`;
+    newspaper.appendChild(emoji);
+    breakingNewsEmojis.push(emoji);
+    setTimeout(()=>{
+        if(emoji.parentNode){
+            emoji.parentNode.removeChild(emoji);
+            const index=breakingNewsEmojis.indexOf(emoji);
+            if(index>-1){
+                breakingNewsEmojis.splice(index,1);
+            }
+        }
+    },2000);
+}
+
+const getPrestigeCost=(bruhCount)=>Math.floor(1000*Math.pow(2.5,bruhCount));
+const getMultiplier=()=>(1+gameState.bruh)*gameState.boostMultiplier;
+const getCost=(building)=>Math.floor(building.baseCost*Math.pow(1.15,building.count||0));
+const getCPS=()=>{
+    let base=gameState.buildings.reduce((acc,b)=>acc+(b.count*b.baseCPS),0);
+    return base*getMultiplier();
+};
+const getMaxBuy=(building)=>{
+    let canBuy=0;
+    let tempNews=gameState.news;
+    let tempCount=building.count;
+    let nextCost=getCost({...building,count:tempCount});
+    for(let i=0;i<1000;i++){
+        if(tempNews>=nextCost){
+            canBuy++;
+            tempNews-=nextCost;
+            tempCount++;
+            nextCost=getCost({...building,count:tempCount});
+        }else{
+            break;
+        }
+    }
+    return canBuy;
+};
+
+function awardXPForAction(action,amount=1){
+    let xpAmount=0;
+    switch(action){
+        case'click':xpAmount=1;break;
+        case'building':xpAmount=Math.floor(amount*5);break;
+        case'bruh':xpAmount=Math.floor(amount*50);break;
+        case'time':xpAmount=Math.min(amount,100);break;
+    }
+    if(xpAmount>0){
+        addXP(xpAmount);
+    }
+}
+
+function sendChatMessage(){
+    const input=document.getElementById('chat-input');
+    const message=input.value.trim();
+    if(!message||message.length===0)return;
+    ChatSystem.sendMessage(message).then(success=>{
+        if(success){
+            input.value='';
+        }
+    });
+}
+
+function saveGame(){
+    try{
+        gameState.lastUpdate=Date.now();
+        localStorage.setItem('newsBruhGameState',JSON.stringify(gameState));
+        LeaderboardSystem.updatePlayerScore();
+    }catch(e){
+        console.warn('Could not save game state:',e);
+    }
+}
+
+function loadGame(){
+    try{
+        const saved=localStorage.getItem('newsBruhGameState');
+        if(saved){
+            const parsed=JSON.parse(saved);
+            gameState=parsed;
+            gameState.news=gameState.news||0;
+            gameState.bruh=gameState.bruh||0;
+            gameState.level=gameState.level||1;
+            gameState.xp=gameState.xp||0;
+            gameState.totalXpEarned=gameState.totalXpEarned||0;
+            gameState.boostProgress=gameState.boostProgress||0;
+            gameState.isBoostActive=gameState.isBoostActive||false;
+            gameState.boostTimeLeft=gameState.boostTimeLeft||0;
+            gameState.boostCooldown=gameState.boostCooldown||0;
+            gameState.boostMultiplier=gameState.boostMultiplier||1;
+            gameState.lastDepletionTime=gameState.lastDepletionTime||Date.now();
+        }
+    }catch(e){
+        console.warn('Could not load saved game:',e);
+        gameState=JSON.parse(JSON.stringify(defaultGameState));
+    }
+}
+
+function manualClick(e){
+    e.preventDefault();
+    e.stopPropagation();
+    const amount=1*getMultiplier();
+    gameState.news+=amount;
+    awardXPForAction('click');
+    incrementBoostProgress();
+    if(gameState.isBoostActive){
+        gameState.boostTimeLeft=15;
+    }
+    const btn=document.getElementById('print-btn');
+    btn.classList.add('pulse');
+    setTimeout(()=>btn.classList.remove('pulse'),300);
+    const floater=document.createElement('div');
+    floater.className='floater';
+    floater.innerText=`📰 +${formatNumber(amount)}`;
+    let x,y;
+    if(e.type==='touchstart'||e.type==='touchmove'){
+        const touch=e.touches[0]||e.changedTouches[0];
+        x=touch.clientX;
+        y=touch.clientY;
+    }else{
+        x=e.clientX;
+        y=e.clientY;
+    }
+    floater.style.left=`${x}px`;
+    floater.style.top=`${y}px`;
+    document.body.appendChild(floater);
+    setTimeout(()=>floater.remove(),1000);
+    updateUI();
+    saveGame();
+}
+
+function buyMax(id){
+    const building=gameState.buildings[id];
+    let bought=0;
+    let cost=getCost(building);
+    for(let i=0;i<1000;i++){
+        if(gameState.news>=cost){
+            gameState.news-=cost;
+            building.count++;
+            bought++;
+            cost=getCost({...building,count:building.count});
+        }else{
+            break;
+        }
+    }
+    if(bought>0){
+        awardXPForAction('building',bought);
+        const card=document.getElementById(`card-${id}`);
+        card.style.transform='scale(1.02)';
+        card.style.backgroundColor='#e8f5e8';
+        setTimeout(()=>{
+            card.style.transform='';
+            card.style.backgroundColor='';
+        },300);
+        updateUI();
+        saveGame();
+    }
+}
+
+function prestige(){
+    let bruhsToBuy=0;
+    let tempNews=gameState.news;
+    let tempBruh=gameState.bruh;
+    while(true){
+        const nextCost=getPrestigeCost(tempBruh);
+        if(tempNews>=nextCost){
+            bruhsToBuy++;
+            tempNews-=nextCost;
+            tempBruh++;
+        }else{
+            break;
+        }
+        if(bruhsToBuy>=100)break;
+    }
+    if(bruhsToBuy===0){
+        return;
+    }
+    if(!confirm(`Are you sure? You will lose ALL progress (including level) except your name and ${bruhsToBuy} new Bruh${bruhsToBuy>1?'s':''}.\n\nCurrent Bruh: ${gameState.bruh}\nNew Bruh: ${gameState.bruh+bruhsToBuy}\nTotal Multiplier: x${1+(gameState.bruh+bruhsToBuy)}`)){
+        return;
+    }
+    const playerName=gameState.playerName;
+    const newBruhCount=gameState.bruh+bruhsToBuy;
+    gameState=JSON.parse(JSON.stringify(defaultGameState));
+    gameState.playerName=playerName;
+    gameState.bruh=newBruhCount;
+    gameState.news=0;
+    gameState.level=1;
+    gameState.xp=0;
+    gameState.totalXpEarned=0;
+    gameState.boostProgress=0;
+    gameState.isBoostActive=false;
+    gameState.boostTimeLeft=0;
+    gameState.boostCooldown=0;
+    gameState.boostMultiplier=1;
+    gameState.lastDepletionTime=Date.now();
+    gameState.buildings.forEach(b=>b.count=0);
+    const banner=document.getElementById('breaking-news-banner');
+    banner.style.display='none';
+    stopEmojiRain();
+    if(boostTimerInterval){
+        clearInterval(boostTimerInterval);
+        boostTimerInterval=null;
+    }
+    const prestigeBox=document.querySelector('.prestige-box');
+    prestigeBox.style.backgroundColor='#ffe6e6';
+    prestigeBox.style.transform='scale(1.05)';
+    setTimeout(()=>{
+        prestigeBox.style.backgroundColor='';
+        prestigeBox.style.transform='';
+    },500);
+    updateUI();
+    updateLevelDisplay();
+    updateBoostProgress();
+    LeaderboardSystem.updatePlayerScore();
+    saveGame();
+}
+
+function updateUI(){
+    updateLevelDisplay();
+    document.getElementById('currency').textContent=formatNumber(gameState.news);
+    document.getElementById('cps').textContent=formatNumber(getCPS());
+    if(gameState.isBoostActive){
+        document.getElementById('multiplier').textContent=formatNumber(getMultiplier())+' (5x BOOST!)';
+        document.getElementById('multiplier').style.color='#ff0000';
+    }else{
+        document.getElementById('multiplier').textContent=formatNumber(getMultiplier());
+        document.getElementById('multiplier').style.color='var(--red-accent)';
+    }
+    document.getElementById('bruh-owned').textContent=formatNumber(gameState.bruh);
+    document.getElementById('tap-value-display').textContent=`📰 +${formatNumber(1*getMultiplier())} New per Tap`;
+    const pBtn=document.getElementById('prestige-btn');
+    const prestigeCost=getPrestigeCost(gameState.bruh);
+    const prestigeCostElement=document.getElementById('prestige-cost');
+    const prestigeMaxElement=document.getElementById('prestige-max');
+    prestigeCostElement.textContent=`Costs: ${formatNumber(prestigeCost)} New`;
+    let maxBuy=0;
+    let tempNews=gameState.news;
+    let tempBruh=gameState.bruh;
+    while(true){
+        const nextCost=getPrestigeCost(tempBruh);
+        if(tempNews>=nextCost){
+            tempNews-=nextCost;
+            tempBruh++;
+            maxBuy++;
+        }else{
+            break;
+        }
+        if(maxBuy>=100)break;
+    }
+    prestigeMaxElement.textContent=`Max: ${maxBuy}`;
+    if(maxBuy>0){
+        pBtn.disabled=false;
+        pBtn.innerHTML=`BUY ${maxBuy} BRUH${maxBuy>1?'S':''} (RESET) <div id="prestige-cost" class="prestige-cost">Costs: ${formatNumber(prestigeCost)} New</div> <div id="prestige-max" class="prestige-max">Max: ${maxBuy}</div>`;
+    }else{
+        pBtn.disabled=true;
+        pBtn.innerHTML=`Need ${formatNumber(prestigeCost)} New <div id="prestige-cost" class="prestige-cost">Costs: ${formatNumber(prestigeCost)} New</div> <div id="prestige-max" class="prestige-max">Max: 0</div>`;
+    }
+    gameState.buildings.forEach(building=>{
+        const currentCost=getCost(building);
+        const maxBuy=getMaxBuy(building);
+        const card=document.getElementById(`card-${building.id}`);
+        const btn=document.getElementById(`btn-${building.id}`);
+        if(card){
+            document.getElementById(`count-${building.id}`).textContent=formatNumber(building.count);
+            document.getElementById(`cost-text-${building.id}`).textContent=`Cost: ${formatNumber(currentCost)}`;
+            if(building.count>0){
+                card.classList.add('purchased');
+            }else{
+                card.classList.remove('purchased');
+            }
+            if(maxBuy>0){
+                card.classList.remove('disabled');
+                card.classList.add('affordable');
+                btn.disabled=false;
+                btn.classList.add('affordable');
+                document.getElementById(`max-text-${building.id}`).textContent=`Buy ${maxBuy}`;
+            }else{
+                card.classList.remove('affordable');
+                card.classList.add('disabled');
+                btn.disabled=true;
+                btn.classList.remove('affordable');
+                document.getElementById(`max-text-${building.id}`).textContent="Too Expensive";
+            }
+        }
+    });
+}
+
+function init(){
+    if(isInitialized)return;
+    const savedName=localStorage.getItem('newsBruhPlayerName');
+    if(!savedName||savedName.trim()===''){
+        document.getElementById('name-selection-modal').classList.remove('hidden');
+        document.getElementById('newspaper').style.display='none';
+        document.getElementById('player-name-input').focus();
+        return;
+    }else{
+        gameState.playerName=savedName;
         document.getElementById('name-selection-modal').classList.add('hidden');
-        document.getElementById('newspaper').style.display = 'flex';
-        
+        document.getElementById('newspaper').style.display='flex';
+    }
+    loadGame();
+    updatePlayerNameDisplay();
+    startDateTimeUpdate();
+    const container=document.getElementById('upgrades-list');
+    container.innerHTML='';
+    gameState.buildings.forEach(building=>{
+        const div=document.createElement('div');
+        div.className='upgrade-card';
+        div.id=`card-${building.id}`;
+        div.innerHTML=`
+            <div class="upgrade-top">
+                <span class="upgrade-name">${building.name}</span>
+                <span class="upgrade-count" id="count-${building.id}">0</span>
+            </div>
+            <div class="upgrade-info">+${building.baseCPS} CPS (Base)</div>
+            <button class="upgrade-btn" id="btn-${building.id}" onclick="buyMax(${building.id})">
+                <div class="upgrade-cost" id="cost-text-${building.id}">Cost: 0</div>
+                <div class="upgrade-max" id="max-text-${building.id}">Max: 0</div>
+            </button>
+        `;
+        container.appendChild(div);
+    });
+    const printBtn=document.getElementById('print-btn');
+    printBtn.addEventListener('mousedown',manualClick);
+    printBtn.addEventListener('touchstart',function(e){
+        manualClick(e);
+    },{passive:false});
+    const boostButton=document.getElementById('boost-button');
+    boostButton.addEventListener('click',function(){});
+    const chatInput=document.getElementById('chat-input');
+    chatInput.addEventListener('keypress',function(e){
+        if(e.key==='Enter'){
+            sendChatMessage();
+        }
+    });
+    const nameInput=document.getElementById('player-name-input');
+    nameInput.addEventListener('keypress',function(e){
+        if(e.key==='Enter'){
+            startGameWithName();
+        }
+    });
+    const changeNameLink=document.getElementById('change-name-link');
+    if(changeNameLink){
+        changeNameLink.addEventListener('click',function(e){
+            e.preventDefault();
+            openChangeNameModal();
+        });
+    }
+    const resetButton=document.getElementById('reset-button');
+    if(resetButton){
+        resetButton.addEventListener('click',resetGame);
+    }
+    const now=Date.now();
+    const lastUpdate=gameState.lastUpdate||now;
+    const timeDiff=(now-lastUpdate)/1000;
+    if(timeDiff>1&&timeDiff<86400){
+        const offlineEarnings=getCPS()*timeDiff;
+        if(offlineEarnings>0){
+            gameState.news+=offlineEarnings;
+            awardXPForAction('time',Math.min(timeDiff,3600));
+        }
+    }
+    updateUI();
+    updateBoostProgress();
+    if(gameState.isBoostActive){
+        if(boostTimerInterval)clearInterval(boostTimerInterval);
+        boostTimerInterval=setInterval(updateBoostTimer,1000);
+        const banner=document.getElementById('breaking-news-banner');
+        banner.style.display='block';
+        startEmojiRain();
+        const statBlocks=document.querySelectorAll('.stat-block');
+        statBlocks.forEach(block=>{
+            block.classList.add('active-boost');
+        });
+    }
+    if(gameState.boostCooldown>0){
+        const cooldownInterval=setInterval(()=>{
+            gameState.boostCooldown--;
+            updateBoostProgress();
+            if(gameState.boostCooldown<=0){
+                clearInterval(cooldownInterval);
+                gameState.boostCooldown=0;
+                updateBoostProgress();
+            }
+        },1000);
+    }
+    isInitialized=true;
+    startGameLoops();
+}
+
+function startGameLoops(){
+    function updateNews(){
+        const cps=getCPS();
+        if(cps>0){
+            gameState.news+=cps*0.1;
+            if(gameState.news<0)gameState.news=0;
+        }
+    }
+    function gameLoop(){
+        updateNews();
+        depleteBoostProgress();
+        updateUI();
+        requestAnimationFrame(gameLoop);
+    }
+    function rotateHeadlines(){
+        const headlines=[
+            "Local cat appointed Editor-in-Chief.",
+            "Ink shortage causes panic; citizens using pencil.",
+            "Bruh currency value skyrockets over speculation.",
+            "Paperboys unionize, demand faster bicycles.",
+            "Breaking: Nothing happened today.",
+            "Weather forecast: Cloudy with a chance of News.",
+            "Typo in front page headline causes minor confusion.",
+            "Printing press inventor wins Nobel Prize.",
+            "Newspaper sales reach all-time high.",
+            "Digital media fails to replace traditional print.",
+            "Bruh consultants in high demand worldwide.",
+            "Newspaper subscription rates double overnight.",
+            "Local economy booms thanks to printing industry.",
+            "Ink suppliers report record profits.",
+            "Breaking: News consumption at all-time high."
+        ];
+        const randomHeadline=headlines[Math.floor(Math.random()*headlines.length)];
+        const el=document.getElementById('headline-spot');
+        el.style.opacity=0;
+        setTimeout(()=>{
+            el.textContent=`"${randomHeadline}"`;
+            el.style.opacity=1;
+        },500);
+    }
+    function autoSave(){
+        saveGame();
+    }
+    gameLoop();
+    setInterval(rotateHeadlines,10000);
+    setInterval(autoSave,30000);
+}
+
+window.gameSystemsReady=function(){
+    const savedName=localStorage.getItem('newsBruhPlayerName');
+    if(savedName&&savedName.trim()!==''){
+        document.getElementById('name-selection-modal').classList.add('hidden');
+        document.getElementById('newspaper').style.display='flex';
+        gameState.playerName=savedName;
         init();
-        
         PlayerTracker.init();
         ChatSystem.init();
         LeaderboardSystem.init();
+    }else{
+        document.getElementById('name-selection-modal').classList.remove('hidden');
+        document.getElementById('player-name-input').focus();
     }
+};
 
-    // Live Date & Time Display
-    function updateDateTime() {
-        const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const year = now.getFullYear();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        
-        const dateTimeString = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-        
-        const dateTimeElement = document.getElementById('currentDateTime');
-        if (dateTimeElement) {
-            dateTimeElement.textContent = dateTimeString;
-        }
+window.addEventListener('DOMContentLoaded',function(){
+    if(window.supabaseClient){
+        window.gameSystemsReady();
     }
+});
 
-    function startDateTimeUpdate() {
-        updateDateTime();
-        setInterval(updateDateTime, 1000);
-    }
-
-    // Game State Management
-    const defaultGameState = {
-        news: 0,
-        bruh: 0,
-        buildings: [
-            { id: 0, name: "Paperboy", baseCost: 15, baseCPS: 0.5, count: 0 },
-            { id: 1, name: "Editor", baseCost: 100, baseCPS: 4, count: 0 },
-            { id: 2, name: "Printing Press", baseCost: 1100, baseCPS: 12, count: 0 },
-            { id: 3, name: "Distribution Van", baseCost: 12000, baseCPS: 45, count: 0 },
-            { id: 4, name: "News Tower", baseCost: 130000, baseCPS: 160, count: 0 },
-            { id: 5, name: "Media Empire", baseCost: 1400000, baseCPS: 850, count: 0 }
-        ],
-        lastUpdate: Date.now(),
-        version: "1.0.8",
-        playerName: "",
-        chatNotifications: true,
-        boostProgress: 0,
-        isBoostActive: false,
-        boostTimeLeft: 0,
-        boostCooldown: 0,
-        boostMultiplier: 1,
-        lastDepletionTime: Date.now(),
-        level: 1,
-        xp: 0,
-        totalXpEarned: 0
-    };
-
-    let gameState = JSON.parse(JSON.stringify(defaultGameState));
-    let isInitialized = false;
-    
-    let breakingNewsEmojis = [];
-    let boostEmojiInterval = null;
-    let boostTimerInterval = null;
-
-    // Level System Functions
-    function calculateXPForLevel(level) {
-        return Math.floor(100 * Math.pow(1.15, level - 1));
-    }
-
-    function calculateLevelFromTotalXP(totalXP) {
-        let level = 1;
-        let xpNeeded = calculateXPForLevel(level);
-        let xpRemaining = totalXP;
-        
-        while (xpRemaining >= xpNeeded) {
-            xpRemaining -= xpNeeded;
-            level++;
-            xpNeeded = calculateXPForLevel(level);
-        }
-        
-        return {
-            level: level,
-            currentXP: xpRemaining,
-            nextLevelXP: xpNeeded,
-            progress: (xpRemaining / xpNeeded) * 100
-        };
-    }
-
-    function addXP(amount) {
-        const oldLevelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
-        const oldLevel = oldLevelInfo.level;
-        
-        gameState.totalXpEarned += amount;
-        gameState.xp += amount;
-        
-        const newLevelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
-        const newLevel = newLevelInfo.level;
-        
-        gameState.level = newLevel;
-        gameState.xp = newLevelInfo.currentXP;
-        
-        if (newLevel > oldLevel) {
-            const levelContainer = document.querySelector('.level-container');
-            levelContainer.style.animation = 'none';
-            setTimeout(() => {
-                levelContainer.style.animation = 'levelUpPulse 0.5s 3';
-            }, 10);
-        }
-        
-        updateLevelDisplay();
-        
-        return newLevel > oldLevel;
-    }
-
-    function updateLevelDisplay() {
-        const levelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
-        
-        document.getElementById('current-level').textContent = formatNumber(levelInfo.level);
-        
-        const xpDisplay = document.getElementById('xp-display');
-        xpDisplay.textContent = `${formatNumber(levelInfo.currentXP)}/${formatNumber(levelInfo.nextLevelXP)} XP`;
-        
-        const progressBar = document.getElementById('level-progress-bar');
-        const progressPercent = levelInfo.progress;
-        progressBar.style.width = `${progressPercent}%`;
-        
-        const levelUpIndicator = document.getElementById('level-up-indicator');
-        if (progressPercent >= 95) {
-            levelUpIndicator.style.display = 'block';
-        } else {
-            levelUpIndicator.style.display = 'none';
-        }
-        
-        LeaderboardSystem.updatePlayerScore();
-    }
-
-    // INFINITE ALPHABETICAL NUMBER SYSTEM
-    function formatNumber(num) {
-        if (typeof num !== 'number' || !isFinite(num)) return '0';
-        if (num < 0) return '-' + formatNumber(-num);
-        if (num < 1000) return Math.floor(num).toLocaleString();
-        
-        return toAlphabetical(num);
-    }
-
-    function toAlphabetical(num) {
-        if (num >= 1e6) {
-            const log = Math.log10(num);
-            const magnitude = Math.floor(log / 3);
-            
-            if (magnitude < 1) return Math.floor(num).toLocaleString();
-            
-            const baseValue = Math.pow(1000, magnitude);
-            const scaled = num / baseValue;
-            
-            const suffix = getAlphabeticalSuffix(magnitude - 1);
-            
-            if (scaled >= 100) {
-                return Math.floor(scaled) + suffix;
-            } else if (scaled >= 10) {
-                return scaled.toFixed(1) + suffix;
-            } else {
-                return scaled.toFixed(2) + suffix;
-            }
-        }
-        
-        if (num >= 1e15) return (num / 1e15).toFixed(2) + "Qa";
-        if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
-        if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-        if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-        if (num >= 1e3) return (num / 1e3).toFixed(1) + "k";
-        
-        return Math.floor(num).toLocaleString();
-    }
-
-    function getAlphabeticalSuffix(index) {
-        if (index < 0) return "";
-        
-        if (index < 26) {
-            return String.fromCharCode(97 + index);
-        }
-        
-        let result = "";
-        let remaining = index;
-        
-        while (remaining >= 0) {
-            const charIndex = remaining % 26;
-            result = String.fromCharCode(97 + charIndex) + result;
-            
-            remaining = Math.floor(remaining / 26) - 1;
-            
-            if (remaining < 0) break;
-        }
-        
-        return result;
-    }
-
-    // Reset Game Function
-    function resetGame() {
-        if (!confirm("⚠️ WARNING: This will PERMANENTLY delete ALL your progress!\n\nThis includes:\n• All your New currency\n• All buildings purchased\n• All Bruhs owned\n• Your current level and XP\n• Boost progress\n• Leaderboard ranking\n\nYour player name will be kept.\n\nAre you absolutely sure you want to reset everything?")) {
-            return;
-        }
-        
-        if (!confirm("FINAL WARNING: This action cannot be undone!\n\nAll your progress will be lost forever.\n\nType 'RESET' to confirm:")) {
-            return;
-        }
-        
-        const userInput = prompt("Please type 'RESET' (in uppercase) to confirm:");
-        if (userInput !== 'RESET') {
-            alert("Reset cancelled. Your progress is safe.");
-            return;
-        }
-        
-        const playerName = gameState.playerName;
-        
-        localStorage.removeItem('newsBruhGameState');
-        
-        gameState = JSON.parse(JSON.stringify(defaultGameState));
-        gameState.playerName = playerName;
-        
-        gameState.news = 0;
-        gameState.bruh = 0;
-        gameState.level = 1;
-        gameState.xp = 0;
-        gameState.totalXpEarned = 0;
-        gameState.boostProgress = 0;
-        gameState.isBoostActive = false;
-        gameState.boostTimeLeft = 0;
-        gameState.boostCooldown = 0;
-        gameState.boostMultiplier = 1;
-        
-        gameState.buildings.forEach(building => {
-            building.count = 0;
-        });
-        
-        const banner = document.getElementById('breaking-news-banner');
-        if (banner) banner.style.display = 'none';
-        
-        stopEmojiRain();
-        
-        if (boostTimerInterval) {
-            clearInterval(boostTimerInterval);
-            boostTimerInterval = null;
-        }
-        
-        updateUI();
-        updateLevelDisplay();
-        updateBoostProgress();
-        
-        LeaderboardSystem.updatePlayerScore();
-        
-        saveGame();
-        
-        alert("✅ Game has been reset successfully!\n\nYou're starting fresh with:\n• 0 New currency\n• 0 Buildings\n• 0 Bruhs\n• Level 1\n\nYour player name has been kept.");
-        
-        const resetButton = document.getElementById('reset-button');
-        if (resetButton) {
-            resetButton.style.backgroundColor = '#4CAF50';
-            resetButton.textContent = '✅ RESET COMPLETE!';
-            setTimeout(() => {
-                resetButton.style.backgroundColor = '';
-                resetButton.textContent = 'RESET ALL PROGRESS';
-            }, 2000);
-        }
-    }
-
-    // Enhanced: Boost System Functions
-    function updateBoostProgress() {
-        const boostButton = document.getElementById('boost-button');
-        const progressBar = document.getElementById('boost-progress-bar');
-        const percentageElement = document.getElementById('boost-percentage');
-        const cooldownElement = document.getElementById('boost-cooldown');
-        const timerElement = document.getElementById('boost-timer');
-        
-        if (gameState.boostCooldown > 0) {
-            boostButton.disabled = true;
-            const minutes = Math.floor(gameState.boostCooldown / 60);
-            const seconds = Math.floor(gameState.boostCooldown % 60);
-            cooldownElement.textContent = `Cooldown: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            cooldownElement.style.display = 'block';
-            timerElement.style.display = 'none';
-            percentageElement.textContent = '0%';
-            progressBar.style.width = '0%';
-            progressBar.style.background = 'linear-gradient(90deg, #cccccc, #999999)';
-        } else if (gameState.isBoostActive) {
-            boostButton.disabled = false;
-            percentageElement.textContent = 'ACTIVE!';
-            percentageElement.style.color = '#ff0000';
-            progressBar.style.width = '100%';
-            progressBar.style.background = 'linear-gradient(90deg, #ff0000, #ff8800, #ff0000)';
-            progressBar.style.animation = 'progressShimmer 1s infinite linear';
-            cooldownElement.style.display = 'none';
-            timerElement.style.display = 'block';
-            timerElement.textContent = `${gameState.boostTimeLeft}s`;
-        } else {
-            boostButton.disabled = false;
-            percentageElement.style.color = '';
-            percentageElement.textContent = `${Math.floor(gameState.boostProgress)}%`;
-            progressBar.style.width = `${gameState.boostProgress}%`;
-            progressBar.style.background = 'linear-gradient(90deg, #ff4444, #ff0000, #ff4444)';
-            progressBar.style.animation = 'progressShimmer 2s infinite linear';
-            cooldownElement.style.display = 'none';
-            timerElement.style.display = 'none';
-            
-            if (gameState.boostProgress >= 100) {
-                cooldownElement.textContent = 'READY!';
-                cooldownElement.style.display = 'block';
-                cooldownElement.style.color = '#ff0000';
-            } else {
-                cooldownElement.style.display = 'none';
-            }
-        }
-    }
-
-    function depleteBoostProgress() {
-        if (gameState.isBoostActive || gameState.boostCooldown > 0 || gameState.boostProgress <= 0) {
-            return;
-        }
-        
-        const now = Date.now();
-        const timeSinceLastDepletion = (now - gameState.lastDepletionTime) / 1000;
-        
-        if (timeSinceLastDepletion >= 1) {
-            gameState.boostProgress = Math.max(0, gameState.boostProgress - 2);
-            gameState.lastDepletionTime = now;
-            
-            if (gameState.boostProgress % 10 === 0 || gameState.boostProgress <= 1) {
-                updateBoostProgress();
-            }
-        }
-    }
-
-    function incrementBoostProgress() {
-        if (gameState.isBoostActive || gameState.boostCooldown > 0) {
-            return;
-        }
-        
-        gameState.boostProgress += 5;
-        gameState.lastDepletionTime = Date.now();
-        
-        if (gameState.boostProgress >= 100) {
-            gameState.boostProgress = 100;
-            activateBoost();
-        }
-        
-        updateBoostProgress();
-        saveGame();
-    }
-
-    function activateBoost() {
-        if (gameState.isBoostActive || gameState.boostProgress < 100) return;
-        
-        gameState.isBoostActive = true;
-        gameState.boostTimeLeft = 15;
-        gameState.boostMultiplier = 5;
-        gameState.boostProgress = 0;
-        
-        const banner = document.getElementById('breaking-news-banner');
-        banner.style.display = 'block';
-        
-        startEmojiRain();
-        
-        updateBoostTimer();
-        
-        if (boostTimerInterval) clearInterval(boostTimerInterval);
-        boostTimerInterval = setInterval(updateBoostTimer, 1000);
-        
-        const statBlocks = document.querySelectorAll('.stat-block');
-        statBlocks.forEach(block => {
-            block.classList.add('active-boost');
-        });
-        
-        updateUI();
-        updateBoostProgress();
-    }
-
-    function updateBoostTimer() {
-        if (!gameState.isBoostActive) return;
-        
-        gameState.boostTimeLeft--;
-        
-        const timerElement = document.getElementById('boost-timer');
-        
-        if (timerElement) {
-            timerElement.textContent = `${gameState.boostTimeLeft}s`;
-            
-            if (gameState.boostTimeLeft <= 5) {
-                timerElement.style.color = '#ff0000';
-            }
-        }
-        
-        if (gameState.boostTimeLeft <= 0) {
-            endBoost();
-        }
-    }
-
-    function endBoost() {
-        gameState.isBoostActive = false;
-        gameState.boostMultiplier = 1;
-        gameState.boostCooldown = 600;
-        
-        const banner = document.getElementById('breaking-news-banner');
-        banner.style.display = 'none';
-        
-        stopEmojiRain();
-        
-        if (boostTimerInterval) {
-            clearInterval(boostTimerInterval);
-            boostTimerInterval = null;
-        }
-        
-        const statBlocks = document.querySelectorAll('.stat-block');
-        statBlocks.forEach(block => {
-            block.classList.remove('active-boost');
-        });
-        
-        const cooldownInterval = setInterval(() => {
-            gameState.boostCooldown--;
-            updateBoostProgress();
-            
-            if (gameState.boostCooldown <= 0) {
-                clearInterval(cooldownInterval);
-                gameState.boostCooldown = 0;
-                updateBoostProgress();
-            }
-        }, 1000);
-        
-        updateUI();
-        updateBoostProgress();
-    }
-
-    function startEmojiRain() {
-        if (boostEmojiInterval) clearInterval(boostEmojiInterval);
-        
-        boostEmojiInterval = setInterval(() => {
-            createFallingEmoji();
-        }, 300);
-    }
-
-    function stopEmojiRain() {
-        if (boostEmojiInterval) {
-            clearInterval(boostEmojiInterval);
-            boostEmojiInterval = null;
-        }
-        
-        breakingNewsEmojis.forEach(emoji => {
-            if (emoji.parentNode) {
-                emoji.parentNode.removeChild(emoji);
-            }
-        });
-        breakingNewsEmojis = [];
-    }
-
-    function createFallingEmoji() {
-        const banner = document.getElementById('breaking-news-container');
-        if (!banner) return;
-        
-        const emoji = document.createElement('div');
-        emoji.className = 'breaking-news-flash';
-        emoji.textContent = '📰';
-        
-        const newspaper = document.getElementById('newspaper');
-        const newspaperRect = newspaper.getBoundingClientRect();
-        const bannerRect = banner.getBoundingClientRect();
-        
-        const startX = Math.random() * newspaperRect.width;
-        const startY = bannerRect.top - newspaperRect.top;
-        
-        emoji.style.left = `${startX}px`;
-        emoji.style.top = `${startY}px`;
-        emoji.style.fontSize = `${Math.random() * 20 + 20}px`;
-        emoji.style.animationDuration = `${Math.random() * 1 + 1.5}s`;
-        
-        newspaper.appendChild(emoji);
-        breakingNewsEmojis.push(emoji);
-        
-        setTimeout(() => {
-            if (emoji.parentNode) {
-                emoji.parentNode.removeChild(emoji);
-                const index = breakingNewsEmojis.indexOf(emoji);
-                if (index > -1) {
-                    breakingNewsEmojis.splice(index, 1);
-                }
-            }
-        }, 2000);
-    }
-
-    // Fixed Helper Functions
-    const getPrestigeCost = (bruhCount) => {
-        return Math.floor(1000 * Math.pow(2.5, bruhCount));
-    };
-
-    const getMultiplier = () => {
-        const bruh = gameState.bruh || 0;
-        return (1 + bruh) * gameState.boostMultiplier;
-    };
-
-    const getCost = (building) => {
-        const count = building.count || 0;
-        const baseCost = building.baseCost || 15;
-        return Math.floor(baseCost * Math.pow(1.15, count));
-    };
-
-    const getCPS = () => {
-        let base = gameState.buildings.reduce((acc, b) => acc + (b.count * b.baseCPS), 0);
-        return base * getMultiplier();
-    };
-
-    const getMaxBuy = (building) => {
-        let canBuy = 0;
-        let tempNews = gameState.news;
-        let tempCount = building.count;
-        let nextCost = getCost({...building, count: tempCount});
-        
-        for (let i = 0; i < 1000; i++) {
-            if (tempNews >= nextCost) {
-                canBuy++;
-                tempNews -= nextCost;
-                tempCount++;
-                nextCost = getCost({...building, count: tempCount});
-            } else {
-                break;
-            }
-        }
-        
-        return canBuy;
-    };
-
-    function awardXPForAction(action, amount = 1) {
-        let xpAmount = 0;
-        
-        switch(action) {
-            case 'click':
-                xpAmount = 1;
-                break;
-            case 'building':
-                xpAmount = Math.floor(amount * 5);
-                break;
-            case 'bruh':
-                xpAmount = Math.floor(amount * 50);
-                break;
-            case 'time':
-                xpAmount = Math.min(amount, 100);
-                break;
-        }
-        
-        if (xpAmount > 0) {
-            addXP(xpAmount);
-        }
-    }
-
-    function sendChatMessage() {
-        const input = document.getElementById('chat-input');
-        const message = input.value.trim();
-        
-        if (!message || message.length === 0) return;
-        
-        ChatSystem.sendMessage(message).then(success => {
-            if (success) {
-                input.value = '';
-            }
-        });
-    }
-
-    function saveGame() {
-        try {
-            gameState.lastUpdate = Date.now();
-            localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
-            
-            // Update leaderboard
-            LeaderboardSystem.updatePlayerScore();
-        } catch (e) {
-            console.warn('Could not save game state:', e);
-        }
-    }
-
-    function loadGame() {
-        try {
-            const saved = localStorage.getItem('newsBruhGameState');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                gameState = parsed;
-                
-                // Ensure all required fields exist
-                gameState.news = gameState.news || 0;
-                gameState.bruh = gameState.bruh || 0;
-                gameState.level = gameState.level || 1;
-                gameState.xp = gameState.xp || 0;
-                gameState.totalXpEarned = gameState.totalXpEarned || 0;
-                gameState.boostProgress = gameState.boostProgress || 0;
-                gameState.isBoostActive = gameState.isBoostActive || false;
-                gameState.boostTimeLeft = gameState.boostTimeLeft || 0;
-                gameState.boostCooldown = gameState.boostCooldown || 0;
-                gameState.boostMultiplier = gameState.boostMultiplier || 1;
-                gameState.lastDepletionTime = gameState.lastDepletionTime || Date.now();
-                
-                console.log('Game loaded successfully');
-            }
-        } catch (e) {
-            console.warn('Could not load saved game:', e);
-            gameState = JSON.parse(JSON.stringify(defaultGameState));
-        }
-    }
-
-    // Fixed Game Functions
-    function manualClick(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const amount = 1 * getMultiplier();
-        gameState.news += amount;
-        
-        awardXPForAction('click');
-        
-        incrementBoostProgress();
-        
-        if (gameState.isBoostActive) {
-            // Reset boost timer on click
-            gameState.boostTimeLeft = 15;
-        }
-        
-        const btn = document.getElementById('print-btn');
-        btn.classList.add('pulse');
-        setTimeout(() => btn.classList.remove('pulse'), 300);
-        
-        const floater = document.createElement('div');
-        floater.className = 'floater';
-        floater.innerText = `📰 +${formatNumber(amount)}`;
-        
-        let x, y;
-        if (e.type === 'touchstart' || e.type === 'touchmove') {
-            const touch = e.touches[0] || e.changedTouches[0];
-            x = touch.clientX;
-            y = touch.clientY;
-        } else {
-            x = e.clientX;
-            y = e.clientY;
-        }
-        
-        floater.style.left = `${x}px`;
-        floater.style.top = `${y}px`;
-        document.body.appendChild(floater);
-        
-        setTimeout(() => floater.remove(), 1000);
-        updateUI();
-        saveGame();
-    }
-
-    function buyMax(id) {
-        const building = gameState.buildings[id];
-        let bought = 0;
-        let cost = getCost(building);
-        
-        for (let i = 0; i < 1000; i++) {
-            if (gameState.news >= cost) {
-                gameState.news -= cost;
-                building.count++;
-                bought++;
-                cost = getCost({...building, count: building.count});
-            } else {
-                break;
-            }
-        }
-        
-        if (bought > 0) {
-            awardXPForAction('building', bought);
-            
-            const card = document.getElementById(`card-${id}`);
-            card.style.transform = 'scale(1.02)';
-            card.style.backgroundColor = '#e8f5e8';
-            
-            setTimeout(() => {
-                card.style.transform = '';
-                card.style.backgroundColor = '';
-            }, 300);
-            
-            updateUI();
-            saveGame();
-        }
-    }
-
-    function prestige() {
-        let bruhsToBuy = 0;
-        let tempNews = gameState.news;
-        let tempBruh = gameState.bruh;
-        
-        while (true) {
-            const nextCost = getPrestigeCost(tempBruh);
-            if (tempNews >= nextCost) {
-                bruhsToBuy++;
-                tempNews -= nextCost;
-                tempBruh++;
-            } else {
-                break;
-            }
-            if (bruhsToBuy >= 100) break;
-        }
-        
-        if (bruhsToBuy === 0) {
-            return;
-        }
-        
-        if (!confirm(`Are you sure? You will lose ALL progress (including level) except your name and ${bruhsToBuy} new Bruh${bruhsToBuy > 1 ? 's' : ''}.\n\nCurrent Bruh: ${gameState.bruh}\nNew Bruh: ${gameState.bruh + bruhsToBuy}\nTotal Multiplier: x${1 + (gameState.bruh + bruhsToBuy)}`)) {
-            return;
-        }
-        
-        const playerName = gameState.playerName;
-        const newBruhCount = gameState.bruh + bruhsToBuy;
-        
-        gameState = JSON.parse(JSON.stringify(defaultGameState));
-        
-        gameState.playerName = playerName;
-        gameState.bruh = newBruhCount;
-        
-        gameState.news = 0;
-        gameState.level = 1;
-        gameState.xp = 0;
-        gameState.totalXpEarned = 0;
-        gameState.boostProgress = 0;
-        gameState.isBoostActive = false;
-        gameState.boostTimeLeft = 0;
-        gameState.boostCooldown = 0;
-        gameState.boostMultiplier = 1;
-        gameState.lastDepletionTime = Date.now();
-        
-        gameState.buildings.forEach(b => b.count = 0);
-        
-        const banner = document.getElementById('breaking-news-banner');
-        banner.style.display = 'none';
-        
-        stopEmojiRain();
-        
-        if (boostTimerInterval) {
-            clearInterval(boostTimerInterval);
-            boostTimerInterval = null;
-        }
-        
-        const prestigeBox = document.querySelector('.prestige-box');
-        prestigeBox.style.backgroundColor = '#ffe6e6';
-        prestigeBox.style.transform = 'scale(1.05)';
-        
-        setTimeout(() => {
-            prestigeBox.style.backgroundColor = '';
-            prestigeBox.style.transform = '';
-        }, 500);
-        
-        updateUI();
-        updateLevelDisplay();
-        updateBoostProgress();
-        LeaderboardSystem.updatePlayerScore();
-        saveGame();
-    }
-
-    // Fixed UI Update
-    function updateUI() {
-        updateLevelDisplay();
-        
-        document.getElementById('currency').textContent = formatNumber(gameState.news);
-        document.getElementById('cps').textContent = formatNumber(getCPS());
-        
-        if (gameState.isBoostActive) {
-            document.getElementById('multiplier').textContent = formatNumber(getMultiplier()) + ' (5x BOOST!)';
-            document.getElementById('multiplier').style.color = '#ff0000';
-        } else {
-            document.getElementById('multiplier').textContent = formatNumber(getMultiplier());
-            document.getElementById('multiplier').style.color = 'var(--red-accent)';
-        }
-        
-        document.getElementById('bruh-owned').textContent = formatNumber(gameState.bruh);
-        document.getElementById('tap-value-display').textContent = `📰 +${formatNumber(1 * getMultiplier())} New per Tap`;
-
-        const pBtn = document.getElementById('prestige-btn');
-        const prestigeCost = getPrestigeCost(gameState.bruh);
-        const prestigeCostElement = document.getElementById('prestige-cost');
-        const prestigeMaxElement = document.getElementById('prestige-max');
-        
-        prestigeCostElement.textContent = `Costs: ${formatNumber(prestigeCost)} New`;
-        
-        let maxBuy = 0;
-        let tempNews = gameState.news;
-        let tempBruh = gameState.bruh;
-        
-        while (true) {
-            const nextCost = getPrestigeCost(tempBruh);
-            if (tempNews >= nextCost) {
-                tempNews -= nextCost;
-                tempBruh++;
-                maxBuy++;
-            } else {
-                break;
-            }
-            if (maxBuy >= 100) break;
-        }
-        
-        prestigeMaxElement.textContent = `Max: ${maxBuy}`;
-        
-        if (maxBuy > 0) {
-            pBtn.disabled = false;
-            pBtn.innerHTML = `BUY ${maxBuy} BRUH${maxBuy > 1 ? 'S' : ''} (RESET) <div id="prestige-cost" class="prestige-cost">Costs: ${formatNumber(prestigeCost)} New</div> <div id="prestige-max" class="prestige-max">Max: ${maxBuy}</div>`;
-        } else {
-            pBtn.disabled = true;
-            pBtn.innerHTML = `Need ${formatNumber(prestigeCost)} New <div id="prestige-cost" class="prestige-cost">Costs: ${formatNumber(prestigeCost)} New</div> <div id="prestige-max" class="prestige-max">Max: 0</div>`;
-        }
-
-        gameState.buildings.forEach(building => {
-            const currentCost = getCost(building);
-            const maxBuy = getMaxBuy(building);
-            const card = document.getElementById(`card-${building.id}`);
-            const btn = document.getElementById(`btn-${building.id}`);
-            
-            if (card) {
-                document.getElementById(`count-${building.id}`).textContent = formatNumber(building.count);
-                document.getElementById(`cost-text-${building.id}`).textContent = `Cost: ${formatNumber(currentCost)}`;
-                
-                if (building.count > 0) {
-                    card.classList.add('purchased');
-                } else {
-                    card.classList.remove('purchased');
-                }
-                
-                if (maxBuy > 0) {
-                    card.classList.remove('disabled');
-                    card.classList.add('affordable');
-                    btn.disabled = false;
-                    btn.classList.add('affordable');
-                    document.getElementById(`max-text-${building.id}`).textContent = `Buy ${maxBuy}`;
-                } else {
-                    card.classList.remove('affordable');
-                    card.classList.add('disabled');
-                    btn.disabled = true;
-                    btn.classList.remove('affordable');
-                    document.getElementById(`max-text-${building.id}`).textContent = "Too Expensive";
-                }
-            }
-        });
-    }
-
-    // Fixed Initialization
-    function init() {
-        if (isInitialized) return;
-        
-        const savedName = localStorage.getItem('newsBruhPlayerName');
-        if (!savedName || savedName.trim() === '') {
-            document.getElementById('name-selection-modal').classList.remove('hidden');
-            document.getElementById('newspaper').style.display = 'none';
-            document.getElementById('player-name-input').focus();
-            return;
-        } else {
-            gameState.playerName = savedName;
-            document.getElementById('name-selection-modal').classList.add('hidden');
-            document.getElementById('newspaper').style.display = 'flex';
-        }
-        
-        loadGame();
-        
-        updatePlayerNameDisplay();
-        
-        startDateTimeUpdate();
-        
-        const container = document.getElementById('upgrades-list');
-        container.innerHTML = '';
-        
-        gameState.buildings.forEach(building => {
-            const div = document.createElement('div');
-            div.className = 'upgrade-card';
-            div.id = `card-${building.id}`;
-            
-            div.innerHTML = `
-                <div class="upgrade-top">
-                    <span class="upgrade-name">${building.name}</span>
-                    <span class="upgrade-count" id="count-${building.id}">0</span>
-                </div>
-                <div class="upgrade-info">
-                    +${building.baseCPS} CPS (Base)
-                </div>
-                <button class="upgrade-btn" id="btn-${building.id}" onclick="buyMax(${building.id})">
-                    <div class="upgrade-cost" id="cost-text-${building.id}">Cost: 0</div>
-                    <div class="upgrade-max" id="max-text-${building.id}">Max: 0</div>
-                </button>
-            `;
-            
-            container.appendChild(div);
-        });
-        
-        const printBtn = document.getElementById('print-btn');
-        
-        printBtn.addEventListener('mousedown', manualClick);
-        
-        printBtn.addEventListener('touchstart', function(e) {
-            manualClick(e);
-        }, { passive: false });
-        
-        const boostButton = document.getElementById('boost-button');
-        boostButton.addEventListener('click', function() {
-            // Auto-activates at 100%
-        });
-        
-        const chatInput = document.getElementById('chat-input');
-        chatInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendChatMessage();
-            }
-        });
-        
-        const nameInput = document.getElementById('player-name-input');
-        nameInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                startGameWithName();
-            }
-        });
-        
-        const changeNameLink = document.getElementById('change-name-link');
-        if (changeNameLink) {
-            changeNameLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                openChangeNameModal();
-            });
-        }
-        
-        const resetButton = document.getElementById('reset-button');
-        if (resetButton) {
-            resetButton.addEventListener('click', resetGame);
-        }
-        
-        const now = Date.now();
-        const lastUpdate = gameState.lastUpdate || now;
-        const timeDiff = (now - lastUpdate) / 1000;
-        
-        if (timeDiff > 1 && timeDiff < 86400) {
-            const offlineEarnings = getCPS() * timeDiff;
-            if (offlineEarnings > 0) {
-                gameState.news += offlineEarnings;
-                awardXPForAction('time', Math.min(timeDiff, 3600));
-            }
-        }
-        
-        updateUI();
-        updateBoostProgress();
-        
-        if (gameState.isBoostActive) {
-            if (boostTimerInterval) clearInterval(boostTimerInterval);
-            boostTimerInterval = setInterval(updateBoostTimer, 1000);
-            
-            const banner = document.getElementById('breaking-news-banner');
-            banner.style.display = 'block';
-            
-            startEmojiRain();
-            
-            const statBlocks = document.querySelectorAll('.stat-block');
-            statBlocks.forEach(block => {
-                block.classList.add('active-boost');
-            });
-        }
-        
-        if (gameState.boostCooldown > 0) {
-            const cooldownInterval = setInterval(() => {
-                gameState.boostCooldown--;
-                updateBoostProgress();
-                
-                if (gameState.boostCooldown <= 0) {
-                    clearInterval(cooldownInterval);
-                    gameState.boostCooldown = 0;
-                    updateBoostProgress();
-                }
-            }, 1000);
-        }
-        
-        isInitialized = true;
-        
-        startGameLoops();
-    }
-
-    // Fixed Game Loops
-    function startGameLoops() {
-        function updateNews() {
-            const cps = getCPS();
-            if (cps > 0) {
-                gameState.news += cps * 0.1;
-                if (gameState.news < 0) gameState.news = 0;
-            }
-        }
-
-        function gameLoop() {
-            updateNews();
-            depleteBoostProgress();
-            updateUI();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function rotateHeadlines() {
-            const headlines = [
-                "Local cat appointed Editor-in-Chief.",
-                "Ink shortage causes panic; citizens using pencil.",
-                "Bruh currency value skyrockets over speculation.",
-                "Paperboys unionize, demand faster bicycles.",
-                "Breaking: Nothing happened today.",
-                "Weather forecast: Cloudy with a chance of News.",
-                "Typo in front page headline causes minor confusion.",
-                "Printing press inventor wins Nobel Prize.",
-                "Newspaper sales reach all-time high.",
-                "Digital media fails to replace traditional print.",
-                "Bruh consultants in high demand worldwide.",
-                "Newspaper subscription rates double overnight.",
-                "Local economy booms thanks to printing industry.",
-                "Ink suppliers report record profits.",
-                "Breaking: News consumption at all-time high."
-            ];
-            
-            const randomHeadline = headlines[Math.floor(Math.random() * headlines.length)];
-            const el = document.getElementById('headline-spot');
-            
-            el.style.opacity = 0;
-            setTimeout(() => {
-                el.textContent = `"${randomHeadline}"`;
-                el.style.opacity = 1;
-            }, 500);
-        }
-
-        function autoSave() {
-            saveGame();
-        }
-
-        gameLoop();
-        setInterval(rotateHeadlines, 10000);
-        setInterval(autoSave, 30000);
-    }
-
-    // Function to run when Supabase is ready
-    window.gameSystemsReady = function() {
-        console.log('Supabase is ready, initializing game systems...');
-        
-        const savedName = localStorage.getItem('newsBruhPlayerName');
-        if (savedName && savedName.trim() !== '') {
-            document.getElementById('name-selection-modal').classList.add('hidden');
-            document.getElementById('newspaper').style.display = 'flex';
-            gameState.playerName = savedName;
-            init();
-            
-            // Initialize tracking systems
-            PlayerTracker.init();
-            ChatSystem.init();
-            LeaderboardSystem.init();
-        } else {
-            document.getElementById('name-selection-modal').classList.remove('hidden');
-            document.getElementById('player-name-input').focus();
-        }
-    };
-    
-    // Start initialization when DOM is loaded
-    window.addEventListener('DOMContentLoaded', function() {
-        // If Supabase is already loaded (from module), run systems
-        if (window.supabaseClient) {
-            window.gameSystemsReady();
-        }
-    });
-    
-    window.addEventListener('beforeunload', saveGame);
-    
-    // Export functions to global scope
-    window.manualClick = manualClick;
-    window.buyMax = buyMax;
-    window.prestige = prestige;
-    window.sendChatMessage = sendChatMessage;
-    window.startGameWithName = startGameWithName;
-    window.resetGame = resetGame;
-    window.updatePlayerName = updatePlayerName;
-    window.openChangeNameModal = openChangeNameModal;
-    window.formatNumber = formatNumber;
+window.addEventListener('beforeunload',saveGame);
+window.manualClick=manualClick;window.buyMax=buyMax;window.prestige=prestige;window.sendChatMessage=sendChatMessage;window.startGameWithName=startGameWithName;window.resetGame=resetGame;window.updatePlayerName=updatePlayerName;window.openChangeNameModal=openChangeNameModal;window.formatNumber=formatNumber;
 </script>
-
 </body>
 </html>
