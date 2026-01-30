@@ -178,9 +178,82 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
 .notification-sender{font-weight:bold;margin-bottom:5px}
 .notification-message{font-size:0.85rem;opacity:0.9}
+/* MANUAL SAVE BUTTON STYLES */
+#manual-save-btn {
+    background: linear-gradient(to bottom, #0066cc, #004d99);
+    color: white;
+    border: 3px solid var(--ink);
+    padding: 18px 15px;
+    width: 100%;
+    font-family: var(--font-mono);
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 15px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70px;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+}
+
+#manual-save-btn:hover {
+    background: linear-gradient(to bottom, #0052a3, #003d73);
+    transform: translateY(-2px);
+    box-shadow: 6px 6px 0 rgba(0,0,0,0.2);
+}
+
+#manual-save-btn:active {
+    transform: translateY(1px);
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+}
+
+#manual-save-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+#manual-save-btn.saving {
+    background: linear-gradient(to bottom, #006400, #004d00);
+}
+
+#manual-save-btn.saved {
+    background: linear-gradient(to bottom, #006400, #004d00);
+    animation: savePulse 0.5s 3;
+}
+
+@keyframes savePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.save-status {
+    font-size: 0.8rem;
+    margin-top: 5px;
+    opacity: 0.9;
+    font-weight: normal;
+}
+
+.save-status.error {
+    color: #ffcccc;
+}
+
+.save-status.success {
+    color: #ccffcc;
+}
+/* END MANUAL SAVE BUTTON STYLES */
 @media (max-width:1024px){#main-content{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto}.column{min-height:300px;max-height:500px;border-right:none;border-bottom:2px solid #aaa}.column:last-child{border-bottom:none}}
-@media (max-width:768px){body{padding:5px;overflow-x:hidden}#newspaper{min-height:100vh;height:auto}.player-header-info{flex-direction:column;gap:5px}.player-name-display{flex-direction:column;gap:5px}.player-name-text{font-size:0.9rem;padding:4px 10px}.column{padding:15px;min-height:auto;max-height:none;overflow-y:visible}h1{font-size:2.2rem}h2{font-size:1.5rem}#breaking-news-banner{font-size:1rem;padding:10px 15px}.breaking-news-text{flex-direction:column;gap:10px}.breaking-news-title{font-size:1.1rem}#print-btn{padding:30px 15px}.print-title{font-size:1.8rem}.meta-line{font-size:0.75rem}.player-counts{font-size:0.8rem;gap:10px}.stat-value{font-size:1.4rem}.prestige-box{padding:15px}#leaderboard-section,#chat-section{padding:15px}.chat-container,.chat-users{height:250px}#chat-section{grid-template-columns:1fr}#boost-button{padding:15px 10px;min-height:80px}.boost-percentage{font-size:1.6rem}.boost-label{font-size:0.9rem}.reset-btn{padding:15px;font-size:1.1rem;max-width:100%}}
-@media (max-width:480px){h1{font-size:1.8rem}#print-btn{padding:25px 10px}.print-title{font-size:1.5rem}.column{padding:10px}#breaking-news-banner{font-size:0.9rem;padding:8px 10px}.breaking-news-title{font-size:1rem}#leaderboard-table th,#leaderboard-table td{padding:8px 5px;font-size:0.8rem}.player-name{max-width:80px}#boost-button{padding:12px 8px;min-height:70px}.boost-percentage{font-size:1.4rem}.boost-label{font-size:0.8rem}.reset-btn{padding:12px;font-size:1rem}}
+@media (max-width:768px){body{padding:5px;overflow-x:hidden}#newspaper{min-height:100vh;height:auto}.player-header-info{flex-direction:column;gap:5px}.player-name-display{flex-direction:column;gap:5px}.player-name-text{font-size:0.9rem;padding:4px 10px}.column{padding:15px;min-height:auto;max-height:none;overflow-y:visible}h1{font-size:2.2rem}h2{font-size:1.5rem}#breaking-news-banner{font-size:1rem;padding:10px 15px}.breaking-news-text{flex-direction:column;gap:10px}.breaking-news-title{font-size:1.1rem}#print-btn{padding:30px 15px}.print-title{font-size:1.8rem}.meta-line{font-size:0.75rem}.player-counts{font-size:0.8rem;gap:10px}.stat-value{font-size:1.4rem}.prestige-box{padding:15px}#leaderboard-section,#chat-section{padding:15px}.chat-container,.chat-users{height:250px}#chat-section{grid-template-columns:1fr}#boost-button{padding:15px 10px;min-height:80px}.boost-percentage{font-size:1.6rem}.boost-label{font-size:0.9rem}.reset-btn{padding:15px;font-size:1.1rem;max-width:100%}#manual-save-btn{padding:15px 10px;min-height:60px;font-size:0.9rem}}
+@media (max-width:480px){h1{font-size:1.8rem}#print-btn{padding:25px 10px}.print-title{font-size:1.5rem}.column{padding:10px}#breaking-news-banner{font-size:0.9rem;padding:8px 10px}.breaking-news-title{font-size:1rem}#leaderboard-table th,#leaderboard-table td{padding:8px 5px;font-size:0.8rem}.player-name{max-width:80px}#boost-button{padding:12px 8px;min-height:70px}.boost-percentage{font-size:1.4rem}.boost-label{font-size:0.8rem}.reset-btn{padding:12px;font-size:1rem}#manual-save-btn{padding:12px 8px;min-height:50px;font-size:0.8rem}}
 </style>
 </head>
 <body>
@@ -260,6 +333,11 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 <div id="prestige-max" class="prestige-max">Max: 0</div>
 </button>
 </div>
+<!-- MANUAL SAVE BUTTON ADDED HERE -->
+<button id="manual-save-btn" onclick="manualSave()">
+💾 MANUAL SAVE
+<div class="save-status" id="save-status"></div>
+</button>
 </div>
 <div class="column" id="col-center">
 <h2>Front Page</h2>
@@ -362,6 +440,61 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
+// MANUAL SAVE FUNCTIONALITY
+async function manualSave() {
+    const saveBtn = document.getElementById('manual-save-btn');
+    const saveStatus = document.getElementById('save-status');
+    
+    if (!gameState.playerName) {
+        saveStatus.textContent = "Error: No player name";
+        saveStatus.className = "save-status error";
+        setTimeout(() => { saveStatus.textContent = ""; }, 3000);
+        return;
+    }
+    
+    // Disable button and show saving state
+    saveBtn.disabled = true;
+    saveBtn.classList.add('saving');
+    saveStatus.textContent = "Saving to cloud...";
+    saveStatus.className = "save-status";
+    
+    try {
+        // Call the existing saveGame function
+        saveGame();
+        
+        // Also force an immediate update to leaderboard
+        await LeaderboardSystem.updatePlayerScore();
+        
+        // Force update player counts
+        await PlayerTracker.updatePlayerCounts();
+        
+        // Show success
+        saveBtn.classList.remove('saving');
+        saveBtn.classList.add('saved');
+        saveStatus.textContent = "✓ Saved successfully!";
+        saveStatus.className = "save-status success";
+        
+        // Re-enable button after animation
+        setTimeout(() => {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('saved');
+            saveStatus.textContent = "";
+        }, 2000);
+        
+        console.log("✅ Manual save completed");
+    } catch (error) {
+        console.error("❌ Manual save failed:", error);
+        saveBtn.classList.remove('saving');
+        saveStatus.textContent = "✗ Save failed";
+        saveStatus.className = "save-status error";
+        
+        setTimeout(() => {
+            saveBtn.disabled = false;
+            saveStatus.textContent = "";
+        }, 3000);
+    }
+}
+
 // Supabase Game State Manager
 const GameStateManager = {
   async saveGameState() {
@@ -513,43 +646,56 @@ const PlayerTracker = {
   },
 
   async updatePlayerCounts() {
+    console.log("🟡 [PlayerTracker] updatePlayerCounts() called");
+
     if (!window.supabaseClient) {
+      console.warn("⚠️ [PlayerTracker] Supabase client is not available!");
       this.updateDisplay();
       return;
     }
-    
+
     try {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       
       // Get online players (active in last 5 minutes)
+      console.log("🟡 [PlayerTracker] Fetching online players...");
       const { data: onlineData, error: onlineError } = await window.supabaseClient
         .from('player_sessions')
         .select('player_name')
         .gt('last_active', fiveMinutesAgo);
       
+      console.log("📊 [PlayerTracker] Online query result:", onlineData, "Error:", onlineError);
+
       if (!onlineError && onlineData !== null) {
         const uniqueOnlinePlayers = new Set(onlineData.map(p => p.player_name));
         this.onlinePlayers = Math.max(1, uniqueOnlinePlayers.size);
+        console.log("✅ [PlayerTracker] Online players set to:", this.onlinePlayers);
       } else {
         this.onlinePlayers = Math.max(1, this.onlinePlayers);
+        console.warn("⚠️ [PlayerTracker] Using fallback for online count:", this.onlinePlayers);
       }
       
       // Get total players from leaderboard
+      console.log("🟡 [PlayerTracker] Fetching total players...");
       const { data: totalData, error: totalError } = await window.supabaseClient
         .from('leaderboard')
         .select('player_name')
         .order('bruh_count', { ascending: false });
       
+      console.log("📊 [PlayerTracker] Total query result:", totalData, "Error:", totalError);
+
       if (!totalError && totalData !== null) {
         const uniqueTotalPlayers = new Set(totalData.map(p => p.player_name));
         this.totalPlayers = Math.max(this.onlinePlayers, uniqueTotalPlayers.size);
+        console.log("✅ [PlayerTracker] Total players set to:", this.totalPlayers);
       } else {
         this.totalPlayers = Math.max(this.onlinePlayers, this.totalPlayers);
+        console.warn("⚠️ [PlayerTracker] Using fallback for total count:", this.totalPlayers);
       }
       
       this.updateDisplay();
     } catch (error) {
-      console.warn('Error updating player counts:', error);
+      console.error("❌ [PlayerTracker] Unexpected error:", error);
       this.updateDisplay();
     }
   },
@@ -824,6 +970,7 @@ const LeaderboardSystem = {
   },
 
   async updatePlayerScore() {
+    console.log("🟡 [LeaderboardSystem] Updating score for:", gameState.playerName);
     if (!gameState.playerName) return;
     
     const playerData = {
@@ -1919,6 +2066,7 @@ window.resetGame = resetGame;
 window.updatePlayerName = updatePlayerName;
 window.openChangeNameModal = openChangeNameModal;
 window.formatNumber = formatNumber;
+window.manualSave = manualSave;
 </script>
 </body>
 </html>
