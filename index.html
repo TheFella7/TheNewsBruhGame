@@ -459,11 +459,10 @@ async function manualSave() {
     saveStatus.className = "save-status";
     
     try {
-        // Call the existing saveGame function
-        saveGame();
-        
-        // Also force an immediate update to leaderboard
+        // Force save everything
+        await PlayerTracker.registerPlayer();
         await LeaderboardSystem.updatePlayerScore();
+        await GameStateManager.saveGameState();
         
         // Force update player counts
         await PlayerTracker.updatePlayerCounts();
@@ -494,6 +493,303 @@ async function manualSave() {
         }, 3000);
     }
 }
+
+// Enhanced Player Tracking System
+const PlayerTracker = {
+  onlinePlayers: 0,
+  totalPlayers: 0,
+  sessionId: null,
+  updateInterval: null,
+  onlineUsers: new Map(), // Store online users with their data
+
+  async init() {
+    this.sessionId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('player_session_id', this.sessionId);
+    
+    // Register player immediately
+    await this.registerPlayer();
+    
+    this.startTracking();
+    await this.updatePlayerCounts();
+    this.setupRealtime();
+    
+    // Initial online users list update
+    await this.updateOnlineUsers();
+  },
+
+  async registerPlayer() {
+    if (!window.supabaseClient || !gameState.playerName) return;
+    
+    try {
+      const now = new Date().toISOString();
+      
+      // Register session for online tracking
+      const { error: sessionError } = await window.supabaseClient
+        .from('player_sessions')
+        .upsert({
+          session_id: this.sessionId,
+          player_name: gameState.playerName,
+          last_active: now,
+          created_at: now
+        }, { onConflict: 'session_id' });
+
+      if (sessionError) throw sessionError;
+      
+      // Ensure player has a leaderboard entry
+      const { error: leaderboardError } = await window.supabaseClient
+        .from('leaderboard')
+        .upsert({
+          player_name: gameState.playerName,
+          bruh_count: gameState.bruh || 0,
+          news_count: gameState.news || 0,
+          level: gameState.level || 1,
+          last_active: now,
+          created_at: now
+        }, { onConflict: 'player_name' });
+
+      if (leaderboardError) throw leaderboardError;
+      
+      console.log("✅ Player registered in tracking system");
+    } catch (error) {
+      console.warn('Error registering player:', error);
+    }
+  },
+
+  async updateSessionActivity() {
+    if (!window.supabaseClient || !gameState.playerName) return;
+    
+    try {
+      const now = new Date().toISOString();
+      
+      // Update session activity
+      await window.supabaseClient
+        .from('player_sessions')
+        .update({
+          last_active: now,
+          player_name: gameState.playerName
+        })
+        .eq('session_id', this.sessionId);
+      
+      // Also update leaderboard last_active for this player
+      await window.supabaseClient
+        .from('leaderboard')
+        .update({
+          last_active: now
+        })
+        .eq('player_name', gameState.playerName);
+      
+      console.log("🔄 Session activity updated");
+    } catch (error) {
+      console.warn('Error updating session activity:', error);
+    }
+  },
+
+  async updatePlayerCounts() {
+    console.log("🟡 [PlayerTracker] updatePlayerCounts() called");
+
+    if (!window.supabaseClient) {
+      console.warn("⚠️ [PlayerTracker] Supabase client is not available!");
+      this.updateDisplay();
+      return;
+    }
+
+    try {
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      
+      // Get online players (active in last 15 minutes from player_sessions)
+      console.log("🟡 [PlayerTracker] Fetching online players...");
+      const { data: onlineData, error: onlineError } = await window.supabaseClient
+        .from('player_sessions')
+        .select('player_name, last_active')
+        .gt('last_active', fifteenMinutesAgo)
+        .order('last_active', { ascending: false });
+      
+      console.log("📊 [PlayerTracker] Online query result:", onlineData?.length || 0, "players, Error:", onlineError);
+
+      if (!onlineError && onlineData !== null && onlineData.length > 0) {
+        // Filter unique players and count them
+        const uniquePlayers = new Map();
+        onlineData.forEach(session => {
+          if (session.player_name && !uniquePlayers.has(session.player_name)) {
+            uniquePlayers.set(session.player_name, session.last_active);
+          }
+        });
+        
+        this.onlinePlayers = Math.max(1, uniquePlayers.size);
+        console.log("✅ [PlayerTracker] Online players set to:", this.onlinePlayers);
+        
+        // Update online users map
+        this.onlineUsers = uniquePlayers;
+      } else {
+        // Always show at least 1 (current player)
+        this.onlinePlayers = Math.max(1, this.onlinePlayers);
+        console.warn("⚠️ [PlayerTracker] Using fallback for online count:", this.onlinePlayers);
+      }
+      
+      // Get total players from leaderboard
+      console.log("🟡 [PlayerTracker] Fetching total players...");
+      const { data: totalData, error: totalError } = await window.supabaseClient
+        .from('leaderboard')
+        .select('player_name, last_active')
+        .order('bruh_count', { ascending: false });
+      
+      console.log("📊 [PlayerTracker] Total query result:", totalData?.length || 0, "players, Error:", totalError);
+
+      if (!totalError && totalData !== null) {
+        const uniqueTotalPlayers = new Set(totalData.map(p => p.player_name).filter(name => name));
+        this.totalPlayers = Math.max(this.onlinePlayers, uniqueTotalPlayers.size);
+        console.log("✅ [PlayerTracker] Total players set to:", this.totalPlayers);
+      } else {
+        this.totalPlayers = Math.max(this.onlinePlayers, this.totalPlayers);
+        console.warn("⚠️ [PlayerTracker] Using fallback for total count:", this.totalPlayers);
+      }
+      
+      this.updateDisplay();
+      await this.updateOnlineUsers();
+      
+    } catch (error) {
+      console.error("❌ [PlayerTracker] Unexpected error:", error);
+      this.updateDisplay();
+    }
+  },
+
+  async updateOnlineUsers() {
+    const onlineUsersContainer = document.getElementById('online-users');
+    if (!onlineUsersContainer) return;
+    
+    try {
+      // Get leaderboard data for online users
+      const onlineUserNames = Array.from(this.onlineUsers.keys());
+      if (onlineUserNames.length === 0) {
+        onlineUsersContainer.innerHTML = '<div class="user-item">No other players online</div>';
+        return;
+      }
+      
+      const { data: userData, error } = await window.supabaseClient
+        .from('leaderboard')
+        .select('player_name, bruh_count, level')
+        .in('player_name', onlineUserNames);
+      
+      if (error) throw error;
+      
+      // Clear and rebuild online users list
+      onlineUsersContainer.innerHTML = '';
+      
+      userData.forEach(user => {
+        const userItem = document.createElement('div');
+        userItem.className = 'user-item';
+        userItem.innerHTML = `
+          <div>
+            <span class="user-online"></span>
+            <span class="user-name">${user.player_name || 'Unknown'}</span>
+          </div>
+          <div class="user-bruh">${formatNumber(user.bruh_count || 0)}</div>
+        `;
+        onlineUsersContainer.appendChild(userItem);
+      });
+      
+    } catch (error) {
+      console.warn('Error updating online users list:', error);
+    }
+  },
+
+  updateDisplay() {
+    const onlineElement = document.getElementById('online-count');
+    const totalElement = document.getElementById('total-count');
+    const onlineUsersCount = document.getElementById('online-users-count');
+    
+    if (onlineElement) {
+      this.animateNumber(onlineElement, this.onlinePlayers);
+    }
+    if (totalElement) {
+      this.animateNumber(totalElement, this.totalPlayers);
+    }
+    if (onlineUsersCount) {
+      onlineUsersCount.textContent = this.onlinePlayers;
+    }
+  },
+
+  animateNumber(element, newValue) {
+    const currentValue = parseInt(element.textContent.replace(/,/g, '')) || 0;
+    if (currentValue === newValue) {
+      element.textContent = this.formatNumber(newValue);
+      return;
+    }
+    
+    const duration = 1000;
+    const startTime = Date.now();
+    const difference = newValue - currentValue;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const current = currentValue + (difference * easeOut);
+      
+      element.textContent = this.formatNumber(Math.floor(current));
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        element.textContent = this.formatNumber(newValue);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  },
+
+  formatNumber(num) {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  },
+
+  startTracking() {
+    // Update session activity every 30 seconds
+    setInterval(() => {
+      this.updateSessionActivity();
+    }, 30000);
+    
+    // Update player counts every 15 seconds
+    setInterval(async () => {
+      await this.updatePlayerCounts();
+    }, 15000);
+    
+    // Update when tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        this.updateSessionActivity();
+        this.updatePlayerCounts();
+      }
+    });
+  },
+
+  setupRealtime() {
+    if (!window.supabaseClient) return;
+    
+    // Subscribe to player_sessions changes for real-time online updates
+    window.supabaseClient.channel('player-sessions-realtime')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'player_sessions' 
+      }, () => {
+        console.log("🔄 Player sessions changed, updating counts");
+        this.updatePlayerCounts();
+      })
+      .subscribe();
+    
+    // Subscribe to leaderboard changes for total player updates
+    window.supabaseClient.channel('leaderboard-realtime')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'leaderboard' 
+      }, () => {
+        console.log("🔄 Leaderboard changed, updating counts");
+        this.updatePlayerCounts();
+      })
+      .subscribe();
+  }
+};
 
 // Supabase Game State Manager
 const GameStateManager = {
@@ -527,6 +823,7 @@ const GameStateManager = {
         }, { onConflict: 'player_name' });
 
       if (error) throw error;
+      console.log("✅ Game state saved to Supabase");
     } catch (error) {
       console.warn('Error saving game state to Supabase:', error);
     }
@@ -591,193 +888,6 @@ const GameStateManager = {
     } catch (error) {
       console.warn('Error deleting game state from Supabase:', error);
     }
-  }
-};
-
-const PlayerTracker = {
-  onlinePlayers: 0,
-  totalPlayers: 0,
-  sessionId: null,
-  updateInterval: null,
-
-  async init() {
-    this.sessionId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('player_session_id', this.sessionId);
-    
-    await this.registerSession();
-    this.startTracking();
-    await this.updatePlayerCounts();
-    this.setupRealtime();
-  },
-
-  async registerSession() {
-    if (!window.supabaseClient || !gameState.playerName) return;
-    
-    try {
-      const now = new Date().toISOString();
-      const { error } = await window.supabaseClient
-        .from('player_sessions')
-        .upsert({
-          session_id: this.sessionId,
-          player_name: gameState.playerName,
-          last_active: now,
-          created_at: now
-        }, { onConflict: 'session_id' });
-
-      if (error) throw error;
-    } catch (error) {
-      console.warn('Error registering session:', error);
-    }
-  },
-
-  async updateSessionActivity() {
-    if (!window.supabaseClient || !gameState.playerName) return;
-    
-    try {
-      await window.supabaseClient
-        .from('player_sessions')
-        .update({
-          last_active: new Date().toISOString()
-        })
-        .eq('session_id', this.sessionId);
-    } catch (error) {
-      console.warn('Error updating session activity:', error);
-    }
-  },
-
-  async updatePlayerCounts() {
-    console.log("🟡 [PlayerTracker] updatePlayerCounts() called");
-
-    if (!window.supabaseClient) {
-      console.warn("⚠️ [PlayerTracker] Supabase client is not available!");
-      this.updateDisplay();
-      return;
-    }
-
-    try {
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      
-      // Get online players (active in last 5 minutes)
-      console.log("🟡 [PlayerTracker] Fetching online players...");
-      const { data: onlineData, error: onlineError } = await window.supabaseClient
-        .from('player_sessions')
-        .select('player_name')
-        .gt('last_active', fiveMinutesAgo);
-      
-      console.log("📊 [PlayerTracker] Online query result:", onlineData, "Error:", onlineError);
-
-      if (!onlineError && onlineData !== null) {
-        const uniqueOnlinePlayers = new Set(onlineData.map(p => p.player_name));
-        this.onlinePlayers = Math.max(1, uniqueOnlinePlayers.size);
-        console.log("✅ [PlayerTracker] Online players set to:", this.onlinePlayers);
-      } else {
-        this.onlinePlayers = Math.max(1, this.onlinePlayers);
-        console.warn("⚠️ [PlayerTracker] Using fallback for online count:", this.onlinePlayers);
-      }
-      
-      // Get total players from leaderboard
-      console.log("🟡 [PlayerTracker] Fetching total players...");
-      const { data: totalData, error: totalError } = await window.supabaseClient
-        .from('leaderboard')
-        .select('player_name')
-        .order('bruh_count', { ascending: false });
-      
-      console.log("📊 [PlayerTracker] Total query result:", totalData, "Error:", totalError);
-
-      if (!totalError && totalData !== null) {
-        const uniqueTotalPlayers = new Set(totalData.map(p => p.player_name));
-        this.totalPlayers = Math.max(this.onlinePlayers, uniqueTotalPlayers.size);
-        console.log("✅ [PlayerTracker] Total players set to:", this.totalPlayers);
-      } else {
-        this.totalPlayers = Math.max(this.onlinePlayers, this.totalPlayers);
-        console.warn("⚠️ [PlayerTracker] Using fallback for total count:", this.totalPlayers);
-      }
-      
-      this.updateDisplay();
-    } catch (error) {
-      console.error("❌ [PlayerTracker] Unexpected error:", error);
-      this.updateDisplay();
-    }
-  },
-
-  updateDisplay() {
-    const onlineElement = document.getElementById('online-count');
-    const totalElement = document.getElementById('total-count');
-    const onlineUsersCount = document.getElementById('online-users-count');
-    
-    if (onlineElement) {
-      this.animateNumber(onlineElement, this.onlinePlayers);
-    }
-    if (totalElement) {
-      this.animateNumber(totalElement, this.totalPlayers);
-    }
-    if (onlineUsersCount) {
-      onlineUsersCount.textContent = this.onlinePlayers;
-    }
-  },
-
-  animateNumber(element, newValue) {
-    const currentValue = parseInt(element.textContent.replace(/,/g, '')) || 0;
-    if (currentValue === newValue) {
-      element.textContent = this.formatNumber(newValue);
-      return;
-    }
-    
-    const duration = 1000;
-    const startTime = Date.now();
-    const difference = newValue - currentValue;
-    
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const current = currentValue + (difference * easeOut);
-      
-      element.textContent = this.formatNumber(Math.floor(current));
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        element.textContent = this.formatNumber(newValue);
-      }
-    };
-    
-    requestAnimationFrame(animate);
-  },
-
-  formatNumber(num) {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  },
-
-  startTracking() {
-    // Update session activity every 30 seconds
-    setInterval(() => {
-      this.updateSessionActivity();
-    }, 30000);
-    
-    // Update player counts every 10 seconds
-    setInterval(async () => {
-      await this.updatePlayerCounts();
-    }, 10000);
-    
-    // Update when tab becomes visible
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        this.updateSessionActivity();
-        this.updatePlayerCounts();
-      }
-    });
-  },
-
-  setupRealtime() {
-    if (!window.supabaseClient) return;
-    
-    // Subscribe to player sessions changes
-    window.supabaseClient.channel('player-sessions-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'player_sessions' }, () => {
-        this.updatePlayerCounts();
-      })
-      .subscribe();
   }
 };
 
@@ -1004,6 +1114,7 @@ const LeaderboardSystem = {
           .upsert(playerData, { onConflict: 'player_name' });
         
         if (error) throw error;
+        console.log("✅ Leaderboard score updated");
       } catch (error) {
         console.warn('Error updating leaderboard on Supabase:', error);
       }
@@ -1624,10 +1735,17 @@ function saveGame() {
   try {
     gameState.lastUpdate = Date.now();
     localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
+    
+    // Update leaderboard with current score
     LeaderboardSystem.updatePlayerScore();
     
     // Also save to Supabase
     GameStateManager.saveGameState();
+    
+    // Update session activity
+    PlayerTracker.updateSessionActivity();
+    
+    console.log("💾 Game saved locally and to cloud");
   } catch (e) {
     console.warn('Could not save game state:', e);
   }
