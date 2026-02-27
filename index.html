@@ -1148,7 +1148,7 @@ const defaultGameState = {
     { id: 5, name: "Media Empire", baseCost: 1400000, baseCPS: 850, count: 0 }
   ],
   lastUpdate: Date.now(),
-  version: "1.0.9",
+  version: "1.1.0",
   playerName: "",
   chatNotifications: true,
   boostProgress: 0,
@@ -1189,6 +1189,7 @@ function calculateLevelFromTotalXP(totalXP) {
   };
 }
 
+// Updated addXP to accept fractional XP
 function addXP(amount) {
   const oldLevelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
   const oldLevel = oldLevelInfo.level;
@@ -1210,7 +1211,8 @@ function addXP(amount) {
 function updateLevelDisplay() {
   const levelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
   document.getElementById('current-level').textContent = formatNumber(levelInfo.level);
-  document.getElementById('xp-display').textContent = `${formatNumber(levelInfo.currentXP)}/${formatNumber(levelInfo.nextLevelXP)} XP`;
+  // Show XP as whole numbers (floor)
+  document.getElementById('xp-display').textContent = `${Math.floor(levelInfo.currentXP)}/${Math.floor(levelInfo.nextLevelXP)} XP`;
   document.getElementById('level-progress-bar').style.width = `${levelInfo.progress}%`;
   const levelUpIndicator = document.getElementById('level-up-indicator');
   levelUpIndicator.style.display = levelInfo.progress >= 95 ? 'block' : 'none';
@@ -1461,10 +1463,11 @@ const getMaxBuy = (building) => {
 function awardXPForAction(action, amount = 1) {
   let xpAmount = 0;
   switch (action) {
-    case 'click': xpAmount = 1; break;
-    case 'building': xpAmount = Math.floor(amount * 5); break;
+    case 'click': xpAmount = 1; break; // taps still give 1 XP
+    // Building purchases no longer give XP
     case 'bruh': xpAmount = Math.floor(amount * 50); break;
     case 'time': xpAmount = Math.min(amount, 100); break;
+    default: return;
   }
   if (xpAmount > 0) addXP(xpAmount);
 }
@@ -1512,7 +1515,7 @@ function manualClick(e) {
   e.preventDefault(); e.stopPropagation();
   const amount = 1 * getMultiplier();
   gameState.news += amount;
-  awardXPForAction('click');
+  awardXPForAction('click'); // 1 XP per tap
   incrementBoostProgress();
   if (gameState.isBoostActive) gameState.boostTimeLeft = 15;
   
@@ -1546,7 +1549,7 @@ function buyMax(id) {
     } else break;
   }
   if (bought > 0) {
-    awardXPForAction('building', bought);
+    // XP no longer awarded for buying buildings – now from passive income
     const card = document.getElementById(`card-${id}`);
     card.style.transform = 'scale(1.02)'; card.style.backgroundColor = '#e8f5e8';
     setTimeout(() => { card.style.transform = ''; card.style.backgroundColor = ''; }, 300);
@@ -1749,8 +1752,11 @@ function startGameLoops() {
     
     const cps = getCPS();
     if (cps > 0 && delta > 0) {
-      gameState.news += cps * delta;
-      if (gameState.news < 0) gameState.news = 0;
+      const newsEarned = cps * delta;
+      gameState.news += newsEarned;
+      // XP from passive income: 0.1 XP per New earned (so 10 New = 1 XP)
+      const xpGain = newsEarned * 0.1;
+      addXP(xpGain);
     }
     
     depleteBoostProgress();
