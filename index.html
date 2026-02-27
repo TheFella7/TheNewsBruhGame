@@ -34,6 +34,52 @@ body{background-color:#2e2e2e;margin:0;padding:0;font-family:var(--font-head);co
 .ticker-content{display:inline-block;animation:marquee 25s linear infinite;padding-left:100%;white-space:nowrap}
 .ticker-content a{color:#4dabf7;text-decoration:underline;font-weight:bold;margin:0 20px}
 @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+/* ----- OFFLINE EARNINGS NOTIFICATION ----- */
+.offline-notification {
+  position: relative;
+  background: linear-gradient(135deg, #f9f7e8, #e6e0c0);
+  border: 4px solid var(--ink);
+  margin: 10px 20px;
+  padding: 15px;
+  font-family: var(--font-head);
+  box-shadow: 6px 6px 0 rgba(0,0,0,0.3);
+  animation: slideDown 0.5s ease;
+  z-index: 1000;
+}
+.offline-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.offline-icon {
+  font-size: 2rem;
+}
+.offline-text {
+  flex: 1;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+.offline-close {
+  background: var(--red-accent);
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.offline-close:hover {
+  background: #b30000;
+}
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+/* ---------------------------------------- */
 .header-container{position:relative;text-align:center;padding:15px 20px;border-bottom:5px double var(--ink)}
 .player-header-info{display:flex;flex-direction:column;align-items:center;margin-bottom:10px;gap:8px}
 .player-name-display{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
@@ -51,7 +97,6 @@ h1{font-family:var(--font-old-english);font-size:clamp(2.5rem,5vw,3.5rem);margin
 .column{padding:20px;overflow-y:auto;border-right:1px solid #aaa;display:flex;flex-direction:column;height:100%;min-height:400px}
 .column:last-child{border-right:none}
 .column::-webkit-scrollbar{width:8px}.column::-webkit-scrollbar-thumb{background:#888;border-radius:4px}.column::-webkit-scrollbar-track{background:transparent}
-/* Ensure left column has enough space on desktop for the prestige box */
 @media (min-width: 1025px) {
   .column {
     min-height: 600px;
@@ -337,6 +382,16 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 <div id="ticker-tape">
 <div class="ticker-content" id="ticker-text">Join <a href="https://www.reddit.com/r/thenewsbruh/s/HPIdtW6H3X" target="_blank">r/TheNewsBruh</a> on Reddit & Reach The Top 3 on The Leaderboard to Earn Real New Token</div>
 </div>
+
+<!-- OFFLINE EARNINGS NOTIFICATION -->
+<div id="offline-earnings-notification" class="offline-notification" style="display: none;">
+  <div class="offline-content">
+    <span class="offline-icon">📰</span>
+    <span class="offline-text" id="offline-earnings-text"></span>
+    <button class="offline-close" onclick="closeOfflineNotification()">×</button>
+  </div>
+</div>
+
 <div class="header-container">
 <div class="player-header-info">
 <div class="player-name-display">
@@ -1803,6 +1858,27 @@ function updateUI() {
   });
 }
 
+// NEW: Show offline earnings notification
+function showOfflineEarningsNotification(earnings) {
+  const notif = document.getElementById('offline-earnings-notification');
+  if (!notif) return;
+  const textEl = document.getElementById('offline-earnings-text');
+  if (textEl) {
+    textEl.innerHTML = `📰 While you were away, your news empire earned <strong>${formatNumber(earnings)} New</strong>!`;
+  }
+  notif.style.display = 'block';
+  // Auto-hide after 8 seconds
+  setTimeout(() => {
+    notif.style.display = 'none';
+  }, 8000);
+}
+
+// NEW: Close notification manually
+function closeOfflineNotification() {
+  const notif = document.getElementById('offline-earnings-notification');
+  if (notif) notif.style.display = 'none';
+}
+
 function init() {
   if (isInitialized) return;
   
@@ -1866,11 +1942,13 @@ function init() {
   const now = Date.now();
   const lastUpdate = gameState.lastUpdate || now;
   const timeDiff = (now - lastUpdate) / 1000;
-  if (timeDiff > 1 && timeDiff < 86400) {
+  // OFFLINE EARNINGS: now capped at 12 hours (43200 seconds) instead of 24 hours
+  if (timeDiff > 1 && timeDiff < 43200) {  // changed from 86400 to 43200
     const offlineEarnings = getCPS() * timeDiff;
     if (offlineEarnings > 0) {
       gameState.news += offlineEarnings;
-      awardXPForAction('time', Math.min(timeDiff, 3600));
+      awardXPForAction('time', Math.min(timeDiff, 43200)); // XP capped at 12 hours too
+      showOfflineEarningsNotification(offlineEarnings);
     }
   }
   
@@ -1987,6 +2065,7 @@ window.updatePlayerName = updatePlayerName;
 window.openChangeNameModal = openChangeNameModal;
 window.formatNumber = formatNumber;
 window.manualSave = manualSave;
+window.closeOfflineNotification = closeOfflineNotification;  // expose close function
 </script>
 </body>
 </html>
