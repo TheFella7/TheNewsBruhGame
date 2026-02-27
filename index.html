@@ -285,6 +285,13 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 .save-status.success {
     color: #ccffcc;
 }
+#last-save-time {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--ink-light);
+    text-align: center;
+    margin-top: 5px;
+}
 @media (max-width:1024px){#main-content{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto}.column{min-height:300px;max-height:500px;border-right:none;border-bottom:2px solid #aaa}.column:last-child{border-bottom:none}}
 @media (max-width:768px){body{padding:5px;overflow-x:hidden}#newspaper{min-height:100vh;height:auto}.player-header-info{flex-direction:column;gap:5px}.player-name-display{flex-direction:column;gap:5px}.player-name-text{font-size:0.9rem;padding:4px 10px}.column{padding:15px;min-height:auto;max-height:none;overflow-y:visible}h1{font-size:2.2rem}h2{font-size:1.5rem}#breaking-news-banner{font-size:1rem;padding:10px 15px}.breaking-news-text{flex-direction:column;gap:10px}.breaking-news-title{font-size:1.1rem}#print-btn{padding:30px 15px}.print-title{font-size:1.8rem}.meta-line{font-size:0.75rem}.player-counts{font-size:0.8rem;gap:10px}.stat-value{font-size:1.4rem}.prestige-box{padding:15px}#leaderboard-section,#chat-section{padding:15px}.chat-container,.chat-users{height:250px}#chat-section{grid-template-columns:1fr}#boost-button{padding:15px 10px;min-height:80px}.boost-percentage{font-size:1.6rem}.boost-label{font-size:0.9rem}.reset-btn{padding:15px;font-size:1.1rem;max-width:100%}#manual-save-btn{padding:15px 10px;min-height:60px;font-size:0.9rem}}
 @media (max-width:480px){h1{font-size:1.8rem}#print-btn{padding:25px 10px}.print-title{font-size:1.5rem}.column{padding:10px}#breaking-news-banner{font-size:0.9rem;padding:8px 10px}.breaking-news-title{font-size:1rem}#leaderboard-table th,#leaderboard-table td{padding:8px 5px;font-size:0.8rem}.player-name{max-width:80px}#boost-button{padding:12px 8px;min-height:70px}.boost-percentage{font-size:1.4rem}.boost-label{font-size:0.8rem}.reset-btn{padding:12px;font-size:1rem}#manual-save-btn{padding:12px 8px;min-height:50px;font-size:0.8rem}}
@@ -391,6 +398,7 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
     💾 MANUAL SAVE
     <div class="save-status" id="save-status"></div>
   </button>
+  <div id="last-save-time">Last auto‑save: never</div>
 </div>
 <div class="column" id="col-center">
   <h2>Front Page</h2>
@@ -520,6 +528,9 @@ async function manualSave() {
         saveStatus.textContent = "✓ Saved successfully!";
         saveStatus.className = "save-status success";
         
+        // Update last save time display
+        updateLastSaveTime();
+        
         setTimeout(() => {
             saveBtn.disabled = false;
             saveBtn.classList.remove('saved');
@@ -537,6 +548,14 @@ async function manualSave() {
             saveBtn.disabled = false;
             saveStatus.textContent = "";
         }, 3000);
+    }
+}
+
+function updateLastSaveTime() {
+    const el = document.getElementById('last-save-time');
+    if (el) {
+        const now = new Date();
+        el.textContent = `Last auto‑save: ${now.toLocaleTimeString()}`;
     }
 }
 
@@ -731,7 +750,7 @@ const PlayerTracker = {
   }
 };
 
-// Supabase Game State Manager (unchanged)
+// Supabase Game State Manager – improved merging and logging
 const GameStateManager = {
   async saveGameState() {
     if (!window.supabaseClient || !gameState.playerName) return;
@@ -763,6 +782,7 @@ const GameStateManager = {
         }, { onConflict: 'player_name' });
 
       if (error) throw error;
+      console.log('💾 Game state saved to Supabase');
     } catch (error) {
       console.warn('Error saving game state to Supabase:', error);
     }
@@ -779,12 +799,16 @@ const GameStateManager = {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') return false;
+        if (error.code === 'PGRST116') {
+          console.log('No cloud save found, using local');
+          return false;
+        }
         throw error;
       }
 
       if (data && data.game_state) {
         const savedState = data.game_state;
+        // Only load if cloud save is newer than current (or current is default)
         if (savedState.lastUpdate > (gameState.lastUpdate || 0)) {
           Object.keys(savedState).forEach(key => {
             if (key !== 'playerName' && key !== 'chatNotifications') {
@@ -798,6 +822,7 @@ const GameStateManager = {
               }
             });
           }
+          console.log('☁️ Loaded game state from Supabase');
           return true;
         }
       }
@@ -815,6 +840,7 @@ const GameStateManager = {
         .from('game_saves')
         .delete()
         .eq('player_name', gameState.playerName);
+      console.log('🗑️ Deleted cloud save');
     } catch (error) {
       console.warn('Error deleting game state from Supabase:', error);
     }
@@ -1155,11 +1181,13 @@ async function startGameWithName() {
   document.getElementById('name-selection-modal').classList.add('hidden');
   document.getElementById('newspaper').style.display = 'flex';
   
+  // Load from cloud first, then local if needed
   const loadedFromSupabase = await GameStateManager.loadGameState();
-  if (!loadedFromSupabase) loadGame();
+  if (!loadedFromSupabase) {
+    loadGame(); // loads from localStorage
+  }
   
-  init();
-  // PlayerTracker.init() will be called inside init()
+  init(); // init will not reload gameState
 }
 
 function updateDateTime() {
@@ -1192,7 +1220,7 @@ const defaultGameState = {
     { id: 5, name: "Media Empire", baseCost: 1400000, baseCPS: 850, count: 0 }
   ],
   lastUpdate: Date.now(),
-  version: "1.2.0",
+  version: "1.2.1",
   playerName: "",
   chatNotifications: true,
   boostProgress: 0,
@@ -1417,7 +1445,7 @@ function activateBoost() {
   boostTimerInterval = setInterval(updateBoostTimer, 1000);
   
   document.querySelectorAll('.stat-block').forEach(block => block.classList.add('active-boost'));
-  updateUI(); updateBoostProgress();
+  updateUI(); updateBoostProgress(); saveGame();
 }
 
 function updateBoostTimer() {
@@ -1445,10 +1473,10 @@ function endBoost() {
   const cooldownInterval = setInterval(() => {
     gameState.boostCooldown--;
     updateBoostProgress();
-    if (gameState.boostCooldown <= 0) { clearInterval(cooldownInterval); gameState.boostCooldown = 0; updateBoostProgress(); }
+    if (gameState.boostCooldown <= 0) { clearInterval(cooldownInterval); gameState.boostCooldown = 0; updateBoostProgress(); saveGame(); }
   }, 1000);
   
-  updateUI(); updateBoostProgress();
+  updateUI(); updateBoostProgress(); saveGame();
 }
 
 function startEmojiRain() {
@@ -1526,6 +1554,7 @@ function saveGame() {
     localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
     LeaderboardSystem.updatePlayerScore();
     GameStateManager.saveGameState();
+    updateLastSaveTime();
     console.log("💾 Game saved locally and to cloud");
   } catch (e) { console.warn('Could not save game state:', e); }
 }
@@ -1547,6 +1576,7 @@ function loadGame() {
       gameState.boostCooldown = gameState.boostCooldown || 0;
       gameState.boostMultiplier = gameState.boostMultiplier || 1;
       gameState.lastDepletionTime = gameState.lastDepletionTime || Date.now();
+      console.log('📀 Loaded game from localStorage');
     }
   } catch (e) { console.warn('Could not load saved game:', e); gameState = JSON.parse(JSON.stringify(defaultGameState)); }
 }
@@ -1704,7 +1734,9 @@ function init() {
     document.getElementById('newspaper').style.display = 'flex';
   }
   
-  loadGame();
+  // gameState already loaded in startGameWithName, but ensure defaults are applied
+  // No extra loadGame() here to avoid overwriting cloud load
+  
   updatePlayerNameDisplay();
   startDateTimeUpdate();
   
@@ -1758,7 +1790,7 @@ function init() {
     }
   }
   
-  updateUI(); updateBoostProgress();
+  updateUI(); updateBoostProgress(); updateLastSaveTime();
   
   if (gameState.isBoostActive) {
     if (boostTimerInterval) clearInterval(boostTimerInterval);
@@ -1773,7 +1805,7 @@ function init() {
     const cooldownInterval = setInterval(() => {
       gameState.boostCooldown--;
       updateBoostProgress();
-      if (gameState.boostCooldown <= 0) { clearInterval(cooldownInterval); gameState.boostCooldown = 0; updateBoostProgress(); }
+      if (gameState.boostCooldown <= 0) { clearInterval(cooldownInterval); gameState.boostCooldown = 0; updateBoostProgress(); saveGame(); }
     }, 1000);
   }
   
@@ -1834,7 +1866,7 @@ function startGameLoops() {
   
   gameLoop();
   setInterval(rotateHeadlines, 10000);
-  setInterval(autoSave, 30000);
+  setInterval(autoSave, 15000); // every 15 seconds
 }
 
 window.gameSystemsReady = async function() {
@@ -1843,12 +1875,13 @@ window.gameSystemsReady = async function() {
     gameState.playerName = savedName;
     
     const loadedFromSupabase = await GameStateManager.loadGameState();
-    if (!loadedFromSupabase) loadGame();
+    if (!loadedFromSupabase) {
+      loadGame(); // load from localStorage
+    }
     
     document.getElementById('name-selection-modal').classList.add('hidden');
     document.getElementById('newspaper').style.display = 'flex';
     init();
-    // PlayerTracker.init() is now called inside init()
   } else {
     document.getElementById('name-selection-modal').classList.remove('hidden');
     document.getElementById('player-name-input').focus();
