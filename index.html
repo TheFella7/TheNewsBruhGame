@@ -1421,7 +1421,8 @@ function addXP(amount) {
 function updateLevelDisplay() {
   const levelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
   document.getElementById('current-level').textContent = formatNumber(levelInfo.level);
-  document.getElementById('xp-display').textContent = `${Math.floor(levelInfo.currentXP)}/${Math.floor(levelInfo.nextLevelXP)} XP`;
+  // Format XP numbers with the same scaling
+  document.getElementById('xp-display').textContent = `${formatNumber(Math.floor(levelInfo.currentXP))}/${formatNumber(Math.floor(levelInfo.nextLevelXP))} XP`;
   document.getElementById('level-progress-bar').style.width = `${levelInfo.progress}%`;
   const levelUpIndicator = document.getElementById('level-up-indicator');
   levelUpIndicator.style.display = levelInfo.progress >= 95 ? 'block' : 'none';
@@ -1867,13 +1868,24 @@ function updateUI() {
   });
 }
 
-// NEW: Show offline earnings notification
-function showOfflineEarningsNotification(earnings) {
+// Helper to format time difference (seconds) into a readable string (e.g., "2h 15m")
+function formatTimeOffline(seconds) {
+  if (seconds < 60) return `${Math.floor(seconds)}s`;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+// Show offline earnings notification with amount and time
+function showOfflineEarningsNotification(earnings, timeDiff) {
   const notif = document.getElementById('offline-earnings-notification');
   if (!notif) return;
   const textEl = document.getElementById('offline-earnings-text');
   if (textEl) {
-    textEl.innerHTML = `📰 While you were away, your news empire earned <strong>${formatNumber(earnings)} New</strong>!`;
+    const timeStr = formatTimeOffline(timeDiff);
+    textEl.innerHTML = `📰 While you were away for <strong>${timeStr}</strong>, your news empire earned <strong>${formatNumber(earnings)} New</strong>!`;
   }
   notif.style.display = 'block';
   // Auto-hide after 8 seconds
@@ -1882,7 +1894,7 @@ function showOfflineEarningsNotification(earnings) {
   }, 8000);
 }
 
-// NEW: Close notification manually
+// Close notification manually
 function closeOfflineNotification() {
   const notif = document.getElementById('offline-earnings-notification');
   if (notif) notif.style.display = 'none';
@@ -1951,13 +1963,18 @@ function init() {
   const now = Date.now();
   const lastUpdate = gameState.lastUpdate || now;
   const timeDiff = (now - lastUpdate) / 1000;
-  // OFFLINE EARNINGS: now capped at 12 hours (43200 seconds) instead of 24 hours
-  if (timeDiff > 1 && timeDiff < 43200) {  // changed from 86400 to 43200
+  // OFFLINE EARNINGS: now capped at 12 hours (43200 seconds)
+  if (timeDiff > 1 && timeDiff < 43200) {
     const offlineEarnings = getCPS() * timeDiff;
     if (offlineEarnings > 0) {
       gameState.news += offlineEarnings;
-      awardXPForAction('time', Math.min(timeDiff, 43200)); // XP capped at 12 hours too
-      showOfflineEarningsNotification(offlineEarnings);
+      awardXPForAction('time', Math.min(timeDiff, 43200));
+      showOfflineEarningsNotification(offlineEarnings, timeDiff);
+      
+      // Update lastUpdate to now to prevent double-counting on next load
+      gameState.lastUpdate = now;
+      // Save immediately to persist the new lastUpdate
+      saveGame();
     }
   }
   
