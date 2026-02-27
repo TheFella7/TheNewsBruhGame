@@ -51,6 +51,12 @@ h1{font-family:var(--font-old-english);font-size:clamp(2.5rem,5vw,3.5rem);margin
 .column{padding:20px;overflow-y:auto;border-right:1px solid #aaa;display:flex;flex-direction:column;height:100%;min-height:400px}
 .column:last-child{border-right:none}
 .column::-webkit-scrollbar{width:8px}.column::-webkit-scrollbar-thumb{background:#888;border-radius:4px}.column::-webkit-scrollbar-track{background:transparent}
+/* Ensure left column has enough space on desktop for the prestige box */
+@media (min-width: 1025px) {
+  .column {
+    min-height: 600px;
+  }
+}
 h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0;font-size:1.8rem;margin-bottom:15px;font-weight:900;padding-bottom:5px}
 
 /* How-to-play dropdown */
@@ -351,7 +357,7 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 </div>
 <div id="main-content">
 <div class="column" id="col-left">
-  <!-- HOW TO PLAY DROPDOWN (added here) -->
+  <!-- HOW TO PLAY DROPDOWN -->
   <div class="how-to-play">
     <details>
       <summary>📰 How to Play (Click to expand)</summary>
