@@ -52,6 +52,51 @@ h1{font-family:var(--font-old-english);font-size:clamp(2.5rem,5vw,3.5rem);margin
 .column:last-child{border-right:none}
 .column::-webkit-scrollbar{width:8px}.column::-webkit-scrollbar-thumb{background:#888;border-radius:4px}.column::-webkit-scrollbar-track{background:transparent}
 h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0;font-size:1.8rem;margin-bottom:15px;font-weight:900;padding-bottom:5px}
+
+/* How-to-play dropdown */
+.how-to-play {
+  margin-bottom: 20px;
+  font-family: var(--font-mono);
+  border: 2px solid var(--ink);
+  background: var(--bg-paper-dark);
+  padding: 8px 12px;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.1);
+}
+.how-to-play summary {
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1.1rem;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.how-to-play summary::-webkit-details-marker {
+  display: none;
+}
+.how-to-play summary::before {
+  content: "▼";
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+.how-to-play details[open] summary::before {
+  transform: rotate(90deg);
+}
+.how-to-content {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.how-to-content ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+.how-to-content li {
+  margin-bottom: 6px;
+}
+
 .level-container{margin-bottom:20px;border:2px solid var(--ink);background:white;padding:15px;box-shadow:3px 3px 0 rgba(0,0,0,0.1)}
 .level-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-family:var(--font-mono)}
 .level-title{font-weight:bold;font-size:1.1rem;color:var(--ink)}
@@ -290,77 +335,96 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 </div>
 <div id="main-content">
 <div class="column" id="col-left">
-<div class="level-container">
-<div class="level-header">
-<div class="level-title">Level <span class="level-number" id="current-level">1</span></div>
-<div class="level-xp-display" id="xp-display">0/100 XP</div>
-</div>
-<div class="level-bar-container">
-<div class="level-progress-bar" id="level-progress-bar"></div>
-<div class="level-up-indicator" id="level-up-indicator" style="display:none">LEVEL UP!</div>
-</div>
-</div>
-<h2>Statistics</h2>
-<div class="stat-block">
-<div class="stat-label">Treasury</div>
-<div class="stat-value"><span id="currency">0</span> New</div>
-</div>
-<div class="stat-block">
-<div class="stat-label">Production</div>
-<div class="stat-value"><span id="cps">0.0</span> / sec</div>
-</div>
-<div class="stat-block">
-<div class="stat-label">Market Multiplier</div>
-<div class="stat-value" style="color:var(--red-accent)">x<span id="multiplier">1</span></div>
-</div>
-<div class="prestige-box">
-<h3 style="margin:0 0 10px 0;border-bottom:1px solid var(--ink)">THE CLASSIFIEDS</h3>
-<p style="font-size:0.85rem;margin-bottom:10px;line-height:1.4">Hire a <strong>Bruh</strong> Consultant. Each Bruh owned adds a <strong>+100% (x1)</strong> permanent bonus to all production.</p>
-<div style="font-weight:bold;margin-bottom:5px;font-size:1.1rem">Bruh Owned: <span id="bruh-owned">0</span></div>
-<button id="prestige-btn" class="prestige-btn" onclick="prestige()">Buy Bruh
-<div id="prestige-cost" class="prestige-cost">Costs: 1k New</div>
-<div id="prestige-max" class="prestige-max">Max: 0</div>
-</button>
-</div>
-<!-- MANUAL SAVE BUTTON ADDED HERE -->
-<button id="manual-save-btn" onclick="manualSave()">
-💾 MANUAL SAVE
-<div class="save-status" id="save-status"></div>
-</button>
+  <!-- HOW TO PLAY DROPDOWN (added here) -->
+  <div class="how-to-play">
+    <details>
+      <summary>📰 How to Play (Click to expand)</summary>
+      <div class="how-to-content">
+        <p><strong>📌 Printing Press Tycoon Basics</strong></p>
+        <ul>
+          <li><strong>Tap the big "PRINT EDITION" button</strong> to earn <strong>New</strong> (currency). Each tap gives +1 New × multiplier.</li>
+          <li><strong>Buy Assets</strong> (Paperboy, Editor, etc.) in the right column. They produce <strong>New per second (CPS)</strong> automatically.</li>
+          <li><strong>Build up the BREAKING NEWS BOOST</strong> by tapping – fill the red bar to activate a 5× multiplier for 15 seconds.</li>
+          <li><strong>Level up</strong> by earning XP from taps and from passive income (every 10 New earned = 1 XP). Higher levels increase nothing directly but show your dedication.</li>
+          <li><strong>Prestige (Buy Bruh)</strong> in the left column. Resets everything but gives a permanent +100% (×1) production bonus per Bruh owned.</li>
+          <li><strong>Chat with other players</strong> in the Press Room – use @name to tag someone.</li>
+          <li><strong>Your progress is auto-saved</strong> locally and to the cloud. Use the <strong>MANUAL SAVE</strong> button anytime.</li>
+        </ul>
+        <p style="margin-top:8px; font-style:italic;">— The News Bruh Team</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="level-container">
+    <div class="level-header">
+      <div class="level-title">Level <span class="level-number" id="current-level">1</span></div>
+      <div class="level-xp-display" id="xp-display">0/100 XP</div>
+    </div>
+    <div class="level-bar-container">
+      <div class="level-progress-bar" id="level-progress-bar"></div>
+      <div class="level-up-indicator" id="level-up-indicator" style="display:none">LEVEL UP!</div>
+    </div>
+  </div>
+  <h2>Statistics</h2>
+  <div class="stat-block">
+    <div class="stat-label">Treasury</div>
+    <div class="stat-value"><span id="currency">0</span> New</div>
+  </div>
+  <div class="stat-block">
+    <div class="stat-label">Production</div>
+    <div class="stat-value"><span id="cps">0.0</span> / sec</div>
+  </div>
+  <div class="stat-block">
+    <div class="stat-label">Market Multiplier</div>
+    <div class="stat-value" style="color:var(--red-accent)">x<span id="multiplier">1</span></div>
+  </div>
+  <div class="prestige-box">
+    <h3 style="margin:0 0 10px 0;border-bottom:1px solid var(--ink)">THE CLASSIFIEDS</h3>
+    <p style="font-size:0.85rem;margin-bottom:10px;line-height:1.4">Hire a <strong>Bruh</strong> Consultant. Each Bruh owned adds a <strong>+100% (x1)</strong> permanent bonus to all production.</p>
+    <div style="font-weight:bold;margin-bottom:5px;font-size:1.1rem">Bruh Owned: <span id="bruh-owned">0</span></div>
+    <button id="prestige-btn" class="prestige-btn" onclick="prestige()">Buy Bruh
+      <div id="prestige-cost" class="prestige-cost">Costs: 1k New</div>
+      <div id="prestige-max" class="prestige-max">Max: 0</div>
+    </button>
+  </div>
+  <button id="manual-save-btn" onclick="manualSave()">
+    💾 MANUAL SAVE
+    <div class="save-status" id="save-status"></div>
+  </button>
 </div>
 <div class="column" id="col-center">
-<h2>Front Page</h2>
-<div id="breaking-news-container">
-<div id="breaking-news-banner">
-<div class="breaking-news-text">
-<span class="breaking-news-icon">📰</span>
-<span class="breaking-news-title">BREAKING NEWS: 5X MULTIPLIER ACTIVE!</span>
-</div>
-</div>
-</div>
-<button id="print-btn">
-<span class="print-title">PRINT EDITION</span>
-<span class="print-sub" id="tap-value-display">📰 +1 New per Tap</span>
-</button>
-<div id="boost-container">
-<button id="boost-button">
-<div id="boost-progress-bar"></div>
-<div class="boost-content">
-<span class="boost-percentage" id="boost-percentage">0%</span>
-<span class="boost-label">BREAKING NEWS BOOST</span>
-<span class="boost-timer" id="boost-timer">15s</span>
-<span class="boost-cooldown" id="boost-cooldown"></span>
-</div>
-</button>
-</div>
-<div class="headline-box">
-<strong>Latest Headline:</strong>
-<p id="headline-spot">"Local entrepreneur starts printing press in garage, neighbors concerned about noise."</p>
-</div>
+  <h2>Front Page</h2>
+  <div id="breaking-news-container">
+    <div id="breaking-news-banner">
+      <div class="breaking-news-text">
+        <span class="breaking-news-icon">📰</span>
+        <span class="breaking-news-title">BREAKING NEWS: 5X MULTIPLIER ACTIVE!</span>
+      </div>
+    </div>
+  </div>
+  <button id="print-btn">
+    <span class="print-title">PRINT EDITION</span>
+    <span class="print-sub" id="tap-value-display">📰 +1 New per Tap</span>
+  </button>
+  <div id="boost-container">
+    <button id="boost-button">
+      <div id="boost-progress-bar"></div>
+      <div class="boost-content">
+        <span class="boost-percentage" id="boost-percentage">0%</span>
+        <span class="boost-label">BREAKING NEWS BOOST</span>
+        <span class="boost-timer" id="boost-timer">15s</span>
+        <span class="boost-cooldown" id="boost-cooldown"></span>
+      </div>
+    </button>
+  </div>
+  <div class="headline-box">
+    <strong>Latest Headline:</strong>
+    <p id="headline-spot">"Local entrepreneur starts printing press in garage, neighbors concerned about noise."</p>
+  </div>
 </div>
 <div class="column" id="col-right">
-<h2>Assets</h2>
-<div id="upgrades-list"></div>
+  <h2>Assets</h2>
+  <div id="upgrades-list"></div>
 </div>
 </div>
 <div id="leaderboard-section">
