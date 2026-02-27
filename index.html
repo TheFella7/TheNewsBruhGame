@@ -1428,6 +1428,7 @@ function updateLevelDisplay() {
   LeaderboardSystem.updatePlayerScore();
 }
 
+// ============= NEW SUFFIX FORMATTER =============
 function formatNumber(num) {
   if (typeof num !== 'number' || !isFinite(num)) return '0';
   if (num < 0) return '-' + formatNumber(-num);
@@ -1436,37 +1437,45 @@ function formatNumber(num) {
 }
 
 function toAlphabetical(num) {
-  if (num >= 1e6) {
-    const log = Math.log10(num);
-    const magnitude = Math.floor(log / 3);
-    if (magnitude < 1) return Math.floor(num).toLocaleString();
-    const baseValue = Math.pow(1000, magnitude);
-    const scaled = num / baseValue;
-    const suffix = getAlphabeticalSuffix(magnitude - 1);
+  const suffixes = ['K', 'M', 'B', 'T']; // up to 1e12
+  const magnitude = Math.floor(Math.log10(num) / 3); // 1 = thousand, 2 = million, etc.
+  
+  if (magnitude <= suffixes.length) {
+    // Use predefined suffixes K,M,B,T
+    const suffix = suffixes[magnitude - 1];
+    const divisor = Math.pow(1000, magnitude);
+    const scaled = num / divisor;
     if (scaled >= 100) return Math.floor(scaled) + suffix;
     if (scaled >= 10) return scaled.toFixed(1) + suffix;
     return scaled.toFixed(2) + suffix;
   }
-  if (num >= 1e15) return (num / 1e15).toFixed(2) + "Qa";
-  if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
-  if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-  if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-  if (num >= 1e3) return (num / 1e3).toFixed(1) + "k";
-  return Math.floor(num).toLocaleString();
-}
-
-function getAlphabeticalSuffix(index) {
-  if (index < 0) return "";
-  if (index < 26) return String.fromCharCode(97 + index);
-  let result = "", remaining = index;
-  while (remaining >= 0) {
-    const charIndex = remaining % 26;
-    result = String.fromCharCode(97 + charIndex) + result;
-    remaining = Math.floor(remaining / 26) - 1;
-    if (remaining < 0) break;
+  
+  // Beyond T: use two-letter suffixes (AA, AB, ...) then three-letter (AAA, AAB, ...)
+  let offset = magnitude - suffixes.length - 1; // offset from AA (0 = AA, 1 = AB, ...)
+  const twoLetterLimit = 26 * 26; // 676 combinations
+  
+  let suffix = '';
+  if (offset < twoLetterLimit) {
+    // Two letters
+    const first = String.fromCharCode(65 + Math.floor(offset / 26));
+    const second = String.fromCharCode(65 + (offset % 26));
+    suffix = first + second;
+  } else {
+    // Three letters
+    offset -= twoLetterLimit;
+    const first = String.fromCharCode(65 + Math.floor(offset / (26 * 26)));
+    const second = String.fromCharCode(65 + Math.floor((offset % (26 * 26)) / 26));
+    const third = String.fromCharCode(65 + (offset % 26));
+    suffix = first + second + third;
   }
-  return result;
+  
+  const divisor = Math.pow(1000, magnitude);
+  const scaled = num / divisor;
+  if (scaled >= 100) return Math.floor(scaled) + suffix;
+  if (scaled >= 10) return scaled.toFixed(1) + suffix;
+  return scaled.toFixed(2) + suffix;
 }
+// =================================================
 
 function resetGame() {
   if (!confirm("⚠️ WARNING: This will PERMANENTLY delete ALL your progress!\n\nThis includes:\n• All your New currency\n• All buildings purchased\n• All Bruhs owned\n• Your current level and XP\n• Boost progress\n• Leaderboard ranking\n\nYour player name will be kept.\n\nAre you absolutely sure you want to reset everything?")) return;
