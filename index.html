@@ -511,10 +511,9 @@ async function manualSave() {
     saveStatus.className = "save-status";
     
     try {
-        await PlayerTracker.registerPlayer();
+        await PlayerTracker.registerPlayer();  // updates leaderboard last_active
         await LeaderboardSystem.updatePlayerScore();
         await GameStateManager.saveGameState();
-        await PlayerTracker.updatePlayerCounts();
         
         saveBtn.classList.remove('saving');
         saveBtn.classList.add('saved');
@@ -541,22 +540,26 @@ async function manualSave() {
     }
 }
 
-// Enhanced Player Tracking System (fixed)
+// PlayerTracker now uses Supabase Realtime Presence for live online tracking
 const PlayerTracker = {
   onlinePlayers: 0,
   totalPlayers: 0,
   sessionId: null,
-  updateInterval: null,
-  onlineUsers: new Map(),
+  presenceChannel: null,
+  onlineUsers: new Map(), // player_name -> { bruh_count, level }
 
   async init() {
     this.sessionId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('player_session_id', this.sessionId);
     
+    // Register in leaderboard (for total players count and persistent last_active)
     await this.registerPlayer();
-    await this.updatePlayerCounts(); // immediate update
-    this.setupRealtime();
-    this.startTracking();
+    
+    // Set up presence
+    await this.setupPresence();
+    
+    // Fetch total players count (from leaderboard) – this doesn't change often
+    await this.updateTotalPlayers();
   },
 
   async registerPlayer() {
@@ -565,15 +568,7 @@ const PlayerTracker = {
     try {
       const now = new Date().toISOString();
       
-      await window.supabaseClient
-        .from('player_sessions')
-        .upsert({
-          session_id: this.sessionId,
-          player_name: gameState.playerName,
-          last_active: now,
-          created_at: now
-        }, { onConflict: 'session_id' });
-
+      // Upsert into leaderboard (ensures player exists)
       await window.supabaseClient
         .from('leaderboard')
         .upsert({
@@ -585,118 +580,117 @@ const PlayerTracker = {
           created_at: now
         }, { onConflict: 'player_name' });
       
-      console.log("✅ Player registered in tracking system");
+      console.log("✅ Player registered in leaderboard");
     } catch (error) {
       console.warn('Error registering player:', error);
     }
   },
 
-  async updateSessionActivity() {
+  async setupPresence() {
     if (!window.supabaseClient || !gameState.playerName) return;
+
+    // Create a channel for online presence
+    this.presenceChannel = window.supabaseClient.channel('online-players', {
+      config: { presence: { key: gameState.playerName } }
+    });
+
+    // Subscribe to presence changes
+    this.presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        // Full state sync – rebuild online users map
+        const newState = this.presenceChannel.presenceState();
+        this.onlineUsers.clear();
+        for (const [key, presence] of Object.entries(newState)) {
+          // presence is an array of objects with player data
+          const playerName = key; // the presence key is the player name
+          // We'll store basic info – we may need to fetch bruh_count/level from leaderboard later
+          this.onlineUsers.set(playerName, { name: playerName });
+        }
+        // Always include current player (in case presence hasn't synced yet)
+        this.onlineUsers.set(gameState.playerName, { name: gameState.playerName });
+        this.onlinePlayers = this.onlineUsers.size;
+        this.updateDisplay();
+        this.updateOnlineUsersList();
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('Player joined:', key);
+        // newPresences is an array, but we can just add the key
+        this.onlineUsers.set(key, { name: key });
+        this.onlinePlayers = this.onlineUsers.size;
+        this.updateDisplay();
+        this.updateOnlineUsersList();
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('Player left:', key);
+        this.onlineUsers.delete(key);
+        this.onlinePlayers = this.onlineUsers.size;
+        this.updateDisplay();
+        this.updateOnlineUsersList();
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Now we can track our own presence
+          await this.presenceChannel.track({
+            player_name: gameState.playerName,
+            online_at: new Date().toISOString()
+          });
+          console.log('Presence tracking started');
+        }
+      });
+  },
+
+  async updateTotalPlayers() {
+    if (!window.supabaseClient) return;
     
     try {
-      const now = new Date().toISOString();
-      
-      await window.supabaseClient
-        .from('player_sessions')
-        .update({
-          last_active: now,
-          player_name: gameState.playerName
-        })
-        .eq('session_id', this.sessionId);
-      
-      await window.supabaseClient
+      const { data, error } = await window.supabaseClient
         .from('leaderboard')
-        .update({ last_active: now })
-        .eq('player_name', gameState.playerName);
+        .select('player_name');
+      
+      if (!error && data) {
+        this.totalPlayers = new Set(data.map(p => p.player_name)).size;
+      }
     } catch (error) {
-      console.warn('Error updating session activity:', error);
+      console.warn('Error fetching total players:', error);
     }
+    this.updateDisplay();
   },
 
-  async updatePlayerCounts() {
-    if (!window.supabaseClient) return;
-
-    try {
-      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-      
-      const { data: onlineData, error: onlineError } = await window.supabaseClient
-        .from('player_sessions')
-        .select('player_name, last_active')
-        .gt('last_active', fifteenMinutesAgo)
-        .order('last_active', { ascending: false });
-
-      if (!onlineError && onlineData) {
-        const uniquePlayers = new Map();
-        onlineData.forEach(session => {
-          if (session.player_name) {
-            uniquePlayers.set(session.player_name, session.last_active);
-          }
-        });
-        // Always include current player
-        uniquePlayers.set(gameState.playerName, new Date().toISOString());
-        this.onlineUsers = uniquePlayers;
-        this.onlinePlayers = uniquePlayers.size;
-      } else {
-        // Fallback: at least current player
-        this.onlinePlayers = Math.max(1, this.onlinePlayers);
-        this.onlineUsers.set(gameState.playerName, new Date().toISOString());
-      }
-      
-      const { data: totalData, error: totalError } = await window.supabaseClient
-        .from('leaderboard')
-        .select('player_name, last_active')
-        .order('bruh_count', { ascending: false });
-
-      if (!totalError && totalData) {
-        const uniqueTotal = new Set(totalData.map(p => p.player_name).filter(name => name));
-        this.totalPlayers = Math.max(this.onlinePlayers, uniqueTotal.size);
-      } else {
-        this.totalPlayers = Math.max(this.onlinePlayers, this.totalPlayers);
-      }
-      
-      this.updateDisplay();
-      await this.updateOnlineUsers();
-      
-    } catch (error) {
-      console.error("❌ [PlayerTracker] Unexpected error:", error);
-      this.updateDisplay();
-    }
-  },
-
-  async updateOnlineUsers() {
+  async updateOnlineUsersList() {
     const onlineUsersContainer = document.getElementById('online-users');
     if (!onlineUsersContainer) return;
     
+    // Get all online player names
+    const onlineNames = Array.from(this.onlineUsers.keys());
+    
+    if (onlineNames.length === 0) {
+      onlineUsersContainer.innerHTML = '<div class="user-item">No players online</div>';
+      return;
+    }
+    
+    // Fetch leaderboard data for these players to show bruh count & level
     try {
-      const onlineUserNames = Array.from(this.onlineUsers.keys());
-      if (onlineUserNames.length === 0) {
-        onlineUsersContainer.innerHTML = '<div class="user-item">No other players online</div>';
-        return;
-      }
-      
-      const { data: userData, error } = await window.supabaseClient
+      const { data, error } = await window.supabaseClient
         .from('leaderboard')
         .select('player_name, bruh_count, level')
-        .in('player_name', onlineUserNames);
+        .in('player_name', onlineNames);
       
       if (error) throw error;
       
+      // Build a map for quick lookup
+      const userDataMap = new Map();
+      data.forEach(u => userDataMap.set(u.player_name, u));
+      
       onlineUsersContainer.innerHTML = '';
       
-      // Build a map of fetched data
-      const userMap = new Map();
-      userData.forEach(u => userMap.set(u.player_name, u));
-      
-      // Ensure current player is always shown
-      onlineUserNames.forEach(name => {
-        const user = userMap.get(name) || { player_name: name, bruh_count: name === gameState.playerName ? gameState.bruh : 0, level: name === gameState.playerName ? gameState.level : 1 };
+      onlineNames.forEach(name => {
+        const user = userDataMap.get(name) || { bruh_count: 0, level: 1 };
         const userItem = document.createElement('div');
         userItem.className = 'user-item';
         userItem.innerHTML = `
           <div>
             <span class="user-online"></span>
-            <span class="user-name">${user.player_name}${user.player_name === gameState.playerName ? ' (You)' : ''}</span>
+            <span class="user-name">${name}${name === gameState.playerName ? ' (You)' : ''}</span>
           </div>
           <div class="user-bruh">${formatNumber(user.bruh_count || 0)}</div>
         `;
@@ -722,36 +716,22 @@ const PlayerTracker = {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   },
 
-  startTracking() {
-    // Update session every 20 seconds
-    setInterval(() => this.updateSessionActivity(), 20000);
-    // Update player counts every 10 seconds
-    setInterval(() => this.updatePlayerCounts(), 10000);
-    
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        this.updateSessionActivity();
-        this.updatePlayerCounts();
-      }
-    });
-  },
-
-  setupRealtime() {
-    if (!window.supabaseClient) return;
-    
-    window.supabaseClient.channel('player-sessions-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'player_sessions' }, 
-        () => this.updatePlayerCounts())
-      .subscribe();
-    
-    window.supabaseClient.channel('leaderboard-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, 
-        () => this.updatePlayerCounts())
-      .subscribe();
+  // Called when player name changes – re‑establish presence
+  async updatePlayerName(newName) {
+    if (this.presenceChannel) {
+      // Untrack old presence
+      await this.presenceChannel.untrack();
+      // Leave channel
+      await window.supabaseClient.removeChannel(this.presenceChannel);
+    }
+    // Set up presence with new name
+    await this.setupPresence();
+    // Update leaderboard registration
+    await this.registerPlayer();
   }
 };
 
-// Supabase Game State Manager (unchanged except for minor improvements)
+// Supabase Game State Manager (unchanged)
 const GameStateManager = {
   async saveGameState() {
     if (!window.supabaseClient || !gameState.playerName) return;
@@ -841,7 +821,7 @@ const GameStateManager = {
   }
 };
 
-// ChatSystem (unchanged, but ensure it works)
+// ChatSystem (unchanged)
 const ChatSystem = {
   messages: [],
   subscription: null,
@@ -975,12 +955,12 @@ const ChatSystem = {
   }
 };
 
-// LeaderboardSystem with more frequent updates
+// LeaderboardSystem (unchanged)
 const LeaderboardSystem = {
   players: [],
   subscription: null,
   lastUpdateTime: 0,
-  updateInterval: 5000, // 5 seconds
+  updateInterval: 5000,
   dirty: false,
 
   async init() {
@@ -1033,9 +1013,8 @@ const LeaderboardSystem = {
     if (this.players.length > 100) this.players = this.players.slice(0, 100);
     
     this.updateLeaderboardDisplay();
-    this.dirty = true; // mark for periodic save
+    this.dirty = true;
     
-    // Save to Supabase
     if (window.supabaseClient) {
       try {
         await window.supabaseClient
@@ -1086,7 +1065,7 @@ const LeaderboardSystem = {
     setInterval(() => {
       if (this.dirty) {
         this.dirty = false;
-        this.updatePlayerScore(); // saves to Supabase
+        this.updatePlayerScore();
       }
     }, this.updateInterval);
   },
@@ -1128,10 +1107,13 @@ function openChangeNameModal() {
   nameInput.select();
 }
 
-function updatePlayerName() {
+async function updatePlayerName() {
   const nameInput = document.getElementById('player-name-input');
   const playerName = nameInput.value.trim();
   if (!validatePlayerName(playerName)) return;
+  
+  // Update PlayerTracker's presence
+  await PlayerTracker.updatePlayerName(playerName);
   
   localStorage.setItem('newsBruhPlayerName', playerName);
   gameState.playerName = playerName;
@@ -1177,9 +1159,7 @@ async function startGameWithName() {
   if (!loadedFromSupabase) loadGame();
   
   init();
-  PlayerTracker.init();
-  ChatSystem.init();
-  LeaderboardSystem.init();
+  // PlayerTracker.init() will be called inside init()
 }
 
 function updateDateTime() {
@@ -1212,7 +1192,7 @@ const defaultGameState = {
     { id: 5, name: "Media Empire", baseCost: 1400000, baseCPS: 850, count: 0 }
   ],
   lastUpdate: Date.now(),
-  version: "1.1.0",
+  version: "1.2.0",
   playerName: "",
   chatNotifications: true,
   boostProgress: 0,
@@ -1253,7 +1233,6 @@ function calculateLevelFromTotalXP(totalXP) {
   };
 }
 
-// Updated addXP to accept fractional XP
 function addXP(amount) {
   const oldLevelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
   const oldLevel = oldLevelInfo.level;
@@ -1275,7 +1254,6 @@ function addXP(amount) {
 function updateLevelDisplay() {
   const levelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
   document.getElementById('current-level').textContent = formatNumber(levelInfo.level);
-  // Show XP as whole numbers (floor)
   document.getElementById('xp-display').textContent = `${Math.floor(levelInfo.currentXP)}/${Math.floor(levelInfo.nextLevelXP)} XP`;
   document.getElementById('level-progress-bar').style.width = `${levelInfo.progress}%`;
   const levelUpIndicator = document.getElementById('level-up-indicator');
@@ -1527,8 +1505,7 @@ const getMaxBuy = (building) => {
 function awardXPForAction(action, amount = 1) {
   let xpAmount = 0;
   switch (action) {
-    case 'click': xpAmount = 1; break; // taps still give 1 XP
-    // Building purchases no longer give XP
+    case 'click': xpAmount = 1; break;
     case 'bruh': xpAmount = Math.floor(amount * 50); break;
     case 'time': xpAmount = Math.min(amount, 100); break;
     default: return;
@@ -1549,7 +1526,6 @@ function saveGame() {
     localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
     LeaderboardSystem.updatePlayerScore();
     GameStateManager.saveGameState();
-    PlayerTracker.updateSessionActivity();
     console.log("💾 Game saved locally and to cloud");
   } catch (e) { console.warn('Could not save game state:', e); }
 }
@@ -1579,7 +1555,7 @@ function manualClick(e) {
   e.preventDefault(); e.stopPropagation();
   const amount = 1 * getMultiplier();
   gameState.news += amount;
-  awardXPForAction('click'); // 1 XP per tap
+  awardXPForAction('click');
   incrementBoostProgress();
   if (gameState.isBoostActive) gameState.boostTimeLeft = 15;
   
@@ -1613,7 +1589,6 @@ function buyMax(id) {
     } else break;
   }
   if (bought > 0) {
-    // XP no longer awarded for buying buildings – now from passive income
     const card = document.getElementById(`card-${id}`);
     card.style.transform = 'scale(1.02)'; card.style.backgroundColor = '#e8f5e8';
     setTimeout(() => { card.style.transform = ''; card.style.backgroundColor = ''; }, 300);
@@ -1758,7 +1733,7 @@ function init() {
   printBtn.addEventListener('touchstart', function(e) { manualClick(e); }, { passive: false });
   
   const boostButton = document.getElementById('boost-button');
-  boostButton.addEventListener('click', function() {}); // No direct action, boost fills via clicks
+  boostButton.addEventListener('click', function() {});
   
   const chatInput = document.getElementById('chat-input');
   chatInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') sendChatMessage(); });
@@ -1803,6 +1778,10 @@ function init() {
   }
   
   isInitialized = true;
+  // Initialize tracking after everything else
+  PlayerTracker.init();
+  ChatSystem.init();
+  LeaderboardSystem.init();
   startGameLoops();
 }
 
@@ -1811,14 +1790,13 @@ function startGameLoops() {
   
   function gameLoop() {
     const now = performance.now();
-    const delta = (now - lastFrameTime) / 1000; // in seconds
+    const delta = (now - lastFrameTime) / 1000;
     lastFrameTime = now;
     
     const cps = getCPS();
     if (cps > 0 && delta > 0) {
       const newsEarned = cps * delta;
       gameState.news += newsEarned;
-      // XP from passive income: 0.1 XP per New earned (so 10 New = 1 XP)
       const xpGain = newsEarned * 0.1;
       addXP(xpGain);
     }
@@ -1870,9 +1848,7 @@ window.gameSystemsReady = async function() {
     document.getElementById('name-selection-modal').classList.add('hidden');
     document.getElementById('newspaper').style.display = 'flex';
     init();
-    PlayerTracker.init();
-    ChatSystem.init();
-    LeaderboardSystem.init();
+    // PlayerTracker.init() is now called inside init()
   } else {
     document.getElementById('name-selection-modal').classList.remove('hidden');
     document.getElementById('player-name-input').focus();
