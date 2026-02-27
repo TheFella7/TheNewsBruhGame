@@ -191,7 +191,16 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 #chat-section{border-top:5px double var(--ink);padding:20px;background:var(--bg-paper);display:grid;grid-template-columns:2fr 1fr;gap:20px}
 @media (max-width:768px){#chat-section{grid-template-columns:1fr}}
 .chat-container{display:flex;flex-direction:column;height:300px;border:2px solid var(--ink);background:white}
-.chat-header{background:var(--ink);color:white;padding:10px;font-family:var(--font-mono);font-weight:bold;display:flex;justify-content:space-between;align-items:center}
+.chat-header{background:var(--ink);color:white;padding:10px;font-family:var(--font-mono);font-weight:bold;display:flex;justify-content:space-between;align-items:center;position:relative}
+.chat-header .unread-badge {
+    background: var(--red-accent);
+    color: white;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+    display: inline-block;
+}
 #chat-messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
 .chat-message{padding:8px;border-radius:4px;font-family:var(--font-mono);font-size:0.85rem;line-height:1.4;animation:fadeIn 0.3s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
@@ -455,7 +464,7 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 <div id="chat-section">
 <div class="chat-container">
 <div class="chat-header">
-<span>📰 PRESS ROOM CHAT</span>
+<span>📰 PRESS ROOM CHAT <span id="unread-badge" class="unread-badge" style="display:none;">0</span></span>
 <span id="chat-status">Connected</span>
 </div>
 <div id="chat-messages">
@@ -847,14 +856,68 @@ const GameStateManager = {
   }
 };
 
-// ChatSystem (unchanged)
+// ChatSystem with unread notifications
 const ChatSystem = {
   messages: [],
   subscription: null,
+  unreadCount: 0,
+  notificationElement: document.getElementById('chat-notification'),
+  notificationSender: document.getElementById('notification-sender'),
+  notificationMessage: document.getElementById('notification-message'),
+  unreadBadge: document.getElementById('unread-badge'),
 
   async init() {
     await this.loadMessages();
     this.setupRealtime();
+    this.setupFocusHandlers();
+  },
+
+  setupFocusHandlers() {
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatContainer = document.querySelector('.chat-container');
+    
+    const clearUnread = () => {
+      if (this.unreadCount > 0) {
+        this.unreadCount = 0;
+        this.updateUnreadBadge();
+        this.hideNotification();
+      }
+    };
+    
+    if (chatInput) chatInput.addEventListener('focus', clearUnread);
+    if (chatMessages) chatMessages.addEventListener('click', clearUnread);
+    if (chatContainer) chatContainer.addEventListener('click', clearUnread);
+  },
+
+  showNotification(sender, message) {
+    if (!this.notificationElement || !this.notificationSender || !this.notificationMessage) return;
+    
+    this.notificationSender.textContent = sender;
+    this.notificationMessage.textContent = message.length > 50 ? message.substring(0,50)+'…' : message;
+    this.notificationElement.style.display = 'block';
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      this.hideNotification();
+    }, 5000);
+  },
+
+  hideNotification() {
+    if (this.notificationElement) {
+      this.notificationElement.style.display = 'none';
+    }
+  },
+
+  updateUnreadBadge() {
+    if (this.unreadBadge) {
+      if (this.unreadCount > 0) {
+        this.unreadBadge.textContent = this.unreadCount;
+        this.unreadBadge.style.display = 'inline-block';
+      } else {
+        this.unreadBadge.style.display = 'none';
+      }
+    }
   },
 
   async loadMessages() {
@@ -926,6 +989,17 @@ const ChatSystem = {
       this.messages.push(chatMessage);
       if (this.messages.length > 100) this.messages = this.messages.slice(-100);
       this.updateChatDisplay();
+      
+      // Increment unread count if message is from someone else and chat is not focused
+      if (isReal && message.sender !== gameState.playerName) {
+        const active = document.activeElement;
+        const chatInput = document.getElementById('chat-input');
+        if (!chatInput || active !== chatInput) {
+          this.unreadCount++;
+          this.updateUnreadBadge();
+          this.showNotification(message.sender, message.message);
+        }
+      }
     }
     
     return chatMessage;
@@ -956,7 +1030,11 @@ const ChatSystem = {
       chatContainer.appendChild(messageDiv);
     });
     
-    setTimeout(() => chatContainer.scrollTop = chatContainer.scrollHeight, 100);
+    // Scroll to bottom only if user was already near bottom or if it's their own message
+    const shouldScroll = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
+    if (shouldScroll) {
+      setTimeout(() => chatContainer.scrollTop = chatContainer.scrollHeight, 100);
+    }
   },
 
   setupRealtime() {
@@ -1220,7 +1298,7 @@ const defaultGameState = {
     { id: 5, name: "Media Empire", baseCost: 1400000, baseCPS: 850, count: 0 }
   ],
   lastUpdate: Date.now(),
-  version: "1.2.1",
+  version: "1.3.0",
   playerName: "",
   chatNotifications: true,
   boostProgress: 0,
