@@ -1963,6 +1963,29 @@ function init() {
   const now = Date.now();
   const lastUpdate = gameState.lastUpdate || now;
   const timeDiff = (now - lastUpdate) / 1000;
+  
+  // Adjust boost cooldown and active time based on elapsed time (so cooldown continues while player is away)
+  if (timeDiff > 0.1) { // only if significant
+    if (gameState.isBoostActive) {
+      if (timeDiff < gameState.boostTimeLeft) {
+        gameState.boostTimeLeft -= timeDiff;
+      } else {
+        // Boost expired during offline
+        const remainingBoostTime = gameState.boostTimeLeft;
+        const timeAfterBoost = timeDiff - remainingBoostTime;
+        gameState.isBoostActive = false;
+        gameState.boostMultiplier = 1;
+        gameState.boostTimeLeft = 0;
+        // Start cooldown from when boost ended
+        gameState.boostCooldown = Math.max(0, 600 - timeAfterBoost);
+      }
+    } else if (gameState.boostCooldown > 0) {
+      gameState.boostCooldown = Math.max(0, gameState.boostCooldown - timeDiff);
+    }
+    // Update boost progress display after adjustments
+    updateBoostProgress();
+  }
+  
   // OFFLINE EARNINGS: now capped at 12 hours (43200 seconds)
   if (timeDiff > 1 && timeDiff < 43200) {
     const offlineEarnings = getCPS() * timeDiff;
