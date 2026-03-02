@@ -1716,7 +1716,9 @@ function sendChatMessage() {
   const input = document.getElementById('chat-input');
   const message = input.value.trim();
   if (!message) return;
-  ChatSystem.sendMessage(message).then(success => { if (success) input.value = ''; });
+  // Clear input immediately for better UX
+  input.value = '';
+  ChatSystem.sendMessage(message);
 }
 
 function saveGame() {
