@@ -314,6 +314,8 @@ const SUPABASE_URL = 'https://kcvcpkxxteeundkydfxv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjdmNwa3h4dGVldW5ka3lkZnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0ODgwNzAsImV4cCI6MjA4ODA2NDA3MH0.u3KaXitQBYtOGltcpEN7T30RGrH4mYEDwV9YUDOWpcQ';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { realtime: { params: { eventsPerSecond: 5 } } });
 window.supabaseClient = supabase;
+
+// Wait for DOM to be ready
 window.addEventListener('DOMContentLoaded', function() { if (window.gameSystemsReady) window.gameSystemsReady(); });
 </script>
 
@@ -321,7 +323,10 @@ window.addEventListener('DOMContentLoaded', function() { if (window.gameSystemsR
 <script>
 // ---------- GLOBAL GAME STATE ----------
 let gameState = {
-  news: 0, bruh: 0,
+  userId: null,           // will be set after authentication
+  playerName: "",
+  news: 0,
+  bruh: 0,
   buildings: [
     { id: 0, name: "Paperboy", baseCost: 15, baseCPS: 0.5, count: 0 },
     { id: 1, name: "Editor", baseCost: 100, baseCPS: 4, count: 0 },
@@ -330,9 +335,18 @@ let gameState = {
     { id: 4, name: "News Tower", baseCost: 130000, baseCPS: 160, count: 0 },
     { id: 5, name: "Media Empire", baseCost: 1400000, baseCPS: 850, count: 0 }
   ],
-  lastUpdate: Date.now(), version: "1.3.0", playerName: "", chatNotifications: true,
-  boostProgress: 0, isBoostActive: false, boostTimeLeft: 0, boostCooldown: 0, boostMultiplier: 1, lastDepletionTime: Date.now(),
-  level: 1, xp: 0, totalXpEarned: 0
+  lastUpdate: Date.now(),
+  version: "1.3.0",
+  chatNotifications: true,
+  boostProgress: 0,
+  isBoostActive: false,
+  boostTimeLeft: 0,
+  boostCooldown: 0,
+  boostMultiplier: 1,
+  lastDepletionTime: Date.now(),
+  level: 1,
+  xp: 0,
+  totalXpEarned: 0
 };
 let isInitialized = false;
 let breakingNewsEmojis = [], boostEmojiInterval = null, boostTimerInterval = null;
@@ -576,22 +590,164 @@ function createFallingEmoji() {
   breakingNewsEmojis.push(emoji);
   setTimeout(() => { if (emoji.parentNode) emoji.parentNode.removeChild(emoji); const idx = breakingNewsEmojis.indexOf(emoji); if(idx>-1) breakingNewsEmojis.splice(idx,1); }, 2000);
 }
-function saveGame() {
-  try {
-    gameState.lastUpdate = Date.now();
-    localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
-    if (window.supabaseClient && gameState.playerName) {
-      window.supabaseClient.from('game_saves').upsert({ player_name: gameState.playerName, game_state: gameState, last_saved: new Date().toISOString() }, { onConflict: 'player_name' }).then().catch(console.warn);
-    }
-    document.getElementById('last-save-time').textContent = `Last auto‑save: ${new Date().toLocaleTimeString()}`;
-  } catch(e){ console.warn('save error',e); }
-}
-function loadGame() {
+
+// ---------- SAVE / LOAD (Supabase + localStorage) ----------
+function loadGameFromLocal() {
   try {
     const saved = localStorage.getItem('newsBruhGameState');
     if (saved) { const parsed = JSON.parse(saved); Object.assign(gameState, parsed); }
-  } catch(e){ console.warn('load error',e); }
+  } catch(e){ console.warn('load error', e); }
 }
+
+async function saveGame() {
+  try {
+    gameState.lastUpdate = Date.now();
+    // Always save to localStorage as backup
+    localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
+
+    if (window.supabaseClient && gameState.userId && gameState.playerName) {
+      const { error } = await supabaseClient
+        .from('game_saves')
+        .upsert({
+          user_id: gameState.userId,
+          player_name: gameState.playerName,
+          game_state: gameState,
+          last_saved: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+      if (error) console.warn('Supabase save error:', error);
+    }
+    document.getElementById('last-save-time').textContent = `Last auto‑save: ${new Date().toLocaleTimeString()}`;
+  } catch(e) {
+    console.warn('save error', e);
+  }
+}
+
+// ---------- AUTHENTICATED GAME START ----------
+async function startGameWithName() {
+  const input = document.getElementById('player-name-input');
+  const name = input.value.trim();
+  if (!name || name.length > 20) { alert('Invalid name (max 20 chars)'); return; }
+
+  // Show loading state (optional)
+  const startBtn = document.querySelector('.start-game-btn');
+  startBtn.disabled = true;
+  startBtn.textContent = 'Signing in...';
+
+  // Sign in anonymously
+  const { data: { user }, error } = await supabaseClient.auth.signInAnonymously();
+  if (error) {
+    console.error('Auth error:', error);
+    alert('Could not create anonymous session. Please try again.');
+    startBtn.disabled = false;
+    startBtn.textContent = 'START PRINTING';
+    return;
+  }
+
+  // Store user id and player name
+  gameState.userId = user.id;
+  gameState.playerName = name;
+  localStorage.setItem('newsBruhPlayerName', name); // for display only
+
+  // Try to load existing save for this user from Supabase
+  const { data: saveData, error: fetchError } = await supabaseClient
+    .from('game_saves')
+    .select('game_state')
+    .eq('user_id', gameState.userId)
+    .maybeSingle();
+
+  if (saveData && saveData.game_state) {
+    // Merge loaded state with current gameState (preserve userId and playerName)
+    const loadedState = saveData.game_state;
+    // Keep the userId and playerName we just set
+    loadedState.userId = gameState.userId;
+    loadedState.playerName = gameState.playerName;
+    Object.assign(gameState, loadedState);
+  } else {
+    // No cloud save – load from localStorage as fallback
+    loadGameFromLocal();
+    // Ensure userId and playerName are set (localStorage may have old name)
+    gameState.userId = user.id;
+    gameState.playerName = name;
+  }
+
+  updatePlayerNameDisplay();
+  document.getElementById('name-selection-modal').classList.add('hidden');
+  document.getElementById('newspaper').style.display = 'flex';
+  init(); // start the game loops
+}
+
+function updatePlayerNameDisplay() {
+  document.getElementById('display-player-name').textContent = gameState.playerName || 'Anonymous';
+}
+
+// ---------- PURCHASE TRACKING & RESTORE ----------
+async function recordPurchase(playerName, amountPaid, multiplier, transactionId) {
+  if (!window.supabaseClient || !gameState.userId) return;
+  try {
+    await supabaseClient.from('purchases').insert({
+      user_id: gameState.userId,
+      player_name: playerName,
+      amount_paid: amountPaid,
+      multiplier_gained: multiplier,
+      transaction_id: transactionId,
+      created_at: new Date().toISOString(),
+      applied: true
+    });
+  } catch (e) { console.warn('Failed to record purchase', e); }
+}
+
+async function restorePurchases() {
+  if (!gameState.userId) { alert('No user session.'); return; }
+  if (!window.supabaseClient) { alert('Supabase not connected'); return; }
+  try {
+    const { data, error } = await supabaseClient
+      .from('purchases')
+      .select('multiplier_gained')
+      .eq('user_id', gameState.userId);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      alert('No purchases found to restore.');
+      return;
+    }
+    const totalMultiplier = data.reduce((sum, p) => sum + p.multiplier_gained, 0);
+    gameState.bruh += totalMultiplier;
+    updateUI();
+    saveGame();
+    alert(`Restored ${totalMultiplier} permanent multiplier from purchases.`);
+  } catch (err) {
+    console.error('Restore error:', err);
+    alert('Could not restore purchases. See console.');
+  }
+}
+
+// ---------- CHAT ----------
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || !gameState.userId) return;
+
+  // Insert into Supabase
+  const { error } = await supabaseClient
+    .from('chat_messages')
+    .insert({
+      user_id: gameState.userId,
+      player_name: gameState.playerName,
+      message: msg,
+      created_at: new Date().toISOString()
+    });
+  if (error) console.warn('Chat insert error:', error);
+
+  // Also display locally immediately
+  const chatDiv = document.getElementById('chat-messages');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'chat-message self';
+  msgDiv.innerHTML = `<div class="message-sender">${gameState.playerName} <span class="message-timestamp">now</span></div><div class="message-content">${msg.replace(/@(\w+)/g,'<span class="tagged-player">@$1</span>')}</div>`;
+  chatDiv.appendChild(msgDiv);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+  input.value = '';
+}
+
+// ---------- OTHER GAME FUNCTIONS ----------
 function manualClick(e) {
   e.preventDefault(); e.stopPropagation();
   const multiplier = (1+gameState.bruh)*gameState.boostMultiplier;
@@ -612,6 +768,7 @@ function manualClick(e) {
   setTimeout(()=>floater.remove(),1000);
   updateUI(); saveGame();
 }
+
 function buyMax(id) {
   const building = gameState.buildings[id];
   const getCost = (bld)=>Math.floor(bld.baseCost * Math.pow(1.15, bld.count || 0));
@@ -629,6 +786,7 @@ function buyMax(id) {
     updateUI(); saveGame();
   }
 }
+
 function prestige() {
   const getPrestigeCost = (bruhCount) => Math.floor(1000 * Math.pow(2.5, bruhCount));
   let bruhsToBuy=0, tempNews=gameState.news, tempBruh=gameState.bruh;
@@ -647,22 +805,11 @@ function prestige() {
   stopEmojiRain(); if(boostTimerInterval)clearInterval(boostTimerInterval);
   updateUI(); updateBoostProgress(); saveGame();
 }
-function sendChatMessage() {
-  const input = document.getElementById('chat-input');
-  const msg = input.value.trim();
-  if (!msg) return;
-  // simple local chat simulation
-  const chatDiv = document.getElementById('chat-messages');
-  const msgDiv = document.createElement('div');
-  msgDiv.className = 'chat-message self';
-  msgDiv.innerHTML = `<div class="message-sender">${gameState.playerName} <span class="message-timestamp">now</span></div><div class="message-content">${msg.replace(/@(\w+)/g,'<span class="tagged-player">@$1</span>')}</div>`;
-  chatDiv.appendChild(msgDiv);
-  chatDiv.scrollTop = chatDiv.scrollHeight;
-  input.value = '';
-  // would also send to supabase if implemented
-}
+
 function manualSave() { saveGame(); alert('Manual save completed'); }
+
 function closeOfflineNotification() { document.getElementById('offline-earnings-notification').style.display='none'; }
+
 function startDateTimeUpdate() {
   function updateDateTime() {
     const now = new Date();
@@ -670,87 +817,34 @@ function startDateTimeUpdate() {
   }
   updateDateTime(); setInterval(updateDateTime,1000);
 }
-function updatePlayerNameDisplay() { document.getElementById('display-player-name').textContent = gameState.playerName||'Anonymous'; }
-function validatePlayerName(name) { return name && name.trim()!=='' && name.length<=20; }
-function startGameWithName() {
-  const input = document.getElementById('player-name-input');
-  const name = input.value.trim();
-  if (!validatePlayerName(name)) { alert('Invalid name (max 20 chars)'); return; }
-  localStorage.setItem('newsBruhPlayerName', name);
-  gameState.playerName = name;
-  updatePlayerNameDisplay();
-  document.getElementById('name-selection-modal').classList.add('hidden');
-  document.getElementById('newspaper').style.display = 'flex';
-  // load from supabase if possible (simplified)
-  if (window.supabaseClient) {
-    window.supabaseClient.from('game_saves').select('game_state').eq('player_name',name).single().then(({data,error})=>{
-      if (data && data.game_state) Object.assign(gameState, data.game_state);
-      init();
-    }).catch(()=>{ loadGame(); init(); });
-  } else { loadGame(); init(); }
-}
+
 function openChangeNameModal() {
-  const modal = document.getElementById('name-selection-modal');
-  modal.classList.remove('hidden');
-  document.getElementById('player-name-input').value = gameState.playerName;
-  document.getElementById('player-name-input').focus();
-  document.querySelector('.start-game-btn').onclick = function() {
-    const newName = document.getElementById('player-name-input').value.trim();
-    if (validatePlayerName(newName)) {
-      gameState.playerName = newName;
-      localStorage.setItem('newsBruhPlayerName', newName);
-      updatePlayerNameDisplay();
-      modal.classList.add('hidden');
-    } else alert('Invalid name');
-  };
+  // For simplicity, we just reload the page – the user can enter a new name.
+  // In a real implementation you might update the player_name in the database.
+  if (confirm('Changing name will restart the game. Continue?')) {
+    localStorage.removeItem('newsBruhPlayerName');
+    location.reload();
+  }
 }
+
 function resetGame() {
   if (!confirm('Reset all progress? This cannot be undone.')) return;
+  // Clear local storage
   localStorage.removeItem('newsBruhGameState');
-  gameState.bruh = 0; gameState.news = 0; gameState.level = 1; gameState.xp = 0; gameState.totalXpEarned = 0;
+  // Reset gameState (except userId and playerName)
+  gameState.news = 0;
+  gameState.bruh = 0;
+  gameState.level = 1;
+  gameState.xp = 0;
+  gameState.totalXpEarned = 0;
   gameState.buildings.forEach(b=>b.count=0);
-  gameState.boostProgress=0; gameState.isBoostActive=false; gameState.boostTimeLeft=0; gameState.boostCooldown=0; gameState.boostMultiplier=1;
+  gameState.boostProgress=0;
+  gameState.isBoostActive=false;
+  gameState.boostTimeLeft=0;
+  gameState.boostCooldown=0;
+  gameState.boostMultiplier=1;
   updateUI(); updateBoostProgress(); saveGame();
   alert('Game reset.');
-}
-
-// ---------- PURCHASE TRACKING & RESTORE ----------
-async function recordPurchase(playerName, amountPaid, multiplier, transactionId) {
-  if (!window.supabaseClient || !playerName) return;
-  try {
-    await supabaseClient.from('purchases').insert({
-      player_name: playerName,
-      amount_paid: amountPaid,
-      multiplier_gained: multiplier,
-      transaction_id: transactionId,
-      created_at: new Date().toISOString(),
-      applied: true
-    });
-  } catch (e) { console.warn('Failed to record purchase', e); }
-}
-
-async function restorePurchases() {
-  if (!gameState.playerName) { alert('No player name set.'); return; }
-  if (!window.supabaseClient) { alert('Supabase not connected'); return; }
-  try {
-    const { data, error } = await supabaseClient
-      .from('purchases')
-      .select('multiplier_gained')
-      .eq('player_name', gameState.playerName);
-    if (error) throw error;
-    if (!data || data.length === 0) {
-      alert('No purchases found to restore.');
-      return;
-    }
-    const totalMultiplier = data.reduce((sum, p) => sum + p.multiplier_gained, 0);
-    gameState.bruh += totalMultiplier;
-    updateUI();
-    saveGame();
-    alert(`Restored ${totalMultiplier} permanent multiplier from purchases.`);
-  } catch (err) {
-    console.error('Restore error:', err);
-    alert('Could not restore purchases. See console.');
-  }
 }
 
 // ---------- PAYPAL BUTTONS ----------
@@ -830,6 +924,7 @@ function init() {
   document.getElementById('change-name-link').addEventListener('click', openChangeNameModal);
   document.getElementById('reset-button').addEventListener('click', resetGame);
 
+  // Offline earnings calculation (based on lastUpdate)
   const now = Date.now();
   const lastUpdate = gameState.lastUpdate || now;
   const timeDiff = (now - lastUpdate) / 1000;
@@ -886,18 +981,11 @@ function init() {
   isInitialized = true;
 }
 
+// This is called after Supabase client is ready and DOM is loaded
 window.gameSystemsReady = function() {
-  const savedName = localStorage.getItem('newsBruhPlayerName');
-  if (savedName) {
-    gameState.playerName = savedName;
-    updatePlayerNameDisplay();
-    document.getElementById('name-selection-modal').classList.add('hidden');
-    document.getElementById('newspaper').style.display = 'flex';
-    loadGame();
-    init();
-  } else {
-    document.getElementById('name-selection-modal').classList.remove('hidden');
-  }
+  // If a name is stored in localStorage, we could try to auto‑sign‑in, but we'll force modal.
+  // Actually, we can check for an existing session? For simplicity, always show modal.
+  document.getElementById('name-selection-modal').classList.remove('hidden');
 };
 
 // expose functions globally
