@@ -207,7 +207,7 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 .save-status.success{color:#ccffcc}
 #last-save-time{font-family:var(--font-mono);font-size:0.7rem;color:var(--ink-light);text-align:center;margin-top:5px}
 @media (max-width:1024px){#main-content{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto}.column{min-height:300px;max-height:500px;border-right:none;border-bottom:2px solid #aaa}.column:last-child{border-bottom:none}}
-@media (max-width:768px){body{padding:5px}#newspaper{min-height:100vh}.player-header-info{flex-direction:column}.player-name-display{flex-direction:column}.column{padding:15px;min-height:auto;max-height:none;overflow-y:visible}h1{font-size:2.2rem}h2{font-size:1.5rem}#breaking-news-banner{font-size:1rem;padding:10px 15px}.breaking-news-text{flex-direction:column;gap:10px}.breaking-news-title{font-size:1.1rem}#print-btn{padding:30px 15px}.print-title{font-size:1.8rem}.meta-line{font-size:0.75rem}.player-counts{font-size:0.8rem;gap:10px}.stat-value{font-size:1.4rem}.prestige-box{padding:15px}#leaderboard-section,#chat-section{padding:15px}.chat-container,.chat-users{height:250px}#chat-section{grid-template-columns:1fr}#boost-button{padding:15px 10px;min-height:80px}.boost-percentage{font-size:1.6rem}.boost-label{font-size:0.9rem}.reset-btn{padding:15px;font-size:1.1rem;max-width:100%}#manual-save-btn{padding:15px 10px;min-height:60px;font-size:0.9rem}}
+@media (max-width:768px){body{padding:5px}#newspaper{min-height:100vh}.player-header-info{flex-direction:column}.player-name-display{flex-direction:column}.column{padding:15px;min-height:auto;max-height:none;overflow-y:visible}h1{font-size:2.2rem}h2{font-size:1.5rem}#breaking-news-banner{font-size:1rem;padding:10px 15px}.breaking-news-text{flex-direction:column;gap:10px}.breaking-news-title{font-size:1rem}#print-btn{padding:30px 15px}.print-title{font-size:1.8rem}.meta-line{font-size:0.75rem}.player-counts{font-size:0.8rem;gap:10px}.stat-value{font-size:1.4rem}.prestige-box{padding:15px}#leaderboard-section,#chat-section{padding:15px}.chat-container,.chat-users{height:250px}#chat-section{grid-template-columns:1fr}#boost-button{padding:15px 10px;min-height:80px}.boost-percentage{font-size:1.6rem}.boost-label{font-size:0.9rem}.reset-btn{padding:15px;font-size:1.1rem;max-width:100%}#manual-save-btn{padding:15px 10px;min-height:60px;font-size:0.9rem}}
 @media (max-width:480px){h1{font-size:1.8rem}#print-btn{padding:25px 10px}.print-title{font-size:1.5rem}.column{padding:10px}#breaking-news-banner{font-size:0.9rem;padding:8px 10px}.breaking-news-title{font-size:1rem}#leaderboard-table th,#leaderboard-table td{padding:8px 5px;font-size:0.8rem}.player-name{max-width:80px}#boost-button{padding:12px 8px;min-height:70px}.boost-percentage{font-size:1.4rem}.boost-label{font-size:0.8rem}.reset-btn{padding:12px;font-size:1rem}#manual-save-btn{padding:12px 8px;min-height:50px;font-size:0.8rem}}
 </style>
 </head>
@@ -309,8 +309,9 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 <!-- Supabase module -->
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const SUPABASE_URL = 'https://qlwtovkrmfoqfgrtynrv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsd3RvdmtybWZvcWZncnR5bnJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzE4NTksImV4cCI6MjA4Mzg0Nzg1OX0.XMPhSftpLtTeM3gTS0Acf6DrFuI_H0U-iAfxAas9n8Y';
+// Updated credentials per user request
+const SUPABASE_URL = 'https://kcvcpkxxteeundkydfxv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjdmNwa3h4dGVldW5ka3lkZnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0ODgwNzAsImV4cCI6MjA4ODA2NDA3MH0.u3KaXitQBYtOGltcpEN7T30RGrH4mYEDwV9YUDOWpcQ';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { realtime: { params: { eventsPerSecond: 5 } } });
 window.supabaseClient = supabase;
 window.addEventListener('DOMContentLoaded', function() { if (window.gameSystemsReady) window.gameSystemsReady(); });
