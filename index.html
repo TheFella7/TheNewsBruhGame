@@ -358,6 +358,11 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 </style>
 </head>
 <body>
+<!-- TOP‑LEFT UNREAD CHAT NOTIFICATION -->
+<div id="chat-top-notification" style="position:fixed; top:10px; left:10px; background:var(--red-accent); color:white; padding:8px 12px; border-radius:20px; font-family:var(--font-mono); font-weight:bold; z-index:10001; display:none; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+  ✉️ <span id="unread-count-top">0</span>
+</div>
+
 <div id="name-selection-modal">
 <div class="name-modal-content">
 <div class="name-modal-title">The News Bruh</div>
@@ -926,6 +931,8 @@ const ChatSystem = {
   notificationSender: document.getElementById('notification-sender'),
   notificationMessage: document.getElementById('notification-message'),
   unreadBadge: document.getElementById('unread-badge'),
+  topNotification: document.getElementById('chat-top-notification'),
+  topUnreadSpan: document.getElementById('unread-count-top'),
 
   async init() {
     await this.loadMessages();
@@ -942,6 +949,7 @@ const ChatSystem = {
       if (this.unreadCount > 0) {
         this.unreadCount = 0;
         this.updateUnreadBadge();
+        this.updateTopNotification();
         this.hideNotification();
       }
     };
@@ -949,6 +957,17 @@ const ChatSystem = {
     if (chatInput) chatInput.addEventListener('focus', clearUnread);
     if (chatMessages) chatMessages.addEventListener('click', clearUnread);
     if (chatContainer) chatContainer.addEventListener('click', clearUnread);
+  },
+
+  updateTopNotification() {
+    if (this.topNotification && this.topUnreadSpan) {
+      if (this.unreadCount > 0) {
+        this.topUnreadSpan.textContent = this.unreadCount;
+        this.topNotification.style.display = 'block';
+      } else {
+        this.topNotification.style.display = 'none';
+      }
+    }
   },
 
   showNotification(sender, message) {
@@ -979,6 +998,7 @@ const ChatSystem = {
         this.unreadBadge.style.display = 'none';
       }
     }
+    this.updateTopNotification();
   },
 
   async loadMessages() {
@@ -1051,6 +1071,14 @@ const ChatSystem = {
       if (this.messages.length > 100) this.messages = this.messages.slice(-100);
       this.updateChatDisplay();
       
+      // Always scroll to bottom to show most recent message
+      setTimeout(() => {
+        const chatContainer = document.getElementById('chat-messages');
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      }, 50);
+      
       // Increment unread count if message is from someone else and chat is not focused
       if (isReal && message.sender !== gameState.playerName) {
         const active = document.activeElement;
@@ -1090,12 +1118,6 @@ const ChatSystem = {
       
       chatContainer.appendChild(messageDiv);
     });
-    
-    // Scroll to bottom only if user was already near bottom or if it's their own message
-    const shouldScroll = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100;
-    if (shouldScroll) {
-      setTimeout(() => chatContainer.scrollTop = chatContainer.scrollHeight, 100);
-    }
   },
 
   setupRealtime() {
