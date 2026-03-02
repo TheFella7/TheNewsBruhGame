@@ -12,105 +12,310 @@
 :root{--bg-paper:#f9f7f1;--bg-paper-dark:#e6e4dc;--ink:#0a0a0a;--ink-light:#454545;--red-accent:#cc0000;--green-accent:#006400;--blue-accent:#0066cc;--font-head:'Playfair Display',serif;--font-mono:'Courier Prime',monospace;--font-old-english:'UnifrakturMaguntia',cursive}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 body{background-color:#2e2e2e;margin:0;padding:0;font-family:var(--font-head);color:var(--ink);min-height:100vh;display:flex;justify-content:center;align-items:center;overflow:auto;position:relative;padding:10px}
-#auth-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);display:flex;justify-content:center;align-items:center;z-index:10000;padding:20px}
-#auth-modal.hidden{display:none}
-.auth-modal-content{background:var(--bg-paper);background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");padding:40px;max-width:600px;width:100%;border:6px solid var(--ink);box-shadow:0 20px 60px rgba(0,0,0,0.8);position:relative;text-align:center}
-.auth-modal-content::before{content:'';position:absolute;top:10px;left:10px;right:10px;bottom:10px;border:2px solid var(--red-accent);pointer-events:none}
-.auth-tabs{display:flex;margin-bottom:20px;border-bottom:2px solid var(--ink)}
-.auth-tab{flex:1;padding:10px;font-family:var(--font-head);font-size:1.2rem;font-weight:bold;cursor:pointer;background:var(--bg-paper-dark);border:2px solid var(--ink);border-bottom:none;transition:all 0.2s}
-.auth-tab.active{background:var(--bg-paper);border-bottom:2px solid var(--bg-paper);transform:translateY(2px)}
-.auth-tab:first-child{border-right:none}
-.auth-form{display:none;margin-top:20px}
-.auth-form.active{display:block}
-.auth-input{width:100%;padding:15px;margin-bottom:15px;font-family:var(--font-mono);font-size:1rem;border:3px solid var(--ink);background:white;outline:none;transition:all 0.3s}
-.auth-input:focus{border-color:var(--red-accent);box-shadow:0 0 20px rgba(204,0,0,0.3)}
-/* Password container for show/hide */
-.password-container{position:relative;width:100%;margin-bottom:15px}
-.password-container .auth-input{padding-right:50px;margin-bottom:0}
-.password-toggle{position:absolute;right:15px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1.4rem;user-select:none;color:var(--ink-light);transition:color 0.2s}
-.password-toggle:hover{color:var(--red-accent)}
-.auth-btn{background:var(--red-accent);color:white;border:none;padding:15px;font-family:var(--font-head);font-size:1.2rem;font-weight:bold;cursor:pointer;text-transform:uppercase;letter-spacing:2px;width:100%;transition:all 0.3s;position:relative;overflow:hidden;margin-top:10px}
-.auth-btn:hover{background:#b30000;transform:translateY(-3px);box-shadow:0 10px 20px rgba(0,0,0,0.3)}
-.auth-btn:active{transform:translateY(1px);box-shadow:0 5px 10px rgba(0,0,0,0.2)}
-.auth-error{color:var(--red-accent);font-family:var(--font-mono);font-size:0.9rem;margin-top:10px;min-height:20px}
-.name-rules{font-family:var(--font-mono);font-size:0.8rem;color:var(--ink-light);margin-top:15px;text-align:left;padding:15px;background:var(--bg-paper-dark);border:1px solid var(--ink)}
+#name-selection-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);display:flex;justify-content:center;align-items:center;z-index:10000;padding:20px}
+#name-selection-modal.hidden{display:none}
+.name-modal-content{background:var(--bg-paper);background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");padding:40px;max-width:600px;width:100%;border:6px solid var(--ink);box-shadow:0 20px 60px rgba(0,0,0,0.8);position:relative;text-align:center}
+.name-modal-content::before{content:'';position:absolute;top:10px;left:10px;right:10px;bottom:10px;border:2px solid var(--red-accent);pointer-events:none}
+.name-modal-title{font-family:var(--font-old-english);font-size:3.5rem;margin-bottom:10px;color:var(--ink)}
+.name-modal-subtitle{font-family:var(--font-head);font-size:1.2rem;margin-bottom:30px;color:var(--ink-light);font-style:italic}
+.name-input-container{margin:30px 0}
+#player-name-input{width:100%;padding:20px;font-family:var(--font-mono);font-size:1.2rem;border:3px solid var(--ink);background:white;text-align:center;outline:none;transition:all 0.3s}
+#player-name-input:focus{border-color:var(--red-accent);box-shadow:0 0 20px rgba(204,0,0,0.3)}
+.name-rules{font-family:var(--font-mono);font-size:0.8rem;color:var(--ink-light);margin-top:10px;text-align:left;padding:15px;background:var(--bg-paper-dark);border:1px solid var(--ink)}
 .name-rules ul{list-style:none;padding-left:10px}
 .name-rules li{margin-bottom:5px;position:relative;padding-left:20px}
 .name-rules li::before{content:'•';position:absolute;left:0;color:var(--red-accent)}
-/* ... rest of CSS unchanged (newspaper styles) ... */
-/* (include all the CSS from the original game here – it's very long, so I'm omitting for brevity; keep your existing full CSS) */
+.start-game-btn{background:var(--red-accent);color:white;border:none;padding:20px 40px;font-family:var(--font-head);font-size:1.3rem;font-weight:bold;cursor:pointer;text-transform:uppercase;letter-spacing:2px;margin-top:20px;width:100%;transition:all 0.3s;position:relative;overflow:hidden}
+.start-game-btn:hover{background:#b30000;transform:translateY(-3px);box-shadow:0 10px 20px rgba(0,0,0,0.3)}
+.start-game-btn:active{transform:translateY(1px);box-shadow:0 5px 10px rgba(0,0,0,0.2)}
+.start-game-btn::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 30%,rgba(255,255,255,0.1) 50%,transparent 70%);transform:rotate(45deg);animation:shine 3s infinite linear}
+@keyframes shine{0%{transform:rotate(45deg) translateX(-100%)}100%{transform:rotate(45deg) translateX(100%)}}
+#newspaper{background-color:var(--bg-paper);background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");width:100%;max-width:1400px;height:auto;min-height:100vh;display:flex;flex-direction:column;box-shadow:0 0 50px rgba(0,0,0,0.8);position:relative}
+#ticker-tape{background:var(--ink);color:#fff;font-family:var(--font-mono);font-size:0.9rem;padding:6px 0;overflow:hidden;white-space:nowrap;border-bottom:3px solid var(--ink);position:relative;width:100%}
+.ticker-content{display:inline-block;animation:marquee 25s linear infinite;padding-left:100%;white-space:nowrap}
+.ticker-content a{color:#4dabf7;text-decoration:underline;font-weight:bold;margin:0 20px}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+.offline-notification{position:relative;background:linear-gradient(135deg,#f9f7e8,#e6e0c0);border:4px solid var(--ink);margin:10px 20px;padding:15px;font-family:var(--font-head);box-shadow:6px 6px 0 rgba(0,0,0,0.3);animation:slideDown 0.5s ease;z-index:1000}
+.offline-content{display:flex;align-items:center;gap:15px}
+.offline-icon{font-size:2rem}
+.offline-text{flex:1;font-size:1.2rem;font-weight:bold}
+.offline-close{background:var(--red-accent);color:white;border:none;width:30px;height:30px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.offline-close:hover{background:#b30000}
+@keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.header-container{position:relative;text-align:center;padding:15px 20px;border-bottom:5px double var(--ink)}
+.player-header-info{display:flex;flex-direction:column;align-items:center;margin-bottom:10px;gap:8px}
+.player-name-display{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+.player-name-text{font-family:var(--font-mono);font-size:1rem;font-weight:bold;color:var(--ink);background:var(--bg-paper-dark);padding:5px 15px;border:2px solid var(--ink);border-radius:4px}
+.change-name-link{font-family:var(--font-mono);font-size:0.8rem;color:var(--blue-accent);text-decoration:underline;cursor:pointer;white-space:nowrap}
+.change-name-link:hover{color:var(--red-accent)}
+h1{font-family:var(--font-old-english);font-size:clamp(2.5rem,5vw,3.5rem);margin:10px 0 15px 0;font-weight:normal}
+.player-counts{font-family:var(--font-mono);font-size:0.9rem;color:var(--ink-light);margin-bottom:10px;display:flex;justify-content:center;flex-wrap:wrap;gap:15px}
+.player-counts span{font-weight:bold}
+.online-indicator{display:inline-block;width:8px;height:8px;background:#4CAF50;border-radius:50%;margin-right:5px;animation:pulse 2s infinite}
+@keyframes pulse{0%{opacity:0.7;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}100%{opacity:0.7;transform:scale(1)}}
+.meta-line{display:flex;justify-content:space-between;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:6px 0;font-family:var(--font-mono);font-size:0.85rem;font-weight:bold;text-transform:uppercase;flex-wrap:wrap}
+.meta-line span{margin:0 5px}
+#main-content{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:0;flex:1;min-height:500px}
+.column{padding:20px;overflow-y:auto;border-right:1px solid #aaa;display:flex;flex-direction:column;height:100%;min-height:400px}
+.column:last-child{border-right:none}
+.column::-webkit-scrollbar{width:8px}.column::-webkit-scrollbar-thumb{background:#888;border-radius:4px}.column::-webkit-scrollbar-track{background:transparent}
+h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0;font-size:1.8rem;margin-bottom:15px;font-weight:900}
+.how-to-play{margin-bottom:20px;font-family:var(--font-mono);border:2px solid var(--ink);background:var(--bg-paper-dark);padding:8px 12px;box-shadow:3px 3px 0 rgba(0,0,0,0.1)}
+.how-to-play summary{cursor:pointer;font-weight:bold;font-size:1.1rem;list-style:none;display:flex;align-items:center;gap:8px}
+.how-to-play summary::-webkit-details-marker{display:none}
+.how-to-play summary::before{content:"▼";font-size:0.8rem;transition:transform 0.2s}
+.how-to-play details[open] summary::before{transform:rotate(90deg)}
+.how-to-content{margin-top:12px;padding-top:8px;border-top:1px dashed var(--ink);font-size:0.9rem;line-height:1.5}
+.how-to-content ul{padding-left:20px;margin:8px 0}
+.how-to-content li{margin-bottom:6px}
+.level-container{margin-bottom:20px;border:2px solid var(--ink);background:white;padding:15px;box-shadow:3px 3px 0 rgba(0,0,0,0.1)}
+.level-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-family:var(--font-mono)}
+.level-title{font-weight:bold;font-size:1.1rem;color:var(--ink)}
+.level-number{font-weight:bold;font-size:1.3rem;color:var(--blue-accent);margin-left:5px}
+.level-xp-display{font-size:0.9rem;color:var(--ink-light)}
+.level-bar-container{height:20px;background:var(--bg-paper-dark);border:1px solid var(--ink);position:relative;overflow:hidden}
+.level-progress-bar{height:100%;background:linear-gradient(90deg,var(--blue-accent),#4dabf7);width:0%;transition:width 0.5s ease;position:relative}
+.level-progress-bar::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);animation:shimmer 2s infinite}
+@keyframes shimmer{0%{left:-100%}100%{left:100%}}
+.level-up-indicator{position:absolute;right:-30px;top:50%;transform:translateY(-50%);background:var(--red-accent);color:white;padding:3px 8px;font-size:0.7rem;font-weight:bold;border-radius:3px;animation:levelUpPulse 1s infinite}
+@keyframes levelUpPulse{0%{opacity:0.7;transform:translateY(-50%) scale(1)}50%{opacity:1;transform:translateY(-50%) scale(1.1)}100%{opacity:0.7;transform:translateY(-50%) scale(1)}}
+.stat-block{background:rgba(0,0,0,0.02);border:1px solid var(--ink);padding:12px;margin-bottom:15px;font-family:var(--font-mono);transition:transform 0.2s}
+.stat-block:hover{transform:translateY(-2px)}
+.stat-label{font-size:0.9rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}
+.stat-value{font-size:1.6rem;font-weight:bold;color:var(--ink)}
+#breaking-news-container{position:relative;margin-bottom:20px;min-height:80px}
+#breaking-news-banner{display:none;background:linear-gradient(45deg,#cc0000 0%,#ff0000 25%,#cc0000 50%,#ff0000 75%,#cc0000 100%);background-size:400% 400%;animation:breakingNewsGradient 3s ease infinite;color:#fff;padding:12px 20px;text-align:center;font-family:var(--font-mono);font-weight:bold;font-size:1.2rem;letter-spacing:2px;text-transform:uppercase;border:3px solid #ffcc00;box-shadow:0 4px 20px rgba(255,0,0,0.4),inset 0 0 20px rgba(255,255,255,0.3);position:relative;overflow:hidden;text-shadow:1px 1px 2px rgba(0,0,0,0.8);transform:perspective(500px) rotateX(5deg)}
+@keyframes breakingNewsGradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+#breaking-news-banner::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#ffcc00,transparent);animation:scanLine 2s linear infinite}
+@keyframes scanLine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+#breaking-news-banner::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.1) 2px,rgba(255,255,255,0.1) 4px);pointer-events:none}
+.breaking-news-text{display:flex;align-items:center;justify-content:center;gap:15px}
+.breaking-news-icon{font-size:1.5rem;animation:flash 1s infinite}
+@keyframes flash{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.7;transform:scale(1.1)}}
+.breaking-news-title{font-size:1.3rem;background:linear-gradient(to bottom,#fff,#ffcc00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:2px 2px 4px rgba(0,0,0,0.5)}
+#print-btn{background:#fff;border:4px solid var(--ink);padding:40px 20px;width:100%;cursor:pointer;transition:all 0.15s ease;position:relative;margin-bottom:20px;overflow:hidden;box-shadow:6px 6px 0 rgba(0,0,0,0.8);touch-action:manipulation;user-select:none}
+#print-btn:hover{transform:translateY(-2px);box-shadow:8px 8px 0 rgba(0,0,0,0.8)}
+#print-btn:active{transform:translate(4px,4px);box-shadow:2px 2px 0 rgba(0,0,0,0.8)}
+.print-title{font-family:var(--font-head);font-size:clamp(1.8rem,4vw,2.5rem);font-weight:900;display:block;text-transform:uppercase}
+.print-sub{font-family:var(--font-mono);font-size:0.9rem;display:block;margin-top:10px;color:var(--ink-light);font-weight:bold}
+#boost-container{margin:20px 0;text-align:center}
+#boost-button{width:100%;background:linear-gradient(to bottom,#f0f0f0,#d0d0d0);border:3px solid var(--ink);padding:20px 15px;cursor:pointer;position:relative;overflow:hidden;font-family:var(--font-mono);font-weight:bold;text-transform:uppercase;letter-spacing:1px;transition:all 0.2s;min-height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+#boost-button:hover:not(:disabled){background:linear-gradient(to bottom,#e8e8e8,#c8c8c8);transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,0.2)}
+#boost-button:active:not(:disabled){transform:translateY(1px);box-shadow:0 2px 4px rgba(0,0,0,0.2)}
+#boost-button:disabled{cursor:not-allowed;opacity:0.7}
+#boost-progress-bar{width:0%;height:100%;background:linear-gradient(90deg,#ff4444,#ff0000,#ff4444);background-size:200% 100%;position:absolute;top:0;left:0;transition:width 0.3s;z-index:0;animation:progressShimmer 2s infinite linear}
+@keyframes progressShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.boost-content{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px}
+.boost-percentage{font-size:2rem;font-weight:bold;color:var(--ink);display:block;text-shadow:1px 1px 2px rgba(255,255,255,0.8)}
+.boost-label{font-size:1rem;color:var(--ink-light);display:block;font-weight:bold}
+.boost-timer{font-size:1.2rem;font-weight:bold;color:var(--red-accent);background:rgba(255,255,255,0.9);padding:4px 12px;border-radius:20px;border:2px solid var(--red-accent);display:none;animation:timerPulse 1s infinite alternate}
+@keyframes timerPulse{from{transform:scale(1)}to{transform:scale(1.05)}}
+.boost-cooldown{font-size:0.9rem;color:var(--red-accent);font-weight:bold;background:rgba(255,255,255,0.8);padding:3px 10px;border-radius:15px;margin-top:5px}
+.breaking-news-flash{position:absolute;font-size:1.8rem;animation:fallDown 2s linear forwards;pointer-events:none;z-index:100;text-shadow:2px 2px 4px rgba(0,0,0,0.5);filter:drop-shadow(0 0 3px rgba(255,204,0,0.8))}
+@keyframes fallDown{0%{transform:translateY(-50px) rotate(0deg) scale(1);opacity:1}70%{opacity:1}100%{transform:translateY(300px) rotate(360deg) scale(0.5);opacity:0}}
+.stat-block.active-boost{animation:boostGlow 1.5s infinite alternate;border-color:var(--red-accent);box-shadow:0 0 15px rgba(255,0,0,0.4)}
+@keyframes boostGlow{from{box-shadow:0 0 10px rgba(255,0,0,0.4);transform:translateY(0)}to{box-shadow:0 0 20px rgba(255,0,0,0.8),0 5px 15px rgba(255,0,0,0.3);transform:translateY(-3px)}}
+#upgrades-list{display:flex;flex-direction:column;gap:12px;flex:1}
+.upgrade-card{border:1px solid var(--ink);background:#fff;box-shadow:4px 4px 0 rgba(0,0,0,0.15);transition:all 0.2s ease}
+.upgrade-card.disabled{opacity:0.5;background:var(--bg-paper-dark);box-shadow:none;border:1px dashed #777}
+.upgrade-card.purchased{background:#f0fff0;border-color:var(--green-accent);box-shadow:4px 4px 0 rgba(0,100,0,0.2)}
+.upgrade-card.affordable{animation:glow 1.5s infinite alternate}
+@keyframes glow{from{box-shadow:4px 4px 0 rgba(0,100,0,0.2),0 0 5px rgba(0,100,0,0.3)}to{box-shadow:4px 4px 0 rgba(0,100,0,0.4),0 0 10px rgba(0,100,0,0.5)}}
+.upgrade-top{padding:12px;border-bottom:1px dotted #000;display:flex;justify-content:space-between;align-items:center}
+.upgrade-name{font-weight:bold;font-size:1.1rem;font-family:var(--font-head)}
+.upgrade-count{font-family:var(--font-mono);font-size:1.2rem;font-weight:bold;color:var(--green-accent)}
+.upgrade-info{padding:8px 12px;font-size:0.8rem;color:var(--ink-light);border-bottom:1px dotted #ccc}
+.upgrade-btn{width:100%;border:none;background:transparent;padding:12px;text-align:left;font-family:var(--font-mono);font-size:0.9rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background-color 0.2s;border-top:1px solid rgba(0,0,0,0.1)}
+.upgrade-btn:hover:not(:disabled){background:#f5f5f5}
+.upgrade-btn:active:not(:disabled){background:#e0e0e0}
+.upgrade-btn:disabled{cursor:not-allowed;color:#777}
+.upgrade-btn.affordable{font-weight:bold;color:var(--green-accent);background:#f0fff0}
+.upgrade-cost,.upgrade-max{font-weight:bold}
+.prestige-box{margin-top:auto;border:4px double var(--ink);padding:20px;background:var(--bg-paper-dark);text-align:center}
+.prestige-btn{background:var(--red-accent);color:#fff;border:none;padding:15px;width:100%;font-family:var(--font-head);font-weight:bold;font-size:1.1rem;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-top:15px;transition:all 0.2s;position:relative;overflow:hidden}
+.prestige-btn:hover:not(:disabled){background:#b30000;transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,0.2)}
+.prestige-btn:active:not(:disabled){transform:translateY(0)}
+.prestige-btn:disabled{background:#555;cursor:not-allowed;opacity:0.5}
+.prestige-cost{font-size:0.9rem;font-weight:normal;margin-top:5px;color:#ffcccc}
+.prestige-max{font-size:0.8rem;font-weight:normal;margin-top:3px;color:#aaffaa}
+.reset-btn{background:#8b0000;color:white;border:none;padding:20px 40px;font-family:var(--font-head);font-weight:bold;font-size:1.3rem;cursor:pointer;text-transform:uppercase;letter-spacing:2px;transition:all 0.3s;position:relative;overflow:hidden;width:100%;max-width:400px;border:3px solid var(--ink);box-shadow:6px 6px 0 rgba(0,0,0,0.5)}
+.reset-btn:hover{background:#660000;transform:translateY(-3px);box-shadow:8px 8px 0 rgba(0,0,0,0.5)}
+.reset-btn:active{transform:translate(4px,4px);box-shadow:2px 2px 0 rgba(0,0,0,0.5)}
+.floater{position:fixed;font-family:var(--font-mono),'Segoe UI Emoji','Apple Color Emoji',monospace;font-weight:bold;color:var(--red-accent);pointer-events:none;animation:floatUp 1s ease-out forwards;z-index:10000;text-shadow:1px 1px 2px rgba(0,0,0,0.5);font-size:1.4rem;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))}
+@keyframes floatUp{0%{transform:translateY(0) scale(1);opacity:1}70%{opacity:1}100%{transform:translateY(-100px) scale(1.4);opacity:0}}
+.headline-box{margin-top:20px;padding:15px;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);background:rgba(255,255,255,0.5)}
+.headline-box strong{font-family:var(--font-mono);font-size:0.9rem;text-transform:uppercase;letter-spacing:1px}
+#headline-spot{font-style:italic;font-family:Georgia,serif;font-size:1.1rem;line-height:1.4;margin-top:8px;min-height:60px;transition:opacity 0.5s ease}
+.paypal-container{margin-top:20px;padding:15px;border:2px solid var(--ink);background:var(--bg-paper-dark);box-shadow:4px 4px 0 rgba(0,0,0,0.1);text-align:center;font-family:var(--font-mono)}
+.paypal-container h3{font-family:var(--font-head);margin:0 0 10px 0;color:var(--red-accent);font-size:1.3rem;border-bottom:1px dashed var(--ink);padding-bottom:5px}
+.paypal-offer{font-size:1.2rem;font-weight:bold;margin-bottom:15px;background:white;padding:8px;border:2px solid var(--green-accent);color:var(--green-accent)}
+.paypal-button-container{min-height:45px;margin-top:10px}
+.paypal-container + .paypal-container{margin-top:10px}
+.restore-btn{background:var(--blue-accent);color:white;border:3px solid var(--ink);padding:15px;width:100%;font-family:var(--font-mono);font-weight:bold;font-size:1.1rem;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-top:15px;transition:all 0.2s;box-shadow:4px 4px 0 rgba(0,0,0,0.2)}
+.restore-btn:hover{background:#0052a3;transform:translateY(-2px);box-shadow:6px 6px 0 rgba(0,0,0,0.2)}
+.restore-btn:active{transform:translateY(1px);box-shadow:2px 2px 0 rgba(0,0,0,0.2)}
+#leaderboard-section{border-top:5px double var(--ink);padding:20px;background:var(--bg-paper-dark)}
+.leaderboard-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+#leaderboard-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:0.9rem}
+#leaderboard-table th{background:var(--ink);color:white;padding:10px;text-align:left;font-weight:bold;border-right:1px solid #555}
+#leaderboard-table th:last-child{border-right:none}
+#leaderboard-table td{padding:10px;border-bottom:1px solid #ccc}
+#leaderboard-table tr:nth-child(even){background:rgba(0,0,0,0.05)}
+.player-rank{font-weight:bold;width:50px;text-align:center}
+.rank-1{color:gold;font-weight:bold}.rank-2{color:silver;font-weight:bold}.rank-3{color:#cd7f32;font-weight:bold}
+.player-name{font-weight:bold;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player-bruh,.player-level{text-align:center;font-weight:bold}
+#chat-section{border-top:5px double var(--ink);padding:20px;background:var(--bg-paper);display:grid;grid-template-columns:2fr 1fr;gap:20px}
+@media (max-width:768px){#chat-section{grid-template-columns:1fr}}
+.chat-container{display:flex;flex-direction:column;height:300px;border:2px solid var(--ink);background:white}
+.chat-header{background:var(--ink);color:white;padding:10px;font-family:var(--font-mono);font-weight:bold;display:flex;justify-content:space-between;align-items:center}
+.chat-header .unread-badge{background:var(--red-accent);color:white;border-radius:12px;padding:2px 8px;font-size:0.75rem;margin-left:8px;display:inline-block}
+#chat-messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.chat-message{padding:8px;border-radius:4px;font-family:var(--font-mono);font-size:0.85rem;line-height:1.4;animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.chat-message.self{background:#e3f2fd;border-left:3px solid #2196f3;margin-left:20px}
+.chat-message.other{background:#f5f5f5;border-left:3px solid #757575;margin-right:20px}
+.message-sender{font-weight:bold;color:var(--ink);margin-bottom:3px}
+.message-timestamp{font-size:0.7rem;color:var(--ink-light);float:right;margin-left:10px}
+.message-content{word-break:break-word}
+.tagged-player{background:#ff9800;color:white;padding:1px 4px;border-radius:3px;font-weight:bold;margin:0 2px}
+#chat-input-container{display:flex;border-top:1px solid #ccc}
+#chat-input{flex:1;border:none;padding:12px;font-family:var(--font-mono);font-size:0.9rem;outline:none}
+#chat-send{background:var(--ink);color:white;border:none;padding:0 20px;font-family:var(--font-mono);font-weight:bold;cursor:pointer;transition:background 0.2s}
+#chat-send:hover{background:#333}
+.chat-users{border:2px solid var(--ink);background:white;display:flex;flex-direction:column}
+.users-header{background:var(--ink);color:white;padding:10px;font-family:var(--font-mono);font-weight:bold}
+#online-users{flex:1;overflow-y:auto;padding:10px}
+.user-item{padding:8px;border-bottom:1px solid #eee;font-family:var(--font-mono);font-size:0.85rem;display:flex;justify-content:space-between;align-items:center}
+.user-name{font-weight:bold;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.user-bruh{color:var(--green-accent);font-weight:bold}
+.user-online{width:8px;height:8px;background:#4caf50;border-radius:50%;display:inline-block;margin-right:5px}
+.chat-notification{position:fixed;bottom:20px;right:20px;background:#ff9800;color:white;padding:15px;border-radius:5px;font-family:var(--font-mono);font-size:0.9rem;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:10002;animation:slideIn 0.3s ease,slideOut 0.3s ease 4.7s forwards;max-width:300px;cursor:pointer}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
+.notification-sender{font-weight:bold;margin-bottom:5px}
+.notification-message{font-size:0.85rem;opacity:0.9}
+#manual-save-btn{background:linear-gradient(to bottom,#0066cc,#004d99);color:white;border:3px solid var(--ink);padding:18px 15px;width:100%;font-family:var(--font-mono);font-weight:bold;font-size:1rem;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-top:15px;transition:all 0.2s;position:relative;overflow:hidden;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70px;box-shadow:4px 4px 0 rgba(0,0,0,0.2)}
+#manual-save-btn:hover{background:linear-gradient(to bottom,#0052a3,#003d73);transform:translateY(-2px);box-shadow:6px 6px 0 rgba(0,0,0,0.2)}
+#manual-save-btn:active{transform:translateY(1px);box-shadow:2px 2px 0 rgba(0,0,0,0.2)}
+#manual-save-btn:disabled{background:#666;cursor:not-allowed;opacity:0.7}
+#manual-save-btn.saving{background:linear-gradient(to bottom,#006400,#004d00)}
+#manual-save-btn.saved{background:linear-gradient(to bottom,#006400,#004d00);animation:savePulse 0.5s 3}
+@keyframes savePulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+.save-status{font-size:0.8rem;margin-top:5px;opacity:0.9;font-weight:normal}
+.save-status.error{color:#ffcccc}
+.save-status.success{color:#ccffcc}
+#last-save-time{font-family:var(--font-mono);font-size:0.7rem;color:var(--ink-light);text-align:center;margin-top:5px}
+@media (max-width:1024px){#main-content{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto}.column{min-height:300px;max-height:500px;border-right:none;border-bottom:2px solid #aaa}.column:last-child{border-bottom:none}}
+@media (max-width:768px){body{padding:5px}#newspaper{min-height:100vh}.player-header-info{flex-direction:column}.player-name-display{flex-direction:column}.column{padding:15px;min-height:auto;max-height:none;overflow-y:visible}h1{font-size:2.2rem}h2{font-size:1.5rem}#breaking-news-banner{font-size:1rem;padding:10px 15px}.breaking-news-text{flex-direction:column;gap:10px}.breaking-news-title{font-size:1rem}#print-btn{padding:30px 15px}.print-title{font-size:1.8rem}.meta-line{font-size:0.75rem}.player-counts{font-size:0.8rem;gap:10px}.stat-value{font-size:1.4rem}.prestige-box{padding:15px}#leaderboard-section,#chat-section{padding:15px}.chat-container,.chat-users{height:250px}#chat-section{grid-template-columns:1fr}#boost-button{padding:15px 10px;min-height:80px}.boost-percentage{font-size:1.6rem}.boost-label{font-size:0.9rem}.reset-btn{padding:15px;font-size:1.1rem;max-width:100%}#manual-save-btn{padding:15px 10px;min-height:60px;font-size:0.9rem}}
+@media (max-width:480px){h1{font-size:1.8rem}#print-btn{padding:25px 10px}.print-title{font-size:1.5rem}.column{padding:10px}#breaking-news-banner{font-size:0.9rem;padding:8px 10px}.breaking-news-title{font-size:1rem}#leaderboard-table th,#leaderboard-table td{padding:8px 5px;font-size:0.8rem}.player-name{max-width:80px}#boost-button{padding:12px 8px;min-height:70px}.boost-percentage{font-size:1.4rem}.boost-label{font-size:0.8rem}.reset-btn{padding:12px;font-size:1rem}#manual-save-btn{padding:12px 8px;min-height:50px;font-size:0.8rem}}
 </style>
 </head>
 <body>
-
-<!-- Authentication Modal with Show/Hide Password -->
-<div id="auth-modal">
-  <div class="auth-modal-content">
+<!-- Name selection modal -->
+<div id="name-selection-modal">
+  <div class="name-modal-content">
     <div class="name-modal-title">The News Bruh</div>
-    <div class="name-modal-subtitle">Press Room Access</div>
-
-    <!-- Tabs -->
-    <div class="auth-tabs">
-      <div class="auth-tab active" id="tab-register" onclick="switchAuthTab('register')">Register</div>
-      <div class="auth-tab" id="tab-login" onclick="switchAuthTab('login')">Login</div>
-    </div>
-
-    <!-- Register Form -->
-    <div id="register-form" class="auth-form active">
-      <input type="email" id="reg-email" class="auth-input" placeholder="Email" required>
-
-      <!-- Password field with toggle -->
-      <div class="password-container">
-        <input type="password" id="reg-password" class="auth-input" placeholder="Password (min 6 characters)" required>
-        <span class="password-toggle" onclick="togglePasswordVisibility('reg-password', this)">👁️</span>
-      </div>
-
-      <input type="text" id="reg-name" class="auth-input" placeholder="Display Name (max 20 chars)" maxlength="20" required>
+    <div class="name-modal-subtitle">Enter the Press Room</div>
+    <div class="name-input-container">
+      <input type="text" id="player-name-input" placeholder="Type your newsroom name..." maxlength="20" autofocus>
       <div class="name-rules">
-        <strong>Display Name Rules:</strong>
-        <ul>
-          <li>Maximum 20 characters</li>
-          <li>Almost any character allowed</li>
-          <li>Your name will appear on the leaderboard</li>
-          <li>Other players can tag you in chat using @name</li>
-          <li>@ symbol is reserved for tagging</li>
-        </ul>
+        <strong>Name Rules:</strong>
+        <ul><li>Maximum 20 characters</li><li>Almost any character allowed</li><li>Your name will appear on the leaderboard</li><li>Other players can tag you in chat using @name</li><li>@ symbol is reserved for tagging</li></ul>
       </div>
-      <button class="auth-btn" onclick="register()">REGISTER & START</button>
-      <div id="register-error" class="auth-error"></div>
     </div>
-
-    <!-- Login Form -->
-    <div id="login-form" class="auth-form">
-      <input type="email" id="login-email" class="auth-input" placeholder="Email" required>
-
-      <!-- Password field with toggle -->
-      <div class="password-container">
-        <input type="password" id="login-password" class="auth-input" placeholder="Password" required>
-        <span class="password-toggle" onclick="togglePasswordVisibility('login-password', this)">👁️</span>
-      </div>
-
-      <button class="auth-btn" onclick="login()">LOGIN</button>
-      <div id="login-error" class="auth-error"></div>
-    </div>
+    <button class="start-game-btn" onclick="startGameWithName()">START PRINTING</button>
   </div>
 </div>
 
-<!-- Main newspaper container (unchanged) -->
+<!-- Main newspaper container -->
 <div id="newspaper" style="display:none">
-  <!-- ... your full newspaper HTML here (from original) ... -->
+  <div id="ticker-tape"><div class="ticker-content" id="ticker-text">Join <a href="https://www.reddit.com/r/thenewsbruh/s/HPIdtW6H3X" target="_blank">r/TheNewsBruh</a> on Reddit & Reach The Top 3 on The Leaderboard to Earn Real New Token</div></div>
+
+  <!-- Offline earnings notification -->
+  <div id="offline-earnings-notification" class="offline-notification" style="display: none;">
+    <div class="offline-content"><span class="offline-icon">📰</span><span class="offline-text" id="offline-earnings-text"></span><button class="offline-close" onclick="closeOfflineNotification()">×</button></div>
+  </div>
+
+  <div class="header-container">
+    <div class="player-header-info">
+      <div class="player-name-display"><div class="player-name-text" id="display-player-name">Player Name</div><div class="change-name-link" id="change-name-link">Change Name</div></div>
+      <div class="player-counts"><span><span class="online-indicator"></span>Players Online: <span id="online-count">0</span></span><span>Total Players: <span id="total-count">0</span></span></div>
+    </div>
+    <h1>The News Bruh</h1>
+    <div class="meta-line"><span>Vol. 1</span><span>Est. 2026</span><span id="currentDateTime">Loading...</span></div>
+  </div>
+
+  <div id="main-content">
+    <!-- LEFT COLUMN -->
+    <div class="column" id="col-left">
+      <div class="how-to-play"><details><summary>📰 How to Play (Click to expand)</summary><div class="how-to-content"><p><strong>📌 Printing Press Tycoon Basics</strong></p><ul><li>Tap the big "PRINT EDITION" button to earn <strong>New</strong> (currency). Each tap gives +1 New × multiplier.</li><li>Buy Assets (Paperboy, Editor, etc.) in the right column. They produce <strong>New per second (CPS)</strong> automatically.</li><li>Build up the BREAKING NEWS BOOST by tapping – fill the red bar to activate a 5× multiplier for 15 seconds.</li><li>Level up by earning XP from taps and from passive income (every 10 New earned = 1 XP).</li><li>Prestige (Buy Bruh) in the left column. Resets everything but gives a permanent +100% (×1) production bonus per Bruh owned.</li><li>Chat with other players in the Press Room – use @name to tag someone.</li><li>Your progress is auto-saved locally and to the cloud. Use the <strong>MANUAL SAVE</strong> button anytime.</li></ul><p style="margin-top:8px; font-style:italic;">— The News Bruh Team</p></div></details></div>
+
+      <div class="level-container"><div class="level-header"><div class="level-title">Level <span class="level-number" id="current-level">1</span></div><div class="level-xp-display" id="xp-display">0/100 XP</div></div><div class="level-bar-container"><div class="level-progress-bar" id="level-progress-bar"></div><div class="level-up-indicator" id="level-up-indicator" style="display:none">LEVEL UP!</div></div></div>
+
+      <h2>Statistics</h2>
+      <div class="stat-block"><div class="stat-label">Treasury</div><div class="stat-value"><span id="currency">0</span> New</div></div>
+      <div class="stat-block"><div class="stat-label">Production</div><div class="stat-value"><span id="cps">0.0</span> / sec</div></div>
+      <div class="stat-block"><div class="stat-label">Market Multiplier</div><div class="stat-value" style="color:var(--red-accent)">x<span id="multiplier">1</span></div></div>
+
+      <div class="prestige-box"><h3 style="margin:0 0 10px 0;border-bottom:1px solid var(--ink)">THE CLASSIFIEDS</h3><p style="font-size:0.85rem;margin-bottom:10px;line-height:1.4">Hire a <strong>Bruh</strong> Consultant. Each Bruh owned adds a <strong>+100% (x1)</strong> permanent bonus to all production.</p><div style="font-weight:bold;margin-bottom:5px;font-size:1.1rem">Bruh Owned: <span id="bruh-owned">0</span></div><button id="prestige-btn" class="prestige-btn" onclick="prestige()">Buy Bruh<div id="prestige-cost" class="prestige-cost">Costs: 1k New</div><div id="prestige-max" class="prestige-max">Max: 0</div></button></div>
+
+      <button id="manual-save-btn" onclick="manualSave()">💾 MANUAL SAVE<div class="save-status" id="save-status"></div></button>
+      <div id="last-save-time">Last auto‑save: never</div>
+    </div>
+
+    <!-- CENTER COLUMN -->
+    <div class="column" id="col-center">
+      <h2>Front Page</h2>
+      <div id="breaking-news-container"><div id="breaking-news-banner"><div class="breaking-news-text"><span class="breaking-news-icon">📰</span><span class="breaking-news-title">BREAKING NEWS: 5X MULTIPLIER ACTIVE!</span></div></div></div>
+      <button id="print-btn"><span class="print-title">PRINT EDITION</span><span class="print-sub" id="tap-value-display">📰 +1 New per Tap</span></button>
+      <div id="boost-container"><button id="boost-button"><div id="boost-progress-bar"></div><div class="boost-content"><span class="boost-percentage" id="boost-percentage">0%</span><span class="boost-label">BREAKING NEWS BOOST</span><span class="boost-timer" id="boost-timer">15s</span><span class="boost-cooldown" id="boost-cooldown"></span></div></button></div>
+      <div class="headline-box"><strong>Latest Headline:</strong><p id="headline-spot">"Local entrepreneur starts printing press in garage, neighbors concerned about noise."</p></div>
+
+      <!-- FOUR GOLD PAYPAL BUTTONS -->
+      <div class="paypal-container"><h3>📰 EXTRA EDITION 📰</h3><div class="paypal-offer">x50 Permanent Market Multiplier (£3.69)</div><div id="paypal-button-container-1" class="paypal-button-container"></div></div>
+      <div class="paypal-container"><div class="paypal-offer">x150 Permanent Market Multiplier (£6.99)</div><div id="paypal-button-container-2" class="paypal-button-container"></div></div>
+      <div class="paypal-container"><div class="paypal-offer">x500 Permanent Market Multiplier (£12.99)</div><div id="paypal-button-container-3" class="paypal-button-container"></div></div>
+      <div class="paypal-container"><div class="paypal-offer">x1500 Permanent Market Multiplier (£19.99)</div><div id="paypal-button-container-4" class="paypal-button-container"></div></div>
+
+      <!-- RESTORE PURCHASES BUTTON -->
+      <button class="restore-btn" onclick="restorePurchases()">🔄 RESTORE PURCHASES</button>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="column" id="col-right"><h2>Assets</h2><div id="upgrades-list"></div></div>
+  </div>
+
+  <!-- LEADERBOARD SECTION -->
+  <div id="leaderboard-section"><div class="leaderboard-header"><h2 style="border-bottom:none;margin:0">🏆 Leaderboard 🏆</h2><div id="leaderboard-update-time" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--ink-light)">Updated: Just now</div></div><table id="leaderboard-table"><thead><tr><th style="width:60px">RANK</th><th>PLAYER</th><th style="width:120px">BRUH COUNT</th><th style="width:100px">LEVEL</th></tr></thead><tbody id="leaderboard-body"></tbody></table></div>
+
+  <!-- CHAT SECTION -->
+  <div id="chat-section">
+    <div class="chat-container">
+      <div class="chat-header"><span>📰 PRESS ROOM CHAT <span id="unread-badge" class="unread-badge" style="display:none;">0</span></span><span id="chat-status">Connected</span></div>
+      <div id="chat-messages"><div class="chat-message other"><div class="message-sender">System <span class="message-timestamp">Just now</span></div><div class="message-content">Welcome to The News Bruh Press Room! Chat with other players here.</div></div></div>
+      <div id="chat-input-container"><input type="text" id="chat-input" placeholder="Type your message... (Use @name to tag players)" maxlength="200"><button id="chat-send" onclick="sendChatMessage()">SEND</button></div>
+    </div>
+    <div class="chat-users"><div class="users-header"><span>🟢 ONLINE PLAYERS (<span id="online-users-count">1</span>)</span></div><div id="online-users"></div></div>
+  </div>
+
+  <!-- RESET BUTTON -->
+  <div id="reset-section" style="padding:20px;text-align:center;border-top:5px double var(--ink);background:var(--bg-paper-dark)"><button id="reset-button" class="reset-btn">RESET ALL PROGRESS</button></div>
 </div>
 
-<!-- Chat notification popup (unchanged) -->
-<div id="chat-notification" class="chat-notification" style="display:none">...</div>
+<!-- Chat notification popup -->
+<div id="chat-notification" class="chat-notification" style="display:none"><div class="notification-sender" id="notification-sender"></div><div class="notification-message" id="notification-message"></div></div>
 
-<!-- Supabase module (unchanged) -->
+<!-- Supabase module -->
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// Updated credentials per user request
 const SUPABASE_URL = 'https://kcvcpkxxteeundkydfxv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjdmNwa3h4dGVldW5ka3lkZnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0ODgwNzAsImV4cCI6MjA4ODA2NDA3MH0.u3KaXitQBYtOGltcpEN7T30RGrH4mYEDwV9YUDOWpcQ';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { realtime: { params: { eventsPerSecond: 5 } } });
 window.supabaseClient = supabase;
+
+// Wait for DOM to be ready
 window.addEventListener('DOMContentLoaded', function() { if (window.gameSystemsReady) window.gameSystemsReady(); });
 </script>
 
@@ -118,7 +323,7 @@ window.addEventListener('DOMContentLoaded', function() { if (window.gameSystemsR
 <script>
 // ---------- GLOBAL GAME STATE ----------
 let gameState = {
-  userId: null,
+  userId: null,           // will be set after authentication
   playerName: "",
   news: 0,
   bruh: 0,
@@ -146,200 +351,645 @@ let gameState = {
 let isInitialized = false;
 let breakingNewsEmojis = [], boostEmojiInterval = null, boostTimerInterval = null;
 
-// ---------- HELPER FUNCTIONS (unchanged) ----------
-function formatNumber(num) { /* ... */ }
-function calculateXPForLevel(level) { return Math.floor(100 * Math.pow(1.15, level-1)); }
-function calculateLevelFromTotalXP(totalXP) { /* ... */ }
-function addXP(amount) { /* ... */ }
-function updateLevelDisplay() { /* ... */ }
-function updateUI() { /* ... */ }
-function updateBoostProgress() { /* ... */ }
-function depleteBoostProgress() { /* ... */ }
-function incrementBoostProgress() { /* ... */ }
-function activateBoost() { /* ... */ }
-function updateBoostTimer() { /* ... */ }
-function endBoost() { /* ... */ }
-function startEmojiRain() { /* ... */ }
-function stopEmojiRain() { /* ... */ }
-function createFallingEmoji() { /* ... */ }
-
-// ---------- NEW: TOGGLE PASSWORD VISIBILITY ----------
-function togglePasswordVisibility(inputId, toggleElement) {
-  const input = document.getElementById(inputId);
-  if (input.type === 'password') {
-    input.type = 'text';
-    toggleElement.textContent = '👁️‍🗨️'; // closed eye emoji (or use '🙈')
+// ---------- HELPER FUNCTIONS ----------
+function formatNumber(num) {
+  if (typeof num !== 'number' || !isFinite(num)) return '0';
+  if (num < 0) return '-' + formatNumber(-num);
+  if (num < 1000) return Math.floor(num).toLocaleString();
+  const suffixes = ['K','M','B','T'];
+  const magnitude = Math.floor(Math.log10(num)/3);
+  if (magnitude <= suffixes.length) {
+    const suffix = suffixes[magnitude-1];
+    const divisor = Math.pow(1000,magnitude);
+    const scaled = num/divisor;
+    if (scaled>=100) return Math.floor(scaled)+suffix;
+    if (scaled>=10) return scaled.toFixed(1)+suffix;
+    return scaled.toFixed(2)+suffix;
+  }
+  let offset = magnitude - suffixes.length -1;
+  const twoLetterLimit = 26*26;
+  let suffix='';
+  if (offset < twoLetterLimit) {
+    suffix = String.fromCharCode(65+Math.floor(offset/26)) + String.fromCharCode(65+(offset%26));
   } else {
-    input.type = 'password';
-    toggleElement.textContent = '👁️';
+    offset -= twoLetterLimit;
+    suffix = String.fromCharCode(65+Math.floor(offset/(26*26))) +
+             String.fromCharCode(65+Math.floor((offset%(26*26))/26)) +
+             String.fromCharCode(65+(offset%26));
   }
+  const divisor = Math.pow(1000,magnitude);
+  const scaled = num/divisor;
+  if (scaled>=100) return Math.floor(scaled)+suffix;
+  if (scaled>=10) return scaled.toFixed(1)+suffix;
+  return scaled.toFixed(2)+suffix;
 }
 
-// ---------- AUTH FUNCTIONS ----------
-function switchAuthTab(tab) {
-  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
-  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-  document.getElementById('register-form').classList.toggle('active', tab === 'register');
-  document.getElementById('login-form').classList.toggle('active', tab === 'login');
-  // Clear errors
-  document.getElementById('register-error').textContent = '';
-  document.getElementById('login-error').textContent = '';
+function calculateXPForLevel(level) { return Math.floor(100 * Math.pow(1.15, level-1)); }
+function calculateLevelFromTotalXP(totalXP) {
+  let level=1, xpNeeded=calculateXPForLevel(level), xpRemaining=totalXP;
+  while (xpRemaining >= xpNeeded) { xpRemaining -= xpNeeded; level++; xpNeeded=calculateXPForLevel(level); }
+  return { level: level, currentXP: xpRemaining, nextLevelXP: xpNeeded, progress: (xpRemaining/xpNeeded)*100 };
 }
-
-async function register() {
-  const email = document.getElementById('reg-email').value.trim();
-  const password = document.getElementById('reg-password').value;
-  const displayName = document.getElementById('reg-name').value.trim();
-
-  if (!email || !password || !displayName) {
-    document.getElementById('register-error').textContent = 'All fields are required.';
-    return;
+function addXP(amount) {
+  const oldLevelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
+  gameState.totalXpEarned += amount;
+  gameState.xp += amount;
+  const newLevelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
+  gameState.level = newLevelInfo.level;
+  gameState.xp = newLevelInfo.currentXP;
+  if (newLevelInfo.level > oldLevelInfo.level) {
+    document.querySelector('.level-container').style.animation = 'none';
+    setTimeout(() => document.querySelector('.level-container').style.animation = 'levelUpPulse 0.5s 3', 10);
   }
-  if (password.length < 6) {
-    document.getElementById('register-error').textContent = 'Password must be at least 6 characters.';
-    return;
+  updateLevelDisplay();
+}
+function updateLevelDisplay() {
+  const levelInfo = calculateLevelFromTotalXP(gameState.totalXpEarned);
+  document.getElementById('current-level').textContent = formatNumber(levelInfo.level);
+  document.getElementById('xp-display').textContent = `${formatNumber(Math.floor(levelInfo.currentXP))}/${formatNumber(Math.floor(levelInfo.nextLevelXP))} XP`;
+  document.getElementById('level-progress-bar').style.width = `${levelInfo.progress}%`;
+  document.getElementById('level-up-indicator').style.display = levelInfo.progress >= 95 ? 'block' : 'none';
+}
+function updateUI() {
+  updateLevelDisplay();
+  document.getElementById('currency').textContent = formatNumber(gameState.news);
+  const multiplier = (1+gameState.bruh)*gameState.boostMultiplier;
+  document.getElementById('cps').textContent = formatNumber(gameState.buildings.reduce((acc,b)=>acc+(b.count*b.baseCPS),0)*multiplier);
+  document.getElementById('multiplier').textContent = gameState.isBoostActive ? formatNumber(multiplier)+' (5x BOOST!)' : formatNumber(multiplier);
+  document.getElementById('multiplier').style.color = gameState.isBoostActive ? '#ff0000' : 'var(--red-accent)';
+  document.getElementById('bruh-owned').textContent = formatNumber(gameState.bruh);
+  document.getElementById('tap-value-display').textContent = `📰 +${formatNumber(1*multiplier)} New per Tap`;
+
+  // prestige button
+  const getPrestigeCost = (bruhCount) => Math.floor(1000 * Math.pow(2.5, bruhCount));
+  const prestigeCost = getPrestigeCost(gameState.bruh);
+  let maxBuy = 0, tempNews = gameState.news, tempBruh = gameState.bruh;
+  while (true) {
+    const nextCost = getPrestigeCost(tempBruh);
+    if (tempNews >= nextCost) { tempNews -= nextCost; tempBruh++; maxBuy++; } else break;
+    if (maxBuy >= 100) break;
   }
-  if (displayName.length > 20) {
-    document.getElementById('register-error').textContent = 'Display name max 20 characters.';
-    return;
+  const pBtn = document.getElementById('prestige-btn');
+  document.getElementById('prestige-cost').textContent = `Costs: ${formatNumber(prestigeCost)} New`;
+  document.getElementById('prestige-max').textContent = `Max: ${maxBuy}`;
+  if (maxBuy > 0) {
+    pBtn.disabled = false;
+    pBtn.innerHTML = `BUY ${maxBuy} BRUH${maxBuy>1?'S':''} (RESET) <div id="prestige-cost" class="prestige-cost">Costs: ${formatNumber(prestigeCost)} New</div> <div id="prestige-max" class="prestige-max">Max: ${maxBuy}</div>`;
+  } else {
+    pBtn.disabled = true;
+    pBtn.innerHTML = `Need ${formatNumber(prestigeCost)} New <div id="prestige-cost" class="prestige-cost">Costs: ${formatNumber(prestigeCost)} New</div> <div id="prestige-max" class="prestige-max">Max: 0</div>`;
   }
 
-  const btn = document.querySelector('#register-form .auth-btn');
-  btn.disabled = true;
-  btn.textContent = 'Registering...';
-
-  try {
-    const { data, error } = await supabaseClient.auth.signUp({
-      email,
-      password,
-    });
-    if (error) throw error;
-    if (!data.user) throw new Error('No user returned');
-
-    gameState.userId = data.user.id;
-    gameState.playerName = displayName;
-
-    const { data: saveData } = await supabaseClient
-      .from('game_saves')
-      .select('game_state')
-      .eq('user_id', gameState.userId)
-      .maybeSingle();
-
-    if (saveData && saveData.game_state) {
-      Object.assign(gameState, saveData.game_state);
-      gameState.userId = data.user.id;
-      gameState.playerName = displayName;
+  // buildings
+  gameState.buildings.forEach(building => {
+    const getCost = (bld) => Math.floor(bld.baseCost * Math.pow(1.15, bld.count || 0));
+    const currentCost = getCost(building);
+    const getMaxBuy = (bld) => {
+      let canBuy=0, tempNews=gameState.news, tempCount=bld.count, nextCost=getCost({...bld, count:tempCount});
+      for (let i=0;i<1000;i++) {
+        if (tempNews >= nextCost) { canBuy++; tempNews -= nextCost; tempCount++; nextCost = getCost({...bld, count:tempCount}); } else break;
+      } return canBuy;
+    };
+    const maxBuyB = getMaxBuy(building);
+    const card = document.getElementById(`card-${building.id}`);
+    const btn = document.getElementById(`btn-${building.id}`);
+    if (card) {
+      document.getElementById(`count-${building.id}`).textContent = formatNumber(building.count);
+      document.getElementById(`cost-text-${building.id}`).textContent = `Cost: ${formatNumber(currentCost)}`;
+      if (building.count > 0) card.classList.add('purchased'); else card.classList.remove('purchased');
+      if (maxBuyB > 0) {
+        card.classList.remove('disabled'); card.classList.add('affordable');
+        btn.disabled = false; btn.classList.add('affordable');
+        document.getElementById(`max-text-${building.id}`).textContent = `Buy ${maxBuyB}`;
+      } else {
+        card.classList.remove('affordable'); card.classList.add('disabled');
+        btn.disabled = true; btn.classList.remove('affordable');
+        document.getElementById(`max-text-${building.id}`).textContent = "Too Expensive";
+      }
     }
+  });
+}
+function updateBoostProgress() {
+  const boostButton = document.getElementById('boost-button');
+  const progressBar = document.getElementById('boost-progress-bar');
+  const percentageElement = document.getElementById('boost-percentage');
+  const cooldownElement = document.getElementById('boost-cooldown');
+  const timerElement = document.getElementById('boost-timer');
+  if (gameState.boostCooldown > 0) {
+    boostButton.disabled = true;
+    const minutes = Math.floor(gameState.boostCooldown / 60);
+    const seconds = Math.floor(gameState.boostCooldown % 60);
+    cooldownElement.textContent = `Cooldown: ${minutes}:${seconds.toString().padStart(2,'0')}`;
+    cooldownElement.style.display = 'block';
+    timerElement.style.display = 'none';
+    percentageElement.textContent = '0%';
+    progressBar.style.width = '0%';
+    progressBar.style.background = 'linear-gradient(90deg,#cccccc,#999999)';
+  } else if (gameState.isBoostActive) {
+    boostButton.disabled = false;
+    percentageElement.textContent = 'ACTIVE!';
+    percentageElement.style.color = '#ff0000';
+    progressBar.style.width = '100%';
+    progressBar.style.background = 'linear-gradient(90deg,#ff0000,#ff8800,#ff0000)';
+    progressBar.style.animation = 'progressShimmer 1s infinite linear';
+    cooldownElement.style.display = 'none';
+    timerElement.style.display = 'block';
+    timerElement.textContent = `${gameState.boostTimeLeft}s`;
+  } else {
+    boostButton.disabled = false;
+    percentageElement.style.color = '';
+    percentageElement.textContent = `${Math.floor(gameState.boostProgress)}%`;
+    progressBar.style.width = `${gameState.boostProgress}%`;
+    progressBar.style.background = 'linear-gradient(90deg,#ff4444,#ff0000,#ff4444)';
+    progressBar.style.animation = 'progressShimmer 2s infinite linear';
+    cooldownElement.style.display = 'none';
+    timerElement.style.display = 'none';
+    if (gameState.boostProgress >= 100) {
+      cooldownElement.textContent = 'READY!';
+      cooldownElement.style.display = 'block';
+      cooldownElement.style.color = '#ff0000';
+    } else cooldownElement.style.display = 'none';
+  }
+}
+function depleteBoostProgress() {
+  if (gameState.isBoostActive || gameState.boostCooldown > 0 || gameState.boostProgress <= 0) return;
+  const now = Date.now();
+  const timeSinceLastDepletion = (now - gameState.lastDepletionTime) / 1000;
+  if (timeSinceLastDepletion >= 1) {
+    gameState.boostProgress = Math.max(0, gameState.boostProgress - 2);
+    gameState.lastDepletionTime = now;
+    if (gameState.boostProgress % 10 === 0 || gameState.boostProgress <= 1) updateBoostProgress();
+  }
+}
+function incrementBoostProgress() {
+  if (gameState.isBoostActive || gameState.boostCooldown > 0) return;
+  gameState.boostProgress += 5;
+  gameState.lastDepletionTime = Date.now();
+  if (gameState.boostProgress >= 100) { gameState.boostProgress = 100; activateBoost(); }
+  updateBoostProgress(); saveGame();
+}
+function activateBoost() {
+  if (gameState.isBoostActive || gameState.boostProgress < 100) return;
+  gameState.isBoostActive = true; gameState.boostTimeLeft = 15; gameState.boostMultiplier = 5; gameState.boostProgress = 0;
+  document.getElementById('breaking-news-banner').style.display = 'block';
+  startEmojiRain();
+  updateBoostTimer();
+  if (boostTimerInterval) clearInterval(boostTimerInterval);
+  boostTimerInterval = setInterval(updateBoostTimer, 1000);
+  document.querySelectorAll('.stat-block').forEach(block => block.classList.add('active-boost'));
+  updateUI(); updateBoostProgress(); saveGame();
+}
+function updateBoostTimer() {
+  if (!gameState.isBoostActive) return;
+  gameState.boostTimeLeft--;
+  const timerElement = document.getElementById('boost-timer');
+  if (timerElement) {
+    timerElement.textContent = `${gameState.boostTimeLeft}s`;
+    if (gameState.boostTimeLeft <= 5) timerElement.style.color = '#ff0000';
+  }
+  if (gameState.boostTimeLeft <= 0) endBoost();
+}
+function endBoost() {
+  gameState.isBoostActive = false; gameState.boostMultiplier = 1; gameState.boostCooldown = 600;
+  document.getElementById('breaking-news-banner').style.display = 'none';
+  stopEmojiRain();
+  if (boostTimerInterval) { clearInterval(boostTimerInterval); boostTimerInterval = null; }
+  document.querySelectorAll('.stat-block').forEach(block => block.classList.remove('active-boost'));
+  const cooldownInterval = setInterval(() => {
+    gameState.boostCooldown--;
+    updateBoostProgress();
+    if (gameState.boostCooldown <= 0) { clearInterval(cooldownInterval); gameState.boostCooldown = 0; updateBoostProgress(); saveGame(); }
+  }, 1000);
+  updateUI(); updateBoostProgress(); saveGame();
+}
+function startEmojiRain() {
+  if (boostEmojiInterval) clearInterval(boostEmojiInterval);
+  boostEmojiInterval = setInterval(createFallingEmoji, 300);
+}
+function stopEmojiRain() {
+  if (boostEmojiInterval) { clearInterval(boostEmojiInterval); boostEmojiInterval = null; }
+  breakingNewsEmojis.forEach(e=>{if(e.parentNode)e.parentNode.removeChild(e);});
+  breakingNewsEmojis = [];
+}
+function createFallingEmoji() {
+  const banner = document.getElementById('breaking-news-container');
+  if (!banner) return;
+  const emoji = document.createElement('div');
+  emoji.className = 'breaking-news-flash';
+  emoji.textContent = '📰';
+  const newspaper = document.getElementById('newspaper');
+  const newspaperRect = newspaper.getBoundingClientRect();
+  const bannerRect = banner.getBoundingClientRect();
+  const startX = Math.random() * newspaperRect.width;
+  const startY = bannerRect.top - newspaperRect.top;
+  emoji.style.left = `${startX}px`;
+  emoji.style.top = `${startY}px`;
+  emoji.style.fontSize = `${Math.random()*20+20}px`;
+  emoji.style.animationDuration = `${Math.random()*1+1.5}s`;
+  newspaper.appendChild(emoji);
+  breakingNewsEmojis.push(emoji);
+  setTimeout(() => { if (emoji.parentNode) emoji.parentNode.removeChild(emoji); const idx = breakingNewsEmojis.indexOf(emoji); if(idx>-1) breakingNewsEmojis.splice(idx,1); }, 2000);
+}
 
-    await saveGame();
+// ---------- SAVE / LOAD (Supabase + localStorage) ----------
+function loadGameFromLocal() {
+  try {
+    const saved = localStorage.getItem('newsBruhGameState');
+    if (saved) { const parsed = JSON.parse(saved); Object.assign(gameState, parsed); }
+  } catch(e){ console.warn('load error', e); }
+}
 
-    document.getElementById('auth-modal').classList.add('hidden');
-    document.getElementById('newspaper').style.display = 'flex';
-    updatePlayerNameDisplay();
-    init();
+async function saveGame() {
+  try {
+    gameState.lastUpdate = Date.now();
+    // Always save to localStorage as backup
+    localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
 
-  } catch (err) {
-    console.error('Registration error:', err);
-    document.getElementById('register-error').textContent = err.message || 'Registration failed.';
-    btn.disabled = false;
-    btn.textContent = 'REGISTER & START';
+    if (window.supabaseClient && gameState.userId && gameState.playerName) {
+      const { error } = await supabaseClient
+        .from('game_saves')
+        .upsert({
+          user_id: gameState.userId,
+          player_name: gameState.playerName,
+          game_state: gameState,
+          last_saved: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+      if (error) console.warn('Supabase save error:', error);
+    }
+    document.getElementById('last-save-time').textContent = `Last auto‑save: ${new Date().toLocaleTimeString()}`;
+  } catch(e) {
+    console.warn('save error', e);
   }
 }
 
-async function login() {
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
+// ---------- AUTHENTICATED GAME START ----------
+async function startGameWithName() {
+  const input = document.getElementById('player-name-input');
+  const name = input.value.trim();
+  if (!name || name.length > 20) { alert('Invalid name (max 20 chars)'); return; }
 
-  if (!email || !password) {
-    document.getElementById('login-error').textContent = 'Email and password required.';
+  // Show loading state (optional)
+  const startBtn = document.querySelector('.start-game-btn');
+  startBtn.disabled = true;
+  startBtn.textContent = 'Signing in...';
+
+  // Sign in anonymously
+  const { data: { user }, error } = await supabaseClient.auth.signInAnonymously();
+  if (error) {
+    console.error('Auth error:', error);
+    alert('Could not create anonymous session. Please try again.');
+    startBtn.disabled = false;
+    startBtn.textContent = 'START PRINTING';
     return;
   }
 
-  const btn = document.querySelector('#login-form .auth-btn');
-  btn.disabled = true;
-  btn.textContent = 'Logging in...';
+  // Store user id and player name
+  gameState.userId = user.id;
+  gameState.playerName = name;
+  localStorage.setItem('newsBruhPlayerName', name); // for display only
 
-  try {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-    if (!data.user) throw new Error('No user returned');
+  // Try to load existing save for this user from Supabase
+  const { data: saveData, error: fetchError } = await supabaseClient
+    .from('game_saves')
+    .select('game_state')
+    .eq('user_id', gameState.userId)
+    .maybeSingle();
 
-    gameState.userId = data.user.id;
-
-    const { data: saveData, error: fetchError } = await supabaseClient
-      .from('game_saves')
-      .select('game_state')
-      .eq('user_id', gameState.userId)
-      .maybeSingle();
-
-    if (fetchError) throw fetchError;
-
-    if (saveData && saveData.game_state) {
-      Object.assign(gameState, saveData.game_state);
-      gameState.userId = data.user.id;
-    } else {
-      gameState.playerName = 'Player';
-      const name = prompt('Enter your display name (max 20 chars):');
-      if (name && name.length <= 20) gameState.playerName = name;
-      else gameState.playerName = 'Player';
-    }
-
-    document.getElementById('auth-modal').classList.add('hidden');
-    document.getElementById('newspaper').style.display = 'flex';
-    updatePlayerNameDisplay();
-    init();
-
-  } catch (err) {
-    console.error('Login error:', err);
-    document.getElementById('login-error').textContent = err.message || 'Login failed.';
-    btn.disabled = false;
-    btn.textContent = 'LOGIN';
+  if (saveData && saveData.game_state) {
+    // Merge loaded state with current gameState (preserve userId and playerName)
+    const loadedState = saveData.game_state;
+    // Keep the userId and playerName we just set
+    loadedState.userId = gameState.userId;
+    loadedState.playerName = gameState.playerName;
+    Object.assign(gameState, loadedState);
+  } else {
+    // No cloud save – load from localStorage as fallback
+    loadGameFromLocal();
+    // Ensure userId and playerName are set (localStorage may have old name)
+    gameState.userId = user.id;
+    gameState.playerName = name;
   }
+
+  updatePlayerNameDisplay();
+  document.getElementById('name-selection-modal').classList.add('hidden');
+  document.getElementById('newspaper').style.display = 'flex';
+  init(); // start the game loops
 }
 
 function updatePlayerNameDisplay() {
   document.getElementById('display-player-name').textContent = gameState.playerName || 'Anonymous';
 }
 
-// ---------- SAVE / LOAD (unchanged) ----------
-function loadGameFromLocal() { /* ... */ }
-async function saveGame() { /* ... */ }
+// ---------- PURCHASE TRACKING & RESTORE ----------
+async function recordPurchase(playerName, amountPaid, multiplier, transactionId) {
+  if (!window.supabaseClient || !gameState.userId) return;
+  try {
+    await supabaseClient.from('purchases').insert({
+      user_id: gameState.userId,
+      player_name: playerName,
+      amount_paid: amountPaid,
+      multiplier_gained: multiplier,
+      transaction_id: transactionId,
+      created_at: new Date().toISOString(),
+      applied: true
+    });
+  } catch (e) { console.warn('Failed to record purchase', e); }
+}
 
-// ---------- PURCHASE TRACKING & RESTORE (unchanged) ----------
-async function recordPurchase(playerName, amountPaid, multiplier, transactionId) { /* ... */ }
-async function restorePurchases() { /* ... */ }
+async function restorePurchases() {
+  if (!gameState.userId) { alert('No user session.'); return; }
+  if (!window.supabaseClient) { alert('Supabase not connected'); return; }
+  try {
+    const { data, error } = await supabaseClient
+      .from('purchases')
+      .select('multiplier_gained')
+      .eq('user_id', gameState.userId);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      alert('No purchases found to restore.');
+      return;
+    }
+    const totalMultiplier = data.reduce((sum, p) => sum + p.multiplier_gained, 0);
+    gameState.bruh += totalMultiplier;
+    updateUI();
+    saveGame();
+    alert(`Restored ${totalMultiplier} permanent multiplier from purchases.`);
+  } catch (err) {
+    console.error('Restore error:', err);
+    alert('Could not restore purchases. See console.');
+  }
+}
 
-// ---------- CHAT (unchanged) ----------
-async function sendChatMessage() { /* ... */ }
+// ---------- CHAT ----------
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || !gameState.userId) return;
 
-// ---------- OTHER GAME FUNCTIONS (unchanged) ----------
-function manualClick(e) { /* ... */ }
-function buyMax(id) { /* ... */ }
-function prestige() { /* ... */ }
+  // Insert into Supabase
+  const { error } = await supabaseClient
+    .from('chat_messages')
+    .insert({
+      user_id: gameState.userId,
+      player_name: gameState.playerName,
+      message: msg,
+      created_at: new Date().toISOString()
+    });
+  if (error) console.warn('Chat insert error:', error);
+
+  // Also display locally immediately
+  const chatDiv = document.getElementById('chat-messages');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'chat-message self';
+  msgDiv.innerHTML = `<div class="message-sender">${gameState.playerName} <span class="message-timestamp">now</span></div><div class="message-content">${msg.replace(/@(\w+)/g,'<span class="tagged-player">@$1</span>')}</div>`;
+  chatDiv.appendChild(msgDiv);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+  input.value = '';
+}
+
+// ---------- OTHER GAME FUNCTIONS ----------
+function manualClick(e) {
+  e.preventDefault(); e.stopPropagation();
+  const multiplier = (1+gameState.bruh)*gameState.boostMultiplier;
+  gameState.news += multiplier;
+  addXP(1);
+  incrementBoostProgress();
+  if (gameState.isBoostActive) gameState.boostTimeLeft = 15;
+  const btn = document.getElementById('print-btn');
+  btn.classList.add('pulse');
+  setTimeout(()=>btn.classList.remove('pulse'),300);
+  const floater = document.createElement('div');
+  floater.className = 'floater';
+  floater.innerText = `📰 +${formatNumber(multiplier)}`;
+  let x,y;
+  if (e.type.startsWith('touch')) { const touch = e.touches[0]||e.changedTouches[0]; x=touch.clientX; y=touch.clientY; } else { x=e.clientX; y=e.clientY; }
+  floater.style.left = `${x}px`; floater.style.top = `${y}px`;
+  document.body.appendChild(floater);
+  setTimeout(()=>floater.remove(),1000);
+  updateUI(); saveGame();
+}
+
+function buyMax(id) {
+  const building = gameState.buildings[id];
+  const getCost = (bld)=>Math.floor(bld.baseCost * Math.pow(1.15, bld.count || 0));
+  let bought=0, cost=getCost(building);
+  for (let i=0;i<1000;i++) {
+    if (gameState.news >= cost) {
+      gameState.news -= cost; building.count++; bought++;
+      cost = getCost({...building, count:building.count});
+    } else break;
+  }
+  if (bought>0) {
+    const card = document.getElementById(`card-${id}`);
+    card.style.transform = 'scale(1.02)'; card.style.backgroundColor = '#e8f5e8';
+    setTimeout(()=>{ card.style.transform = ''; card.style.backgroundColor = ''; },300);
+    updateUI(); saveGame();
+  }
+}
+
+function prestige() {
+  const getPrestigeCost = (bruhCount) => Math.floor(1000 * Math.pow(2.5, bruhCount));
+  let bruhsToBuy=0, tempNews=gameState.news, tempBruh=gameState.bruh;
+  while (true) {
+    const nextCost = getPrestigeCost(tempBruh);
+    if (tempNews >= nextCost) { bruhsToBuy++; tempNews -= nextCost; tempBruh++; } else break;
+    if (bruhsToBuy >= 100) break;
+  }
+  if (bruhsToBuy===0) return;
+  if (!confirm(`Reset for ${bruhsToBuy} new Bruh? Current multiplier: x${1+gameState.bruh} → x${1+gameState.bruh+bruhsToBuy}`)) return;
+  gameState.bruh += bruhsToBuy;
+  gameState.news = 0; gameState.level=1; gameState.xp=0; gameState.totalXpEarned=0;
+  gameState.buildings.forEach(b=>b.count=0);
+  gameState.boostProgress=0; gameState.isBoostActive=false; gameState.boostTimeLeft=0; gameState.boostCooldown=0; gameState.boostMultiplier=1;
+  document.getElementById('breaking-news-banner').style.display='none';
+  stopEmojiRain(); if(boostTimerInterval)clearInterval(boostTimerInterval);
+  updateUI(); updateBoostProgress(); saveGame();
+}
+
 function manualSave() { saveGame(); alert('Manual save completed'); }
-function closeOfflineNotification() { /* ... */ }
-function startDateTimeUpdate() { /* ... */ }
-function openChangeNameModal() { /* ... */ }
-function resetGame() { /* ... */ }
 
-// ---------- PAYPAL BUTTONS (unchanged) ----------
-function initPayPalButtons() { /* ... */ }
+function closeOfflineNotification() { document.getElementById('offline-earnings-notification').style.display='none'; }
 
-// ---------- INITIALIZATION (unchanged) ----------
-function init() { /* ... */ }
+function startDateTimeUpdate() {
+  function updateDateTime() {
+    const now = new Date();
+    document.getElementById('currentDateTime').textContent = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  }
+  updateDateTime(); setInterval(updateDateTime,1000);
+}
 
+function openChangeNameModal() {
+  // For simplicity, we just reload the page – the user can enter a new name.
+  // In a real implementation you might update the player_name in the database.
+  if (confirm('Changing name will restart the game. Continue?')) {
+    localStorage.removeItem('newsBruhPlayerName');
+    location.reload();
+  }
+}
+
+function resetGame() {
+  if (!confirm('Reset all progress? This cannot be undone.')) return;
+  // Clear local storage
+  localStorage.removeItem('newsBruhGameState');
+  // Reset gameState (except userId and playerName)
+  gameState.news = 0;
+  gameState.bruh = 0;
+  gameState.level = 1;
+  gameState.xp = 0;
+  gameState.totalXpEarned = 0;
+  gameState.buildings.forEach(b=>b.count=0);
+  gameState.boostProgress=0;
+  gameState.isBoostActive=false;
+  gameState.boostTimeLeft=0;
+  gameState.boostCooldown=0;
+  gameState.boostMultiplier=1;
+  updateUI(); updateBoostProgress(); saveGame();
+  alert('Game reset.');
+}
+
+// ---------- PAYPAL BUTTONS ----------
+function initPayPalButtons() {
+  if (typeof paypal === 'undefined') { setTimeout(initPayPalButtons, 500); return; }
+  paypal.Buttons({
+    style: { color:'gold' },
+    createOrder: (data,actions) => actions.order.create({
+      purchase_units: [{ amount: { value:'3.69', currency_code:'GBP' }, payee:{email_address:'mrliamc90@gmail.com'}, description:'x50 Multiplier' }]
+    }),
+    onApprove: (data,actions) => actions.order.capture().then(async details => {
+      gameState.bruh += 50;
+      updateUI(); saveGame();
+      await recordPurchase(gameState.playerName, 3.69, 50, details.id);
+      alert('+50 multiplier added!');
+    })
+  }).render('#paypal-button-container-1');
+
+  paypal.Buttons({
+    style: { color:'gold' },
+    createOrder: (data,actions) => actions.order.create({
+      purchase_units: [{ amount: { value:'6.99', currency_code:'GBP' }, payee:{email_address:'mrliamc90@gmail.com'}, description:'x150 Multiplier' }]
+    }),
+    onApprove: (data,actions) => actions.order.capture().then(async details => {
+      gameState.bruh += 150;
+      updateUI(); saveGame();
+      await recordPurchase(gameState.playerName, 6.99, 150, details.id);
+      alert('+150 multiplier added!');
+    })
+  }).render('#paypal-button-container-2');
+
+  paypal.Buttons({
+    style: { color:'gold' },
+    createOrder: (data,actions) => actions.order.create({
+      purchase_units: [{ amount: { value:'12.99', currency_code:'GBP' }, payee:{email_address:'mrliamc90@gmail.com'}, description:'x500 Multiplier' }]
+    }),
+    onApprove: (data,actions) => actions.order.capture().then(async details => {
+      gameState.bruh += 500;
+      updateUI(); saveGame();
+      await recordPurchase(gameState.playerName, 12.99, 500, details.id);
+      alert('+500 multiplier added!');
+    })
+  }).render('#paypal-button-container-3');
+
+  paypal.Buttons({
+    style: { color:'gold' },
+    createOrder: (data,actions) => actions.order.create({
+      purchase_units: [{ amount: { value:'19.99', currency_code:'GBP' }, payee:{email_address:'mrliamc90@gmail.com'}, description:'x1500 Multiplier' }]
+    }),
+    onApprove: (data,actions) => actions.order.capture().then(async details => {
+      gameState.bruh += 1500;
+      updateUI(); saveGame();
+      await recordPurchase(gameState.playerName, 19.99, 1500, details.id);
+      alert('+1500 multiplier added!');
+    })
+  }).render('#paypal-button-container-4');
+}
+
+// ---------- INITIALIZATION ----------
+function init() {
+  if (isInitialized) return;
+  startDateTimeUpdate();
+  // build UI for upgrades
+  const container = document.getElementById('upgrades-list');
+  container.innerHTML = '';
+  gameState.buildings.forEach(building => {
+    const div = document.createElement('div');
+    div.className = 'upgrade-card';
+    div.id = `card-${building.id}`;
+    div.innerHTML = `<div class="upgrade-top"><span class="upgrade-name">${building.name}</span><span class="upgrade-count" id="count-${building.id}">0</span></div><div class="upgrade-info">+${building.baseCPS} CPS (Base)</div><button class="upgrade-btn" id="btn-${building.id}" onclick="buyMax(${building.id})"><div class="upgrade-cost" id="cost-text-${building.id}">Cost: 0</div><div class="upgrade-max" id="max-text-${building.id}">Max: 0</div></button>`;
+    container.appendChild(div);
+  });
+
+  document.getElementById('print-btn').addEventListener('mousedown', manualClick);
+  document.getElementById('print-btn').addEventListener('touchstart', manualClick, { passive: false });
+  document.getElementById('chat-input').addEventListener('keypress', e => { if (e.key==='Enter') sendChatMessage(); });
+  document.getElementById('change-name-link').addEventListener('click', openChangeNameModal);
+  document.getElementById('reset-button').addEventListener('click', resetGame);
+
+  // Offline earnings calculation (based on lastUpdate)
+  const now = Date.now();
+  const lastUpdate = gameState.lastUpdate || now;
+  const timeDiff = (now - lastUpdate) / 1000;
+  if (timeDiff > 1 && timeDiff < 43200) {
+    const cps = gameState.buildings.reduce((acc,b)=>acc+(b.count*b.baseCPS),0)*(1+gameState.bruh)*gameState.boostMultiplier;
+    const earnings = cps * timeDiff;
+    if (earnings > 0) {
+      gameState.news += earnings;
+      addXP(Math.min(timeDiff,43200)*0.1);
+      document.getElementById('offline-earnings-text').innerHTML = `📰 While you were away for ${Math.floor(timeDiff/3600)}h ${Math.floor((timeDiff%3600)/60)}m, your empire earned <strong>${formatNumber(earnings)} New</strong>!`;
+      document.getElementById('offline-earnings-notification').style.display = 'block';
+      setTimeout(()=>document.getElementById('offline-earnings-notification').style.display='none',8000);
+      gameState.lastUpdate = now;
+      saveGame();
+    }
+  }
+
+  updateUI(); updateBoostProgress();
+  if (gameState.isBoostActive) {
+    boostTimerInterval = setInterval(updateBoostTimer,1000);
+    document.getElementById('breaking-news-banner').style.display='block';
+    startEmojiRain();
+  }
+  if (gameState.boostCooldown > 0) {
+    const ci = setInterval(()=>{ gameState.boostCooldown--; updateBoostProgress(); if(gameState.boostCooldown<=0){clearInterval(ci); gameState.boostCooldown=0; updateBoostProgress(); saveGame();}},1000);
+  }
+
+  // PayPal buttons
+  initPayPalButtons();
+
+  // start loops
+  let lastFrameTime = performance.now();
+  function gameLoop() {
+    const now = performance.now();
+    const delta = (now - lastFrameTime) / 1000;
+    lastFrameTime = now;
+    const cps = gameState.buildings.reduce((acc,b)=>acc+(b.count*b.baseCPS),0)*(1+gameState.bruh)*gameState.boostMultiplier;
+    if (cps > 0 && delta > 0) {
+      gameState.news += cps * delta;
+      addXP(cps * delta * 0.1);
+    }
+    depleteBoostProgress();
+    updateUI();
+    requestAnimationFrame(gameLoop);
+  }
+  setInterval(()=>{ saveGame(); },15000);
+  setInterval(()=>{
+    const headlines = ["Local cat appointed Editor-in-Chief.","Ink shortage causes panic; citizens using pencil.","Bruh currency value skyrockets over speculation.","Paperboys unionize, demand faster bicycles.","Breaking: Nothing happened today.","Weather forecast: Cloudy with a chance of News.","Typo in front page headline causes minor confusion.","Printing press inventor wins Nobel Prize.","Newspaper sales reach all-time high.","Digital media fails to replace traditional print.","Bruh consultants in high demand worldwide.","Newspaper subscription rates double overnight.","Local economy booms thanks to printing industry.","Ink suppliers report record profits.","Breaking: News consumption at all-time high."];
+    const el = document.getElementById('headline-spot');
+    el.style.opacity = 0;
+    setTimeout(()=>{ el.textContent = `"${headlines[Math.floor(Math.random()*headlines.length)]}"`; el.style.opacity = 1; },500);
+  },10000);
+  gameLoop();
+  isInitialized = true;
+}
+
+// This is called after Supabase client is ready and DOM is loaded
 window.gameSystemsReady = function() {
-  document.getElementById('auth-modal').classList.remove('hidden');
+  // If a name is stored in localStorage, we could try to auto‑sign‑in, but we'll force modal.
+  // Actually, we can check for an existing session? For simplicity, always show modal.
+  document.getElementById('name-selection-modal').classList.remove('hidden');
 };
 
 // expose functions globally
-window.switchAuthTab = switchAuthTab;
-window.togglePasswordVisibility = togglePasswordVisibility;
-window.register = register;
-window.login = login;
+window.startGameWithName = startGameWithName;
 window.sendChatMessage = sendChatMessage;
 window.prestige = prestige;
 window.buyMax = buyMax;
@@ -350,7 +1000,7 @@ window.openChangeNameModal = openChangeNameModal;
 window.restorePurchases = restorePurchases;
 </script>
 
-<!-- PayPal SDK (unchanged) -->
+<!-- PayPal SDK (first client ID) -->
 <script src="https://www.paypal.com/sdk/js?client-id=AQwko42r9LO4kxj4wgcBx8xM1V0blgNlHlCQ4p3mSUjFm2RMAuInCBhfA6SWsyDNBM6quMxddcmfsS24&currency=GBP"></script>
 </body>
 </html>
