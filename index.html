@@ -309,21 +309,56 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 <!-- Supabase module -->
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-// Updated credentials per user request
 const SUPABASE_URL = 'https://kcvcpkxxteeundkydfxv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjdmNwa3h4dGVldW5ka3lkZnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0ODgwNzAsImV4cCI6MjA4ODA2NDA3MH0.u3KaXitQBYtOGltcpEN7T30RGrH4mYEDwV9YUDOWpcQ';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { realtime: { params: { eventsPerSecond: 5 } } });
 window.supabaseClient = supabase;
 
-// Wait for DOM to be ready
-window.addEventListener('DOMContentLoaded', function() { if (window.gameSystemsReady) window.gameSystemsReady(); });
+// Wait for DOM, then attempt auto-login
+window.attemptAutoLogin = async function() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    // No session, show modal
+    document.getElementById('name-selection-modal').classList.remove('hidden');
+    return;
+  }
+  // We have a session, try to load game
+  const userId = session.user.id;
+  const { data: saveData, error } = await supabase
+    .from('game_saves')
+    .select('game_state, player_name')
+    .eq('user_id', userId)
+    .maybeSingle();
+  
+  if (error || !saveData || !saveData.game_state) {
+    // No save, but we have a user? Possibly new user, show modal to choose name.
+    document.getElementById('name-selection-modal').classList.remove('hidden');
+    return;
+  }
+
+  // Load the game state
+  const loadedState = saveData.game_state;
+  loadedState.userId = userId;
+  loadedState.playerName = saveData.player_name;
+  Object.assign(gameState, loadedState);
+  
+  // Update display
+  updatePlayerNameDisplay();
+  document.getElementById('name-selection-modal').classList.add('hidden');
+  document.getElementById('newspaper').style.display = 'flex';
+  init(); // start game loops
+};
+
+window.gameSystemsReady = function() {
+  attemptAutoLogin();
+};
 </script>
 
 <!-- Main game script -->
 <script>
 // ---------- GLOBAL GAME STATE ----------
 let gameState = {
-  userId: null,           // will be set after authentication
+  userId: null,
   playerName: "",
   news: 0,
   bruh: 0,
@@ -350,6 +385,44 @@ let gameState = {
 };
 let isInitialized = false;
 let breakingNewsEmojis = [], boostEmojiInterval = null, boostTimerInterval = null;
+
+// ---------- ONLINE PRESENCE & COUNTS ----------
+async function updateLastActive() {
+  if (!window.supabaseClient || !gameState.userId) return;
+  try {
+    await supabaseClient
+      .from('game_saves')
+      .update({ last_active: new Date().toISOString() })
+      .eq('user_id', gameState.userId);
+  } catch (e) { /* ignore */ }
+}
+
+async function fetchPlayerCountsAndOnline() {
+  if (!window.supabaseClient) return;
+  try {
+    // Total players (distinct user_id count)
+    const { count: totalCount, error: totalErr } = await supabaseClient
+      .from('game_saves')
+      .select('*', { count: 'exact', head: true });
+    if (!totalErr) document.getElementById('total-count').textContent = totalCount || 0;
+
+    // Online players (active within last 2 minutes)
+    const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const { data: onlineUsers, error: onlineErr } = await supabaseClient
+      .from('game_saves')
+      .select('player_name')
+      .gt('last_active', twoMinAgo);
+    if (!onlineErr && onlineUsers) {
+      document.getElementById('online-count').textContent = onlineUsers.length;
+      document.getElementById('online-users-count').textContent = onlineUsers.length;
+      // Render online users list
+      const onlineContainer = document.getElementById('online-users');
+      onlineContainer.innerHTML = onlineUsers.map(u => 
+        `<div class="user-item"><span class="user-name">${u.player_name}</span><span class="user-online"></span></div>`
+      ).join('');
+    }
+  } catch (e) { console.warn('count fetch error', e); }
+}
 
 // ---------- HELPER FUNCTIONS ----------
 function formatNumber(num) {
@@ -602,7 +675,6 @@ function loadGameFromLocal() {
 async function saveGame() {
   try {
     gameState.lastUpdate = Date.now();
-    // Always save to localStorage as backup
     localStorage.setItem('newsBruhGameState', JSON.stringify(gameState));
 
     if (window.supabaseClient && gameState.userId && gameState.playerName) {
@@ -612,6 +684,7 @@ async function saveGame() {
           user_id: gameState.userId,
           player_name: gameState.playerName,
           game_state: gameState,
+          last_active: new Date().toISOString(),
           last_saved: new Date().toISOString()
         }, { onConflict: 'user_id' });
       if (error) console.warn('Supabase save error:', error);
@@ -628,12 +701,10 @@ async function startGameWithName() {
   const name = input.value.trim();
   if (!name || name.length > 20) { alert('Invalid name (max 20 chars)'); return; }
 
-  // Show loading state (optional)
   const startBtn = document.querySelector('.start-game-btn');
   startBtn.disabled = true;
   startBtn.textContent = 'Signing in...';
 
-  // Sign in anonymously
   const { data: { user }, error } = await supabaseClient.auth.signInAnonymously();
   if (error) {
     console.error('Auth error:', error);
@@ -643,12 +714,10 @@ async function startGameWithName() {
     return;
   }
 
-  // Store user id and player name
   gameState.userId = user.id;
   gameState.playerName = name;
-  localStorage.setItem('newsBruhPlayerName', name); // for display only
+  localStorage.setItem('newsBruhPlayerName', name);
 
-  // Try to load existing save for this user from Supabase
   const { data: saveData, error: fetchError } = await supabaseClient
     .from('game_saves')
     .select('game_state')
@@ -656,16 +725,12 @@ async function startGameWithName() {
     .maybeSingle();
 
   if (saveData && saveData.game_state) {
-    // Merge loaded state with current gameState (preserve userId and playerName)
     const loadedState = saveData.game_state;
-    // Keep the userId and playerName we just set
     loadedState.userId = gameState.userId;
     loadedState.playerName = gameState.playerName;
     Object.assign(gameState, loadedState);
   } else {
-    // No cloud save – load from localStorage as fallback
     loadGameFromLocal();
-    // Ensure userId and playerName are set (localStorage may have old name)
     gameState.userId = user.id;
     gameState.playerName = name;
   }
@@ -673,7 +738,12 @@ async function startGameWithName() {
   updatePlayerNameDisplay();
   document.getElementById('name-selection-modal').classList.add('hidden');
   document.getElementById('newspaper').style.display = 'flex';
-  init(); // start the game loops
+  
+  // Initial presence update
+  await updateLastActive();
+  await fetchPlayerCountsAndOnline();
+  
+  init();
 }
 
 function updatePlayerNameDisplay() {
@@ -726,7 +796,6 @@ async function sendChatMessage() {
   const msg = input.value.trim();
   if (!msg || !gameState.userId) return;
 
-  // Insert into Supabase
   const { error } = await supabaseClient
     .from('chat_messages')
     .insert({
@@ -737,7 +806,6 @@ async function sendChatMessage() {
     });
   if (error) console.warn('Chat insert error:', error);
 
-  // Also display locally immediately
   const chatDiv = document.getElementById('chat-messages');
   const msgDiv = document.createElement('div');
   msgDiv.className = 'chat-message self';
@@ -767,6 +835,9 @@ function manualClick(e) {
   document.body.appendChild(floater);
   setTimeout(()=>floater.remove(),1000);
   updateUI(); saveGame();
+  // Update online presence
+  updateLastActive();
+  fetchPlayerCountsAndOnline();
 }
 
 function buyMax(id) {
@@ -784,6 +855,8 @@ function buyMax(id) {
     card.style.transform = 'scale(1.02)'; card.style.backgroundColor = '#e8f5e8';
     setTimeout(()=>{ card.style.transform = ''; card.style.backgroundColor = ''; },300);
     updateUI(); saveGame();
+    updateLastActive();
+    fetchPlayerCountsAndOnline();
   }
 }
 
@@ -804,6 +877,8 @@ function prestige() {
   document.getElementById('breaking-news-banner').style.display='none';
   stopEmojiRain(); if(boostTimerInterval)clearInterval(boostTimerInterval);
   updateUI(); updateBoostProgress(); saveGame();
+  updateLastActive();
+  fetchPlayerCountsAndOnline();
 }
 
 function manualSave() { saveGame(); alert('Manual save completed'); }
@@ -818,20 +893,19 @@ function startDateTimeUpdate() {
   updateDateTime(); setInterval(updateDateTime,1000);
 }
 
-function openChangeNameModal() {
-  // For simplicity, we just reload the page – the user can enter a new name.
-  // In a real implementation you might update the player_name in the database.
+async function openChangeNameModal() {
+  // Sign out, clear local, reload
   if (confirm('Changing name will restart the game. Continue?')) {
+    if (window.supabaseClient) await supabaseClient.auth.signOut();
     localStorage.removeItem('newsBruhPlayerName');
+    localStorage.removeItem('newsBruhGameState');
     location.reload();
   }
 }
 
 function resetGame() {
   if (!confirm('Reset all progress? This cannot be undone.')) return;
-  // Clear local storage
   localStorage.removeItem('newsBruhGameState');
-  // Reset gameState (except userId and playerName)
   gameState.news = 0;
   gameState.bruh = 0;
   gameState.level = 1;
@@ -907,7 +981,6 @@ function initPayPalButtons() {
 function init() {
   if (isInitialized) return;
   startDateTimeUpdate();
-  // build UI for upgrades
   const container = document.getElementById('upgrades-list');
   container.innerHTML = '';
   gameState.buildings.forEach(building => {
@@ -924,7 +997,7 @@ function init() {
   document.getElementById('change-name-link').addEventListener('click', openChangeNameModal);
   document.getElementById('reset-button').addEventListener('click', resetGame);
 
-  // Offline earnings calculation (based on lastUpdate)
+  // Offline earnings calculation
   const now = Date.now();
   const lastUpdate = gameState.lastUpdate || now;
   const timeDiff = (now - lastUpdate) / 1000;
@@ -952,7 +1025,6 @@ function init() {
     const ci = setInterval(()=>{ gameState.boostCooldown--; updateBoostProgress(); if(gameState.boostCooldown<=0){clearInterval(ci); gameState.boostCooldown=0; updateBoostProgress(); saveGame();}},1000);
   }
 
-  // PayPal buttons
   initPayPalButtons();
 
   // start loops
@@ -977,18 +1049,21 @@ function init() {
     el.style.opacity = 0;
     setTimeout(()=>{ el.textContent = `"${headlines[Math.floor(Math.random()*headlines.length)]}"`; el.style.opacity = 1; },500);
   },10000);
+
+  // Online presence refresh every 30 seconds
+  setInterval(() => {
+    updateLastActive();
+    fetchPlayerCountsAndOnline();
+  }, 30000);
+
+  // Initial fetch
+  fetchPlayerCountsAndOnline();
+
   gameLoop();
   isInitialized = true;
 }
 
-// This is called after Supabase client is ready and DOM is loaded
-window.gameSystemsReady = function() {
-  // If a name is stored in localStorage, we could try to auto‑sign‑in, but we'll force modal.
-  // Actually, we can check for an existing session? For simplicity, always show modal.
-  document.getElementById('name-selection-modal').classList.remove('hidden');
-};
-
-// expose functions globally
+// Expose functions globally
 window.startGameWithName = startGameWithName;
 window.sendChatMessage = sendChatMessage;
 window.prestige = prestige;
@@ -1000,7 +1075,7 @@ window.openChangeNameModal = openChangeNameModal;
 window.restorePurchases = restorePurchases;
 </script>
 
-<!-- PayPal SDK (first client ID) -->
+<!-- PayPal SDK -->
 <script src="https://www.paypal.com/sdk/js?client-id=AQwko42r9LO4kxj4wgcBx8xM1V0blgNlHlCQ4p3mSUjFm2RMAuInCBhfA6SWsyDNBM6quMxddcmfsS24&currency=GBP"></script>
 </body>
 </html>
