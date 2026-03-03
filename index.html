@@ -293,7 +293,7 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
   <div id="chat-section">
     <div class="chat-container">
       <div class="chat-header"><span>📰 PRESS ROOM CHAT <span id="unread-badge" class="unread-badge" style="display:none;">0</span></span><span id="chat-status">Connected</span></div>
-      <div id="chat-messages"><div class="chat-message other"><div class="message-sender">System <span class="message-timestamp">Just now</span></div><div class="message-content">Welcome to The News Bruh Press Room! Chat with other players here.</div></div></div>
+      <div id="chat-messages"></div> <!-- messages will be loaded here -->
       <div id="chat-input-container"><input type="text" id="chat-input" placeholder="Type your message... (Use @name to tag players)" maxlength="200"><button id="chat-send" onclick="sendChatMessage()">SEND</button></div>
     </div>
     <div class="chat-users"><div class="users-header"><span>🟢 ONLINE PLAYERS (<span id="online-users-count">1</span>)</span></div><div id="online-users"></div></div>
@@ -320,16 +320,13 @@ window.supabaseClient = supabase;
 // Auto-login function
 window.attemptAutoLogin = async function() {
   try {
-    // Try to get existing session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;
     
     if (!session) {
-      // No session, check if we have a saved user in localStorage (fallback)
       const localUserId = localStorage.getItem('newsBruhUserId');
       const localName = localStorage.getItem('newsBruhPlayerName');
       if (localUserId && localName) {
-        // Use local data
         gameState.userId = localUserId;
         gameState.playerName = localName;
         loadGameFromLocal();
@@ -339,16 +336,14 @@ window.attemptAutoLogin = async function() {
         init();
         return;
       }
-      // No session and no local data, show modal
       document.getElementById('name-selection-modal').classList.remove('hidden');
       return;
     }
 
     const userId = session.user.id;
     gameState.userId = userId;
-    localStorage.setItem('newsBruhUserId', userId); // backup
+    localStorage.setItem('newsBruhUserId', userId);
 
-    // Try to load cloud save
     const { data: saveData, error: fetchError } = await supabase
       .from('game_saves')
       .select('game_state, player_name')
@@ -358,14 +353,12 @@ window.attemptAutoLogin = async function() {
     if (fetchError) console.warn('Fetch save error:', fetchError);
 
     if (saveData && saveData.game_state) {
-      // Cloud save exists
       const loadedState = saveData.game_state;
       loadedState.userId = userId;
       loadedState.playerName = saveData.player_name;
       Object.assign(gameState, loadedState);
       localStorage.setItem('newsBruhPlayerName', saveData.player_name);
     } else {
-      // No cloud save, try localStorage
       loadGameFromLocal();
       const savedName = localStorage.getItem('newsBruhPlayerName');
       if (savedName) {
@@ -386,12 +379,10 @@ window.attemptAutoLogin = async function() {
     init();
   } catch (err) {
     console.error('Auto-login error:', err);
-    // Fallback to modal
     document.getElementById('name-selection-modal').classList.remove('hidden');
   }
 };
 
-// Call auto-login when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => window.attemptAutoLogin());
 } else {
@@ -430,6 +421,7 @@ let gameState = {
 };
 let isInitialized = false;
 let breakingNewsEmojis = [], boostEmojiInterval = null, boostTimerInterval = null;
+let chatChannel = null; // for realtime subscription
 
 // ---------- ONLINE PRESENCE & COUNTS (FIXED) ----------
 async function updateLastActive() {
@@ -445,7 +437,7 @@ async function updateLastActive() {
 async function fetchPlayerCountsAndOnline() {
   if (!window.supabaseClient) return;
   try {
-    // --- TOTAL PLAYERS: try exact count, fallback to counting rows from a limited select ---
+    // Total players count with fallback
     let totalCount = 0;
     const { count, error: totalErr } = await supabaseClient
       .from('game_saves')
@@ -453,14 +445,12 @@ async function fetchPlayerCountsAndOnline() {
 
     if (totalErr) {
       console.warn('Total count error (head):', totalErr);
-      // Fallback: fetch up to 1000 rows and count client-side (approximate)
       const { data: fallbackData, error: fallbackErr } = await supabaseClient
         .from('game_saves')
         .select('user_id')
         .limit(1000);
       if (!fallbackErr && fallbackData) {
         totalCount = fallbackData.length;
-        console.log('Fallback total count:', totalCount);
       } else {
         console.warn('Fallback count also failed:', fallbackErr);
       }
@@ -469,7 +459,7 @@ async function fetchPlayerCountsAndOnline() {
     }
     document.getElementById('total-count').textContent = totalCount;
 
-    // --- ONLINE PLAYERS (active within last 2 minutes) ---
+    // Online players (active within last 2 minutes)
     const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     const { data: onlineUsers, error: onlineErr } = await supabaseClient
       .from('game_saves')
@@ -486,7 +476,6 @@ async function fetchPlayerCountsAndOnline() {
         `<div class="user-item"><span class="user-name">${u.player_name}</span><span class="user-online"></span></div>`
       ).join('');
     } else {
-      // If online query fails, set to 0
       document.getElementById('online-count').textContent = '0';
       document.getElementById('online-users-count').textContent = '0';
     }
@@ -499,7 +488,6 @@ async function fetchPlayerCountsAndOnline() {
 async function fetchLeaderboard() {
   if (!window.supabaseClient) return;
   try {
-    // Fetch latest game_saves with player_name and game_state, limit to top 500 for performance
     const { data, error } = await supabaseClient
       .from('game_saves')
       .select('player_name, game_state')
@@ -513,7 +501,6 @@ async function fetchLeaderboard() {
       return;
     }
 
-    // Transform and sort by bruh count descending
     const players = data
       .map(row => ({
         name: row.player_name || 'Anonymous',
@@ -521,7 +508,7 @@ async function fetchLeaderboard() {
         level: (row.game_state && typeof row.game_state.level === 'number') ? row.game_state.level : 1
       }))
       .sort((a, b) => b.bruh - a.bruh)
-      .slice(0, 100); // show top 100
+      .slice(0, 100);
 
     const tbody = document.getElementById('leaderboard-body');
     tbody.innerHTML = '';
@@ -543,6 +530,81 @@ async function fetchLeaderboard() {
   } catch (e) {
     console.warn('Leaderboard fetch error:', e);
   }
+}
+
+// ---------- CHAT FUNCTIONS (with realtime) ----------
+async function loadChatHistory() {
+  if (!window.supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('chat_messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    if (!data) return;
+
+    const chatDiv = document.getElementById('chat-messages');
+    chatDiv.innerHTML = ''; // clear system message
+
+    // display from oldest to newest
+    data.reverse().forEach(msg => {
+      appendChatMessage(msg);
+    });
+
+    // scroll to bottom
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  } catch (e) {
+    console.warn('Failed to load chat history:', e);
+  }
+}
+
+function appendChatMessage(msg) {
+  const chatDiv = document.getElementById('chat-messages');
+  const isSelf = msg.user_id === gameState.userId;
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `chat-message ${isSelf ? 'self' : 'other'}`;
+  const timestamp = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // highlight @mentions
+  const formattedMsg = msg.message.replace(/@(\w+)/g, '<span class="tagged-player">@$1</span>');
+  msgDiv.innerHTML = `<div class="message-sender">${msg.player_name} <span class="message-timestamp">${timestamp}</span></div><div class="message-content">${formattedMsg}</div>`;
+  chatDiv.appendChild(msgDiv);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || !gameState.userId) return;
+
+  // Insert into database (will be broadcast via realtime)
+  const { error } = await supabaseClient
+    .from('chat_messages')
+    .insert({
+      user_id: gameState.userId,
+      player_name: gameState.playerName,
+      message: msg,
+      created_at: new Date().toISOString()
+    });
+  if (error) console.warn('Chat insert error:', error);
+
+  input.value = '';
+  // No optimistic insert – rely on realtime
+}
+
+function setupChatRealtime() {
+  if (chatChannel) return; // already set up
+
+  chatChannel = supabaseClient
+    .channel('public:chat_messages')
+    .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        (payload) => {
+          // When a new message arrives, append it
+          appendChatMessage(payload.new);
+        })
+    .subscribe();
 }
 
 // ---------- HELPER FUNCTIONS (unchanged) ----------
@@ -614,7 +676,6 @@ function updateUI() {
   document.getElementById('bruh-owned').textContent = formatNumber(gameState.bruh);
   document.getElementById('tap-value-display').textContent = `📰 +${formatNumber(1*multiplier)} New per Tap`;
 
-  // prestige button
   const getPrestigeCost = (bruhCount) => Math.floor(1000 * Math.pow(2.5, bruhCount));
   const prestigeCost = getPrestigeCost(gameState.bruh);
   let maxBuy = 0, tempNews = gameState.news, tempBruh = gameState.bruh;
@@ -634,7 +695,6 @@ function updateUI() {
     pBtn.innerHTML = `Need ${formatNumber(prestigeCost)} New <div id="prestige-cost" class="prestige-cost">Costs: ${formatNumber(prestigeCost)} New</div> <div id="prestige-max" class="prestige-max">Max: 0</div>`;
   }
 
-  // buildings
   gameState.buildings.forEach(building => {
     const getCost = (bld) => Math.floor(bld.baseCost * Math.pow(1.15, bld.count || 0));
     const currentCost = getCost(building);
@@ -785,7 +845,6 @@ function createFallingEmoji() {
   setTimeout(() => { if (emoji.parentNode) emoji.parentNode.removeChild(emoji); const idx = breakingNewsEmojis.indexOf(emoji); if(idx>-1) breakingNewsEmojis.splice(idx,1); }, 2000);
 }
 
-// ---------- SAVE / LOAD (Supabase + localStorage) ----------
 function loadGameFromLocal() {
   try {
     const saved = localStorage.getItem('newsBruhGameState');
@@ -816,7 +875,6 @@ async function saveGame() {
   }
 }
 
-// ---------- AUTHENTICATED GAME START ----------
 async function startGameWithName() {
   const input = document.getElementById('player-name-input');
   const name = input.value.trim();
@@ -863,7 +921,7 @@ async function startGameWithName() {
   
   await updateLastActive();
   await fetchPlayerCountsAndOnline();
-  await fetchLeaderboard(); // initial leaderboard load
+  await fetchLeaderboard();
   
   init();
 }
@@ -872,7 +930,6 @@ function updatePlayerNameDisplay() {
   document.getElementById('display-player-name').textContent = gameState.playerName || 'Anonymous';
 }
 
-// ---------- PURCHASE TRACKING & RESTORE ----------
 async function recordPurchase(playerName, amountPaid, multiplier, transactionId) {
   if (!window.supabaseClient || !gameState.userId) return;
   try {
@@ -905,7 +962,7 @@ async function restorePurchases() {
     gameState.bruh += totalMultiplier;
     updateUI();
     saveGame();
-    fetchLeaderboard(); // update leaderboard after restoring
+    fetchLeaderboard();
     alert(`Restored ${totalMultiplier} permanent multiplier from purchases.`);
   } catch (err) {
     console.error('Restore error:', err);
@@ -913,32 +970,6 @@ async function restorePurchases() {
   }
 }
 
-// ---------- CHAT ----------
-async function sendChatMessage() {
-  const input = document.getElementById('chat-input');
-  const msg = input.value.trim();
-  if (!msg || !gameState.userId) return;
-
-  const { error } = await supabaseClient
-    .from('chat_messages')
-    .insert({
-      user_id: gameState.userId,
-      player_name: gameState.playerName,
-      message: msg,
-      created_at: new Date().toISOString()
-    });
-  if (error) console.warn('Chat insert error:', error);
-
-  const chatDiv = document.getElementById('chat-messages');
-  const msgDiv = document.createElement('div');
-  msgDiv.className = 'chat-message self';
-  msgDiv.innerHTML = `<div class="message-sender">${gameState.playerName} <span class="message-timestamp">now</span></div><div class="message-content">${msg.replace(/@(\w+)/g,'<span class="tagged-player">@$1</span>')}</div>`;
-  chatDiv.appendChild(msgDiv);
-  chatDiv.scrollTop = chatDiv.scrollHeight;
-  input.value = '';
-}
-
-// ---------- OTHER GAME FUNCTIONS ----------
 function manualClick(e) {
   e.preventDefault(); e.stopPropagation();
   const multiplier = (1+gameState.bruh)*gameState.boostMultiplier;
@@ -979,7 +1010,7 @@ function buyMax(id) {
     updateUI(); saveGame();
     updateLastActive();
     fetchPlayerCountsAndOnline();
-    fetchLeaderboard(); // update leaderboard after buying (bruh unchanged, but maybe level changes)
+    fetchLeaderboard();
   }
 }
 
@@ -1002,7 +1033,7 @@ function prestige() {
   updateUI(); updateBoostProgress(); saveGame();
   updateLastActive();
   fetchPlayerCountsAndOnline();
-  fetchLeaderboard(); // leaderboard update after bruh change
+  fetchLeaderboard();
 }
 
 function manualSave() { saveGame(); alert('Manual save completed'); }
@@ -1042,11 +1073,10 @@ function resetGame() {
   gameState.boostCooldown=0;
   gameState.boostMultiplier=1;
   updateUI(); updateBoostProgress(); saveGame();
-  fetchLeaderboard(); // refresh after reset
+  fetchLeaderboard();
   alert('Game reset.');
 }
 
-// ---------- PAYPAL BUTTONS ----------
 function initPayPalButtons() {
   if (typeof paypal === 'undefined') { setTimeout(initPayPalButtons, 500); return; }
   paypal.Buttons({
@@ -1058,7 +1088,7 @@ function initPayPalButtons() {
       gameState.bruh += 50;
       updateUI(); saveGame();
       await recordPurchase(gameState.playerName, 3.69, 50, details.id);
-      fetchLeaderboard(); // update leaderboard after purchase
+      fetchLeaderboard();
       alert('+50 multiplier added!');
     })
   }).render('#paypal-button-container-1');
@@ -1106,7 +1136,6 @@ function initPayPalButtons() {
   }).render('#paypal-button-container-4');
 }
 
-// ---------- INITIALIZATION ----------
 function init() {
   if (isInitialized) return;
   startDateTimeUpdate();
@@ -1126,7 +1155,7 @@ function init() {
   document.getElementById('change-name-link').addEventListener('click', openChangeNameModal);
   document.getElementById('reset-button').addEventListener('click', resetGame);
 
-  // Offline earnings calculation
+  // Offline earnings
   const now = Date.now();
   const lastUpdate = gameState.lastUpdate || now;
   const timeDiff = (now - lastUpdate) / 1000;
@@ -1156,6 +1185,10 @@ function init() {
 
   initPayPalButtons();
 
+  // --- CHAT INITIALIZATION ---
+  loadChatHistory();               // load last 50 messages
+  setupChatRealtime();             // subscribe to new messages
+
   // start loops
   let lastFrameTime = performance.now();
   function gameLoop() {
@@ -1179,14 +1212,12 @@ function init() {
     setTimeout(()=>{ el.textContent = `"${headlines[Math.floor(Math.random()*headlines.length)]}"`; el.style.opacity = 1; },500);
   },10000);
 
-  // Online presence and leaderboard refresh every 30 seconds
   setInterval(() => {
     updateLastActive();
     fetchPlayerCountsAndOnline();
     fetchLeaderboard();
   }, 30000);
 
-  // Initial fetch
   fetchPlayerCountsAndOnline();
   fetchLeaderboard();
 
@@ -1194,7 +1225,7 @@ function init() {
   isInitialized = true;
 }
 
-// Expose functions globally
+// Expose functions
 window.startGameWithName = startGameWithName;
 window.sendChatMessage = sendChatMessage;
 window.prestige = prestige;
