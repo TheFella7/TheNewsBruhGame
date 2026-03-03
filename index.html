@@ -431,7 +431,7 @@ let gameState = {
 let isInitialized = false;
 let breakingNewsEmojis = [], boostEmojiInterval = null, boostTimerInterval = null;
 
-// ---------- ONLINE PRESENCE & COUNTS ----------
+// ---------- ONLINE PRESENCE & COUNTS (FIXED) ----------
 async function updateLastActive() {
   if (!window.supabaseClient || !gameState.userId) return;
   try {
@@ -445,30 +445,57 @@ async function updateLastActive() {
 async function fetchPlayerCountsAndOnline() {
   if (!window.supabaseClient) return;
   try {
-    // Total players
-    const { count: totalCount, error: totalErr } = await supabaseClient
+    // --- TOTAL PLAYERS: try exact count, fallback to counting rows from a limited select ---
+    let totalCount = 0;
+    const { count, error: totalErr } = await supabaseClient
       .from('game_saves')
       .select('*', { count: 'exact', head: true });
-    if (!totalErr) document.getElementById('total-count').textContent = totalCount || 0;
 
-    // Online players (active within last 2 minutes)
+    if (totalErr) {
+      console.warn('Total count error (head):', totalErr);
+      // Fallback: fetch up to 1000 rows and count client-side (approximate)
+      const { data: fallbackData, error: fallbackErr } = await supabaseClient
+        .from('game_saves')
+        .select('user_id')
+        .limit(1000);
+      if (!fallbackErr && fallbackData) {
+        totalCount = fallbackData.length;
+        console.log('Fallback total count:', totalCount);
+      } else {
+        console.warn('Fallback count also failed:', fallbackErr);
+      }
+    } else {
+      totalCount = count || 0;
+    }
+    document.getElementById('total-count').textContent = totalCount;
+
+    // --- ONLINE PLAYERS (active within last 2 minutes) ---
     const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     const { data: onlineUsers, error: onlineErr } = await supabaseClient
       .from('game_saves')
       .select('player_name')
       .gt('last_active', twoMinAgo);
-    if (!onlineErr && onlineUsers) {
+
+    if (onlineErr) {
+      console.warn('Online count error:', onlineErr);
+    } else if (onlineUsers) {
       document.getElementById('online-count').textContent = onlineUsers.length;
       document.getElementById('online-users-count').textContent = onlineUsers.length;
       const onlineContainer = document.getElementById('online-users');
       onlineContainer.innerHTML = onlineUsers.map(u => 
         `<div class="user-item"><span class="user-name">${u.player_name}</span><span class="user-online"></span></div>`
       ).join('');
+    } else {
+      // If online query fails, set to 0
+      document.getElementById('online-count').textContent = '0';
+      document.getElementById('online-users-count').textContent = '0';
     }
-  } catch (e) { console.warn('count fetch error', e); }
+  } catch (e) { 
+    console.warn('count fetch error', e);
+  }
 }
 
-// ---------- LEADERBOARD FUNCTION (NEW) ----------
+// ---------- LEADERBOARD FUNCTION ----------
 async function fetchLeaderboard() {
   if (!window.supabaseClient) return;
   try {
@@ -486,7 +513,7 @@ async function fetchLeaderboard() {
       return;
     }
 
-    // Transform and sort by bruh count descending (client-side to ensure correct numeric sort)
+    // Transform and sort by bruh count descending
     const players = data
       .map(row => ({
         name: row.player_name || 'Anonymous',
@@ -518,7 +545,7 @@ async function fetchLeaderboard() {
   }
 }
 
-// ---------- HELPER FUNCTIONS ----------
+// ---------- HELPER FUNCTIONS (unchanged) ----------
 function formatNumber(num) {
   if (typeof num !== 'number' || !isFinite(num)) return '0';
   if (num < 0) return '-' + formatNumber(-num);
@@ -1177,7 +1204,7 @@ window.closeOfflineNotification = closeOfflineNotification;
 window.resetGame = resetGame;
 window.openChangeNameModal = openChangeNameModal;
 window.restorePurchases = restorePurchases;
-window.fetchLeaderboard = fetchLeaderboard; // expose for debugging if needed
+window.fetchLeaderboard = fetchLeaderboard;
 </script>
 
 <!-- PayPal SDK -->
