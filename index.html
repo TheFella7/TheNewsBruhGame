@@ -482,7 +482,7 @@ async function fetchPlayerCountsAndOnline() {
   }
 }
 
-// ---------- LEADERBOARD (WITH DEDUPLICATION) ----------
+// ---------- LEADERBOARD (WITH DEDUPLICATION AND CORRECT SORTING) ----------
 async function fetchLeaderboard() {
   if (!window.supabaseClient) return;
   try {
@@ -511,9 +511,12 @@ async function fetchLeaderboard() {
       }
     });
 
-    // Convert map to array and sort by bruh descending
+    // Convert map to array and sort: first by bruh descending, then by level descending
     const players = Array.from(nameMap.values())
-      .sort((a, b) => b.bruh - a.bruh)
+      .sort((a, b) => {
+        if (a.bruh !== b.bruh) return b.bruh - a.bruh;
+        return b.level - a.level; // higher level wins when bruh equal
+      })
       .slice(0, 100); // show top 100 unique names
 
     const tbody = document.getElementById('leaderboard-body');
