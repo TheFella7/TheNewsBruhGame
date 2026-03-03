@@ -317,50 +317,62 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 window.supabaseClient = supabase;
 
-// Attempt to restore session and auto-login
+// Auto-login function
 window.attemptAutoLogin = async function() {
   try {
+    // Try to get existing session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;
     
     if (!session) {
-      // No session, show modal
+      // No session, check if we have a saved user in localStorage (fallback)
+      const localUserId = localStorage.getItem('newsBruhUserId');
+      const localName = localStorage.getItem('newsBruhPlayerName');
+      if (localUserId && localName) {
+        // Use local data
+        gameState.userId = localUserId;
+        gameState.playerName = localName;
+        loadGameFromLocal();
+        updatePlayerNameDisplay();
+        document.getElementById('name-selection-modal').classList.add('hidden');
+        document.getElementById('newspaper').style.display = 'flex';
+        init();
+        return;
+      }
+      // No session and no local data, show modal
       document.getElementById('name-selection-modal').classList.remove('hidden');
       return;
     }
 
     const userId = session.user.id;
     gameState.userId = userId;
+    localStorage.setItem('newsBruhUserId', userId); // backup
 
-    // Try to load existing save
+    // Try to load cloud save
     const { data: saveData, error: fetchError } = await supabase
       .from('game_saves')
       .select('game_state, player_name')
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (fetchError) {
-      console.warn('Error fetching save:', fetchError);
-    }
+    if (fetchError) console.warn('Fetch save error:', fetchError);
 
     if (saveData && saveData.game_state) {
-      // Merge loaded state
+      // Cloud save exists
       const loadedState = saveData.game_state;
       loadedState.userId = userId;
       loadedState.playerName = saveData.player_name;
       Object.assign(gameState, loadedState);
+      localStorage.setItem('newsBruhPlayerName', saveData.player_name);
     } else {
-      // No cloud save – try localStorage backup
+      // No cloud save, try localStorage
       loadGameFromLocal();
-      // Ensure userId is set
-      gameState.userId = userId;
-      // Try to get name from localStorage
       const savedName = localStorage.getItem('newsBruhPlayerName');
       if (savedName) {
         gameState.playerName = savedName;
       } else {
-        // Fallback name
         gameState.playerName = 'Player_' + userId.slice(0,4);
+        localStorage.setItem('newsBruhPlayerName', gameState.playerName);
       }
     }
 
@@ -368,21 +380,23 @@ window.attemptAutoLogin = async function() {
     document.getElementById('name-selection-modal').classList.add('hidden');
     document.getElementById('newspaper').style.display = 'flex';
     
-    // Update online status and counts
     await updateLastActive();
     await fetchPlayerCountsAndOnline();
     
-    init(); // start game loops
+    init();
   } catch (err) {
     console.error('Auto-login error:', err);
-    // If anything fails, show modal
+    // Fallback to modal
     document.getElementById('name-selection-modal').classList.remove('hidden');
   }
 };
 
-window.gameSystemsReady = function() {
-  attemptAutoLogin();
-};
+// Call auto-login when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.attemptAutoLogin());
+} else {
+  window.attemptAutoLogin();
+}
 </script>
 
 <!-- Main game script -->
@@ -431,7 +445,7 @@ async function updateLastActive() {
 async function fetchPlayerCountsAndOnline() {
   if (!window.supabaseClient) return;
   try {
-    // Total players (distinct user_id count)
+    // Total players
     const { count: totalCount, error: totalErr } = await supabaseClient
       .from('game_saves')
       .select('*', { count: 'exact', head: true });
@@ -446,7 +460,6 @@ async function fetchPlayerCountsAndOnline() {
     if (!onlineErr && onlineUsers) {
       document.getElementById('online-count').textContent = onlineUsers.length;
       document.getElementById('online-users-count').textContent = onlineUsers.length;
-      // Render online users list
       const onlineContainer = document.getElementById('online-users');
       onlineContainer.innerHTML = onlineUsers.map(u => 
         `<div class="user-item"><span class="user-name">${u.player_name}</span><span class="user-online"></span></div>`
@@ -747,6 +760,7 @@ async function startGameWithName() {
 
   gameState.userId = user.id;
   gameState.playerName = name;
+  localStorage.setItem('newsBruhUserId', user.id);
   localStorage.setItem('newsBruhPlayerName', name);
 
   const { data: saveData, error: fetchError } = await supabaseClient
@@ -926,6 +940,7 @@ async function openChangeNameModal() {
   if (confirm('Changing name will restart the game. Continue?')) {
     if (window.supabaseClient) await supabaseClient.auth.signOut();
     localStorage.removeItem('newsBruhPlayerName');
+    localStorage.removeItem('newsBruhUserId');
     localStorage.removeItem('newsBruhGameState');
     location.reload();
   }
