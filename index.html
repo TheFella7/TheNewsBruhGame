@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
 <style>
-/* ========== FULL CSS (identical to original, with restore button style) ========== */
+/* ========== FULL CSS (identical to original) ========== */
 :root{--bg-paper:#f9f7f1;--bg-paper-dark:#e6e4dc;--ink:#0a0a0a;--ink-light:#454545;--red-accent:#cc0000;--green-accent:#006400;--blue-accent:#0066cc;--font-head:'Playfair Display',serif;--font-mono:'Courier Prime',monospace;--font-old-english:'UnifrakturMaguntia',cursive}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 body{background-color:#2e2e2e;margin:0;padding:0;font-family:var(--font-head);color:var(--ink);min-height:100vh;display:flex;justify-content:center;align-items:center;overflow:auto;position:relative;padding:10px}
@@ -311,42 +311,73 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const SUPABASE_URL = 'https://kcvcpkxxteeundkydfxv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjdmNwa3h4dGVldW5ka3lkZnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0ODgwNzAsImV4cCI6MjA4ODA2NDA3MH0.u3KaXitQBYtOGltcpEN7T30RGrH4mYEDwV9YUDOWpcQ';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { realtime: { params: { eventsPerSecond: 5 } } });
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { 
+  realtime: { params: { eventsPerSecond: 5 } },
+  auth: { persistSession: true } 
+});
 window.supabaseClient = supabase;
 
-// Wait for DOM, then attempt auto-login
+// Attempt to restore session and auto-login
 window.attemptAutoLogin = async function() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    // No session, show modal
-    document.getElementById('name-selection-modal').classList.remove('hidden');
-    return;
-  }
-  // We have a session, try to load game
-  const userId = session.user.id;
-  const { data: saveData, error } = await supabase
-    .from('game_saves')
-    .select('game_state, player_name')
-    .eq('user_id', userId)
-    .maybeSingle();
-  
-  if (error || !saveData || !saveData.game_state) {
-    // No save, but we have a user? Possibly new user, show modal to choose name.
-    document.getElementById('name-selection-modal').classList.remove('hidden');
-    return;
-  }
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    
+    if (!session) {
+      // No session, show modal
+      document.getElementById('name-selection-modal').classList.remove('hidden');
+      return;
+    }
 
-  // Load the game state
-  const loadedState = saveData.game_state;
-  loadedState.userId = userId;
-  loadedState.playerName = saveData.player_name;
-  Object.assign(gameState, loadedState);
-  
-  // Update display
-  updatePlayerNameDisplay();
-  document.getElementById('name-selection-modal').classList.add('hidden');
-  document.getElementById('newspaper').style.display = 'flex';
-  init(); // start game loops
+    const userId = session.user.id;
+    gameState.userId = userId;
+
+    // Try to load existing save
+    const { data: saveData, error: fetchError } = await supabase
+      .from('game_saves')
+      .select('game_state, player_name')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.warn('Error fetching save:', fetchError);
+    }
+
+    if (saveData && saveData.game_state) {
+      // Merge loaded state
+      const loadedState = saveData.game_state;
+      loadedState.userId = userId;
+      loadedState.playerName = saveData.player_name;
+      Object.assign(gameState, loadedState);
+    } else {
+      // No cloud save – try localStorage backup
+      loadGameFromLocal();
+      // Ensure userId is set
+      gameState.userId = userId;
+      // Try to get name from localStorage
+      const savedName = localStorage.getItem('newsBruhPlayerName');
+      if (savedName) {
+        gameState.playerName = savedName;
+      } else {
+        // Fallback name
+        gameState.playerName = 'Player_' + userId.slice(0,4);
+      }
+    }
+
+    updatePlayerNameDisplay();
+    document.getElementById('name-selection-modal').classList.add('hidden');
+    document.getElementById('newspaper').style.display = 'flex';
+    
+    // Update online status and counts
+    await updateLastActive();
+    await fetchPlayerCountsAndOnline();
+    
+    init(); // start game loops
+  } catch (err) {
+    console.error('Auto-login error:', err);
+    // If anything fails, show modal
+    document.getElementById('name-selection-modal').classList.remove('hidden');
+  }
 };
 
 window.gameSystemsReady = function() {
@@ -739,7 +770,6 @@ async function startGameWithName() {
   document.getElementById('name-selection-modal').classList.add('hidden');
   document.getElementById('newspaper').style.display = 'flex';
   
-  // Initial presence update
   await updateLastActive();
   await fetchPlayerCountsAndOnline();
   
@@ -835,7 +865,6 @@ function manualClick(e) {
   document.body.appendChild(floater);
   setTimeout(()=>floater.remove(),1000);
   updateUI(); saveGame();
-  // Update online presence
   updateLastActive();
   fetchPlayerCountsAndOnline();
 }
@@ -894,7 +923,6 @@ function startDateTimeUpdate() {
 }
 
 async function openChangeNameModal() {
-  // Sign out, clear local, reload
   if (confirm('Changing name will restart the game. Continue?')) {
     if (window.supabaseClient) await supabaseClient.auth.signOut();
     localStorage.removeItem('newsBruhPlayerName');
