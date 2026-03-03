@@ -293,7 +293,7 @@ h2{font-family:var(--font-head);border-bottom:3px double var(--ink);margin-top:0
   <div id="chat-section">
     <div class="chat-container">
       <div class="chat-header"><span>📰 PRESS ROOM CHAT <span id="unread-badge" class="unread-badge" style="display:none;">0</span></span><span id="chat-status">Connected</span></div>
-      <div id="chat-messages"></div> <!-- messages will be loaded here -->
+      <div id="chat-messages"></div>
       <div id="chat-input-container"><input type="text" id="chat-input" placeholder="Type your message... (Use @name to tag players)" maxlength="200"><button id="chat-send" onclick="sendChatMessage()">SEND</button></div>
     </div>
     <div class="chat-users"><div class="users-header"><span>🟢 ONLINE PLAYERS (<span id="online-users-count">1</span>)</span></div><div id="online-users"></div></div>
@@ -421,9 +421,9 @@ let gameState = {
 };
 let isInitialized = false;
 let breakingNewsEmojis = [], boostEmojiInterval = null, boostTimerInterval = null;
-let chatChannel = null; // for realtime subscription
+let chatChannel = null;
 
-// ---------- ONLINE PRESENCE & COUNTS (FIXED) ----------
+// ---------- ONLINE PRESENCE & COUNTS ----------
 async function updateLastActive() {
   if (!window.supabaseClient || !gameState.userId) return;
   try {
@@ -437,7 +437,6 @@ async function updateLastActive() {
 async function fetchPlayerCountsAndOnline() {
   if (!window.supabaseClient) return;
   try {
-    // Total players count with fallback
     let totalCount = 0;
     const { count, error: totalErr } = await supabaseClient
       .from('game_saves')
@@ -459,7 +458,6 @@ async function fetchPlayerCountsAndOnline() {
     }
     document.getElementById('total-count').textContent = totalCount;
 
-    // Online players (active within last 2 minutes)
     const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     const { data: onlineUsers, error: onlineErr } = await supabaseClient
       .from('game_saves')
@@ -484,7 +482,7 @@ async function fetchPlayerCountsAndOnline() {
   }
 }
 
-// ---------- LEADERBOARD FUNCTION ----------
+// ---------- LEADERBOARD (WITH DEDUPLICATION) ----------
 async function fetchLeaderboard() {
   if (!window.supabaseClient) return;
   try {
@@ -501,14 +499,22 @@ async function fetchLeaderboard() {
       return;
     }
 
-    const players = data
-      .map(row => ({
-        name: row.player_name || 'Anonymous',
-        bruh: (row.game_state && typeof row.game_state.bruh === 'number') ? row.game_state.bruh : 0,
-        level: (row.game_state && typeof row.game_state.level === 'number') ? row.game_state.level : 1
-      }))
+    // Group by player_name, keep the entry with the highest bruh count
+    const nameMap = new Map();
+    data.forEach(row => {
+      const name = row.player_name || 'Anonymous';
+      const bruh = (row.game_state && typeof row.game_state.bruh === 'number') ? row.game_state.bruh : 0;
+      const level = (row.game_state && typeof row.game_state.level === 'number') ? row.game_state.level : 1;
+
+      if (!nameMap.has(name) || nameMap.get(name).bruh < bruh) {
+        nameMap.set(name, { name, bruh, level });
+      }
+    });
+
+    // Convert map to array and sort by bruh descending
+    const players = Array.from(nameMap.values())
       .sort((a, b) => b.bruh - a.bruh)
-      .slice(0, 100);
+      .slice(0, 100); // show top 100 unique names
 
     const tbody = document.getElementById('leaderboard-body');
     tbody.innerHTML = '';
@@ -532,7 +538,7 @@ async function fetchLeaderboard() {
   }
 }
 
-// ---------- CHAT FUNCTIONS (with realtime) ----------
+// ---------- CHAT FUNCTIONS (REALTIME) ----------
 async function loadChatHistory() {
   if (!window.supabaseClient) return;
   try {
@@ -546,14 +552,12 @@ async function loadChatHistory() {
     if (!data) return;
 
     const chatDiv = document.getElementById('chat-messages');
-    chatDiv.innerHTML = ''; // clear system message
+    chatDiv.innerHTML = '';
 
-    // display from oldest to newest
     data.reverse().forEach(msg => {
       appendChatMessage(msg);
     });
 
-    // scroll to bottom
     chatDiv.scrollTop = chatDiv.scrollHeight;
   } catch (e) {
     console.warn('Failed to load chat history:', e);
@@ -566,7 +570,6 @@ function appendChatMessage(msg) {
   const msgDiv = document.createElement('div');
   msgDiv.className = `chat-message ${isSelf ? 'self' : 'other'}`;
   const timestamp = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  // highlight @mentions
   const formattedMsg = msg.message.replace(/@(\w+)/g, '<span class="tagged-player">@$1</span>');
   msgDiv.innerHTML = `<div class="message-sender">${msg.player_name} <span class="message-timestamp">${timestamp}</span></div><div class="message-content">${formattedMsg}</div>`;
   chatDiv.appendChild(msgDiv);
@@ -578,7 +581,6 @@ async function sendChatMessage() {
   const msg = input.value.trim();
   if (!msg || !gameState.userId) return;
 
-  // Insert into database (will be broadcast via realtime)
   const { error } = await supabaseClient
     .from('chat_messages')
     .insert({
@@ -590,24 +592,21 @@ async function sendChatMessage() {
   if (error) console.warn('Chat insert error:', error);
 
   input.value = '';
-  // No optimistic insert – rely on realtime
 }
 
 function setupChatRealtime() {
-  if (chatChannel) return; // already set up
-
+  if (chatChannel) return;
   chatChannel = supabaseClient
     .channel('public:chat_messages')
     .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
         (payload) => {
-          // When a new message arrives, append it
           appendChatMessage(payload.new);
         })
     .subscribe();
 }
 
-// ---------- HELPER FUNCTIONS (unchanged) ----------
+// ---------- HELPER FUNCTIONS ----------
 function formatNumber(num) {
   if (typeof num !== 'number' || !isFinite(num)) return '0';
   if (num < 0) return '-' + formatNumber(-num);
@@ -1155,7 +1154,6 @@ function init() {
   document.getElementById('change-name-link').addEventListener('click', openChangeNameModal);
   document.getElementById('reset-button').addEventListener('click', resetGame);
 
-  // Offline earnings
   const now = Date.now();
   const lastUpdate = gameState.lastUpdate || now;
   const timeDiff = (now - lastUpdate) / 1000;
@@ -1185,11 +1183,10 @@ function init() {
 
   initPayPalButtons();
 
-  // --- CHAT INITIALIZATION ---
-  loadChatHistory();               // load last 50 messages
-  setupChatRealtime();             // subscribe to new messages
+  // Chat initialization
+  loadChatHistory();
+  setupChatRealtime();
 
-  // start loops
   let lastFrameTime = performance.now();
   function gameLoop() {
     const now = performance.now();
